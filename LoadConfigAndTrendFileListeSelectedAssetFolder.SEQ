@@ -1,0 +1,46 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Selektierter AssetFolder
+; Output: ConditonTable.csv wird geladen
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "load_config_and_trend_file_selected_asset_folder started"
+
+
+;AssetFolder = FsPnSelectDirectory("Select AssetFolder","D:\",0)
+Idx = PnGetSelectedItem("AssetFolderList")
+AssetFolder = PnGetItemText("AssetFolderList",Idx)
+;zeigen AssetFolder
+PnDeleteItem("ParameterListe",0)
+sequenz ClearPlots
+; load configuration
+path_configfile = AssetFolder + "\xlsconfig.xlsx" 
+;sequenz Inifile_RevB path_configfile;
+sequenz ReadXlsConfig path_configfile;
+
+TrendFileFolder = AssetFolder + "\TrendFiles"; 
+
+_PathName = TrendFileFolder
+formatidx = PnGetSelectedItem("TrendFileFormat")
+trendfileformat =  PnGetItemText("TrendFileFormat",formatidx)
+
+zeigen trendfileformat
+
+PnDeleteItem("TrendFileListe",0)
+$filelist_mm = FsFileListNew(_pathname, trendfileformat, 0, 1, 2)
+FileList = TxArrayCreate(0)
+wenn $filelist_mm > 0
+	$cntfile = FsFileListGetCount($filelist_mm)
+	wenn $cntfile> 0
+		_mm = 1
+		SOLANGE _mm <= $cntfile
+			$filename = FsFileListGetName($filelist_mm, _mm)
+			FileList[_mm] = $filename
+			$filename_short = fsSplitPath($filename, 4) 
+			sequenz Insert_Item "TrendFileListe" $filename_short
+			_mm = _mm + 1
+		end				
+	ende
+	FsFileListClose($filelist_mm)
+sonst
+	_err = FsGetLastError() 
+	zeigen _err
+ende

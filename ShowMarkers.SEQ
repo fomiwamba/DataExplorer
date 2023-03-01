@@ -1,0 +1,66 @@
+sequenz imc_logging "show_markers started"
+
+idx = PnGetSelectedItem("ElectricalAnalysis.SpectralList")
+SpecName = PnGetItemText("ElectricalAnalysis.SpectralList", idx)
+
+CwSelectMode("title")
+_erg = CwSelectWindow(SpecName)
+CwSelectByIndex("x-axis",1)
+AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+
+
+if 0; simulation
+CwSelectMode("auto")
+_erg = CwSelectWindow(I_spec)
+CwSelectByIndex("x-axis",1)
+AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+
+	Freqvec = rampe(0,1,200)
+	F0 = mean(ESA_Metrics_Trend:RotatingFrequency.y) 
+	_ii = 1
+	solange _ii <= lang?(Freqvec)
+		Freqvec[_ii] = F0 *_ii
+		_ii = _ii +1
+	ende
+end
+
+
+_ii = 1
+solange _ii <= lang?(Freqvec)
+	;CwNewElement("marker")
+	_anz_markers = CwDisplayGet("marker.count")
+	CwNewElement("marker.vert.line")
+
+	;CwNewElement("marker.harmonic.harmonic")
+	CwSelectByIndex("marker", _anz_markers+1)
+	CwMarkerSet("x.type",1)
+	CwMarkerSet("x",Freqvec[_ii])
+	CwMarkerSet("y.type",2)
+	CwMarkerSet("y",95)
+	CwMarkerSet("arrow",0)
+	
+	;CwMarkerSet("dimline.distance",8)
+	CwMarkerSet("extension",0)
+	CwMarkerSet("font.size",6)
+	CwMarkerSet("text.orientation",90)
+	fb = RGB( 255, 255, 0 ) ;Rot
+	CwMarkerSet("color.background",fb)
+	fb = RGB( 0, 0, 0) ;Blau
+	CwMarkerSet("color.text",fb)
+	_ii = _ii +1
+ende
+
+
+;CwMarkerSet("font.size",8)
+;CwMarkerSet("font.size",8)
+;CwMarkerSet("font.size",8)
+;CwMarkerSet("font.size",8)
+;
+;
+;CwMarkerSet("y.type",1)
+;CwMarkerSet("line.selected",1)
+;CwMarkerSet("linestyle",1)
+;CwMarkerSet("text", "F1")
+;CwMarkerSet("text.orientation",90)
+;CwMarkerSet("linelength.type", 5)
+;CwMarkerSet("linelength", 10)

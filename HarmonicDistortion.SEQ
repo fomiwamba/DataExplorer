@@ -1,0 +1,88 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Sequenz zur Berechnung der Harmonischen Distortion
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sequenz imc_logging "harmonic_distortion started"
+
+_sig = PA1
+sig_spec = PA2
+
+; fl = 50 Hz
+; fmax = 50*50 Hz = 2500 Hz
+; df = 0.1 Hz
+; fmax_soll = 2*fmax = 5000 Hz
+; T = 1/df = 10s
+; n = T*Fs, Fs >= 12.8 kHz
+;_n = 4
+;_window = 2
+;_overlap = 50
+
+v = leer;
+;sig_spec = AmpSpectrumRMS_1(_sig,_n,_window,_overlap,1)
+
+; problem with fmax, wenn fmax <= 2500 Hz bzw. freqline > 50 Hz -> 50 * 51 > 2500 Hz
+
+
+wenn lang?(sig_spec)>0
+	freqline = posi(sig_spec,max(gren(sig_spec,0,80)))
+	_jj = 1
+	SOLANGE _jj <= N_harm 
+		_fu = _jj*freqline-xdel?(sig_spec)
+		_fo = _jj*freqline+xdel?(sig_spec)
+		v = binde(v,max(gren(sig_spec,_fu,_fo)))
+		_jj = _jj + 1
+	ENDE
+	Harmonics = v
+	
+	wenn 0
+		HD_all = sqrt(sum(v2^2,..,v50^2)/v1^2*100; delta = 1, start = 2, end = 50
+		HD_pos = sqrt(sum(v4^2,v7^2,v10^2,...)/v1^2*100; delta = 3, start = 4, end = 50
+		HD_neg = sqrt(sum(v2^2,v5^2,v8^2,...)/v1^2*100; delta = 3, start = 2, end = 50
+		HD_zero = sqrt(sum(v3^2,v6^2,v9^2,...)/v1^2*100; delta = 3, start = 3, end = 50
+		HD_odd = sqrt(sum(v3^2,v5^2,v7^2,...)/v1^2*100; delta = 2, start = 3, end = 50
+		HD_even = sqrt(sum(v2^2,v4^2,v6^2,...)/v1^2*100; delta = 2, start = 2, end = 50
+	ende
+	
+	_jj = 2
+	v_thd_all = 0
+	SOLANGE _jj <= N_harm 
+		v_thd_all = v_thd_all + v[_jj]^2
+		_jj = _jj + 1
+	ENDE
+	HD_all = sqrt(v_thd_all)/v[1]^2*100; 
+	_jj = 4
+	v_hd_pos = 0
+	SOLANGE _jj <= N_harm 
+		v_hd_pos = v_hd_pos + v[_jj]^2
+		_jj = _jj + 3
+	ENDE
+	HD_pos = sqrt(v_hd_pos)/v[1]^2*100; 
+	_jj = 2
+	v_hd_neg = 0
+	SOLANGE _jj <= N_harm 
+		v_hd_neg = v_hd_neg + v[_jj]^2
+		_jj = _jj + 3
+	ENDE
+	HD_neg = sqrt(v_hd_neg)/v[1]^2*100; 
+	_jj = 3
+	v_hd_zero = 0
+	SOLANGE _jj <= N_harm 
+		v_hd_zero = v_hd_zero + v[_jj]^2
+		_jj = _jj + 3
+	ENDE
+	HD_zero = sqrt(v_hd_zero)/v[1]^2*100; 
+	_jj = 3
+	v_hd_odd = 0
+	SOLANGE _jj <= N_harm 
+		v_hd_odd = v_hd_odd + v[_jj]^2
+		_jj = _jj + 2
+	ENDE
+	HD_odd = sqrt(v_hd_odd)/v[1]^2*100; 
+	_jj = 2
+	v_hd_even = 0
+	SOLANGE _jj <= N_harm 
+		v_hd_even = v_hd_even + v[_jj]^2
+		_jj = _jj + 2
+	ENDE
+	HD_even = sqrt(v_hd_even)/v[1]^2*100; 
+ende

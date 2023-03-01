@@ -1,0 +1,35 @@
+_anzPar = GrChanNum?(FeatData)
+FeatDataPol = GrNeu()
+for _index = 1 to _anzPar
+	;zeigen _index
+	_parname = GrChanName?(FeatData,_index)
+	_parname_parts = txsplit(_parname,"_")
+	_parname_len = TxArrayGetSize(_parname_parts)
+	_parname_last = _parname_parts[_parname_len]
+
+	for  _order = 1 to 4
+		;zeigen _order
+		_txt1 = "A"+tform(_order,"")+"X"
+		_txt2 = "P"+tform(_order,"")+"X"
+		_txt3 = tform(_order,"")+"X"
+		if tcomp(_parname_last, _txt1) = 0
+			;q
+			_signame_from_parname = _parname_parts[1]
+			_signame_anx = _signame_from_parname + "_" +_txt1
+			_signame_pnx = _signame_from_parname + "_" + _txt2
+			_signame_pnx_idx = GrChanFind(FeatData, _signame_pnx)
+			if _signame_pnx_idx > 0
+				{<_signame_anx>} = FeatData:{<_signame_anx>}
+				{<_signame_pnx>} = FeatData:{<_signame_pnx>}
+				seteinheit({<_signame_pnx>},"Grad",1)
+				_signame_nx = _signame_from_parname + "_"+_txt3
+				{<_signame_nx>} = kompl({<_signame_anx>}.y,{<_signame_pnx>}.y)
+				FeatDataPol:{<_signame_nx>} = {<_signame_nx>}
+				;sequenz insert_item "DataExploration.ParameterListe" _signame_nx
+			end
+		end
+	end
+end
+;zeigen FeatDataPol
+
+CwLoadCCV("FeatDataPol", "C:\BDA\ExpertAnalysis\FeatDataPol_Plot.ccv")

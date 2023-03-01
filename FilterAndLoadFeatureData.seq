@@ -1,0 +1,106 @@
+
+_path_assetfolder_selected = "C:\BDA\AssetFolderSelected.txt"
+_fh = FileOpenASCII(_path_assetfolder_selected,1)
+if _fh > 0
+	_err = FileLineWrite(_fh,AssetFolder,0)
+	;_err = FileLineWrite(_fh,OpMode,0)
+	_err = FileClose(_fh)
+sonst
+	_err = FileErrCode?() 
+	zeigen _err
+ende
+entf _*
+
+
+_fileidx =PnTableGetSelectedRows("MeasurementOverview.MeasurementListeGitter")
+wenn _fileidx > 0
+	filename = MeasFiles[_fileidx]
+	measid = "L"+tteil(filename,tlang(filename)-18,15)
+end
+
+_meas_file_id = AssetFolder + "\Output\MeasFileId.txt"
+_fh = FileOpenASCII(_meas_file_id,1)
+if _fh > 0
+	_err = FileLineWrite(_fh,AssetFolder,0)
+	_err = FileLineWrite(_fh,measid,0)
+	_err = FileClose(_fh)
+sonst
+	_err = FileErrCode?() 
+	zeigen _err
+ende
+
+_file = AssetFolder + "\Output\Features\FeatureTable_Clean_FileId.csv"
+_err = FsDeleteFile(_file)
+sequenz imc_logging "cadis_export_data_from_influx_db started"
+_ret = Execute( "C:\python37\python.exe", "C:\BDA\AI\CADIS_ReduceFeatureDataToFileId.py", "", 2,-1)
+_file = AssetFolder + "\Output\Features\FeatureTable_Clean_FileId.csv"
+
+_erg = FsFileExists(_file)
+if _erg > 0
+	filename_ =  AssetFolder + "\Output\TWF\" + filename
+	;_idx = PnFindItem("VibrationAnalysis.MeasFile", filename_)
+	;PnSelectItem("VibrationAnalysis.MeasFile", _idx)
+	importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+	MeasPar = GrNeu()
+	MeasParListe = txarraycreate(0)
+	MeasChName = txarraycreate(0)
+	MeasParMean = leer
+	MeasParMin = leer
+	MeasParMax = leer
+	MeasParStd = leer
+	MeasChStatus = leer
+	MeasChSev = leer
+	_fileid = FileOpenFAS(_file, importsvorlage, 0); ascii_statusfile
+	_item = 0
+	_count = 0
+	wenn _fileid > 0
+		_anzPar = FileObjNum?(_fileid)
+		_index = 1
+		SOLANGE _index <= _anzPar  
+			_typ = FileObjType?(_fileid,_index)
+			wenn _typ = 1
+				_Parname = FileObjName?(_fileid,_index)
+			
+				_parvalue = FileObjRead(_fileid,_index)
+				{<_Parname>} = _parvalue
+				_item = _item + 1
+				MeasParMean = binde(MeasParMean,mean(_parvalue))
+				MeasParMin = binde(MeasParMin,min(_parvalue))
+				MeasParMax = binde(MeasParMax,max(_parvalue))
+				MeasParStd = binde(MeasParStd,streu(_parvalue))
+			
+				_parname_parts = TxSplit(_parname,"_")
+				_parname_parts_numb = TxArrayGetSize(_parname_parts)
+				if txwo(_parname,"-Status") <> 0 and txwo(_parname,"Equipment") = 0 and _parname_parts_numb = 1
+					_count = _count  + 1
+					_parname_parts = TxSplit(_parname,"-")
+					MeasChName[_count] =  _parname_parts[1]
+					MeasChStatus = binde(MeasChStatus,mean(_parvalue))
+				end
+				if txwo(_parname,"-Sev") <> 0  and txwo(_parname,"Equipment") = 0 and _parname_parts_numb = 1
+					MeasChSev = binde(MeasChSev,mean(_parvalue))
+				end
+		
+				wenn IsXY({<_Parname>})
+					{<_Parname>} = sort({<_Parname>},7)
+					MeasPar:{<_Parname>}={<_Parname>}
+				
+					MeasParListe[_item] = _Parname
+				sonst
+					MeasPar:{<_Parname>}={<_Parname>}
+					MeasParListe[_item] = _Parname
+				ende
+				wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+					DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+					MeasPar:Date_Time=DateTimeVec
+				ende
+			ende
+			_index = _index + 1
+		ende
+		fileclose(_fileid)
+	ende
+end
+
+entf _*
+
+

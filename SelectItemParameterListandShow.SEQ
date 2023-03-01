@@ -1,0 +1,175 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Ausgewählter Parameter
+; Output: Ausgewählte Messungszeitpunkt
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "select_item_parameter_list_and_show started"
+
+_index = DlgGetSelectedItem("ParameterListe")
+wenn _index <> 0
+	_Parname = DlgGetItemText("ParameterListe", _index)
+	DlgSetText("Feature",_Parname)
+	DlgSetText("FeatureIdx",tform(_index,"f4.0"))
+	
+	if 0
+		_ret = CwIsWindow("TimeWaveForm")
+		wenn _ret <> 0
+			CwSelectWindow("TimeWaveForm")
+			CwAction("delete.lines")
+			CwAction("delete.markers")
+			CwAction("reset")
+		ende
+		_ret = CwIsWindow("BoxPlot3D")
+		wenn _ret <> 0
+			CwSelectWindow("BoxPlot3D")
+			CwAction("delete.lines")
+			CwAction("delete.markers")
+			CwAction("reset")
+		ende
+		_ret = CwIsWindow("FFT_averaged")
+		wenn _ret <> 0
+			CwSelectWindow("FFT_averaged")
+			CwAction("delete.lines")
+			CwAction("delete.markers")
+			CwAction("reset")
+		ende
+		_ret = CwIsWindow("FFT3D")
+		wenn _ret <> 0
+			CwSelectWindow("FFT3D")
+			CwAction("delete.lines")
+			CwAction("delete.markers")
+			CwAction("reset")
+		ende
+	ende
+	
+	FeatData = FeatData00;
+	
+	index = DlgGetSelectedItem("TrendPlotaxis")
+	wenn index = 1; TrendPlot_vs_Date
+		{<_Parname>} = FeatData:{<_Parname>}
+		xaxis = 1
+	ende
+	wenn index = 2; TrendPlot_vs_Index
+		if  IsXY({<_Parname>})
+			{<_Parname>} = kmpy(FeatData:{<_Parname>})
+		ende
+		xaxis = 2
+	ende
+	_pardata0 = FeatData:{<_Parname>}
+	DlgSetText("Channel",_Parname)
+	DlgSetText("FeatureIdx",tform(_index,"f4.0"))
+	
+	; find feature_name
+	if varexist?("Ch_Config")
+		_qqmax = TxArrayGetSize(Ch_Config:SigName)
+		_qq = 1
+		SOLANGE _qq <= _qqmax 
+			_parname_clean = txsplit(_Parname,"_")
+			;_parunit = _parname_clean[2]
+			_parname_clean = _parname_clean[1]
+		
+			_erg = TxFind(_Parname_clean, Ch_Config:SigName[_qq],-1,1)
+			wenn _erg <>  0 
+				break
+			sonst	
+				_qq = _qq + 1
+			ende
+		ENDE
+
+		search_index = _qq
+		if _qq <= _qqmax
+			_pname = Ch_Config:SigName[_qq]
+			ChannelUnit = Ch_Config:ChUnit[_qq] ;einheit?({<_Parname>},1)
+		sonst; prüfen bei OP_Parameter
+			wenn varexist?("OP_Info:ParName")
+				_qqqmax = TxArrayGetSize(OP_Info:ParName)
+				if _qqqmax <= 1; 
+					_pname = _Parname
+					ChannelUnit = ""
+				sonst
+					_qqq = 1
+					SOLANGE _qqq <= _qqqmax 				
+						_erg = TxFind(_Parname, OP_Info:ParName[_qqq],-1,1)
+						wenn _erg <>  0 
+							break
+						sonst	
+							_qqq = _qqq + 1
+						ende
+					ENDE
+					if  _qqq <= _qqqmax
+						_pname = _Parname
+						ChannelUnit = OP_Info:ParUnit[_qqq]
+					sonst
+						_pname = _Parname
+						ChannelUnit = ""
+					ende
+				ende
+			sonst
+				_pname = _Parname
+				ChannelUnit = ""
+			ende
+		ende
+		seteinheit({<_Parname>},ChannelUnit,1)
+		DlgSetText("ChUnit",ChannelUnit )
+	ende
+	
+	cw_verz = "C:\BDA\DataExploration\"
+	;Neu - 10092019 - Francis
+	;---------------------------------------------
+	_parname_ = _parname
+	if txwo(_parname_,".") > 0
+		_parname_ = txreplace( _parname_,".","_",0,1)
+	end
+	if txwo(_parname_ ," ") > 0
+		_parname_ = txreplace( _parname_ ," ","_",0,1)
+	end
+	if txwo(_parname_ ,"\") > 0
+		_parname_ = txreplace( _parname_ ,"\","_",0,1)
+	end
+	if txwo(_parname_ ,"/") > 0
+		_parname_ = txreplace( _parname_ ,"/","_",0,1)
+	end
+	{<_parname_>} =  {<_Parname>}
+	;---------------------------------------------
+	sequenz plot_2d_trend {<_Parname_>} xaxis "TrendPlot"
+	;sequenz plot_2d_trend {<_Parname_>} 1 "TrendPlot"
+	; build and load boxplot, histogram, fft_averaged and fft3d
+
+
+	
+	
+	currentchannel = _parname
+ende
+
+SOLANGE _file_m <= cntfile
+	filename = FileList[_file_m]
+	_filename = filename
+	
+	filename_short = fsSplitPath(filename, 4) 
+			
+	_file_ext = fssplitPath(filename,3)
+	if tverg(_file_ext,".tdms") = 0 or tverg(_file_ext,".tdm") = 0
+		sequenz LoadTdmsTrendFile
+	ende
+	if  tverg(_file_ext,".csv") = 0 or tverg(_file_ext,".txt") = 0
+		sequenz LoadTxtOrCsvTrendFile
+	ende
+		
+		
+	OP_Data = FeatData
+	_Messdatum = ZeitInText((Zeit?(OP_Data:[1])+xoff?(OP_Data:[1])),3)
+	_Messdatum_zahl = Zeit?(OP_Data:[1])+xoff?(OP_Data:[1])
+		
+	if _Messdatum_zahl >= DateTimeFrom and _Messdatum_zahl <= DateTimeTo
+		zeigen filename
+		_count = _count +1
+		
+		sequenz date_to_string ; _Messdatum -> Date_string
+
+		TrendFileFolderTemp = AssetFolder + "\TrendFiles_temp"; 
+		sicherungsfolder = TrendFileFolderTemp
+		sicherungsfile = sicherungsfolder + "\" + fsSplitPath(filename,2) + ".csv"; 
+		FileListFromTo[_count] = sicherungsfile
+		sequenz store_csv_parameter_file ; sicherungsfile, OP_Data
+	ende
+	_file_m = _file_m + 1
+end	

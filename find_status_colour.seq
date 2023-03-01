@@ -1,0 +1,17 @@
+sequenz imc_logging "find_status_colour started"
+
+if _parstatus = 0
+	_parstatus_color = rgb(0,0, 255)
+elseif _parstatus = 1
+	_parstatus_color = rgb(0,255,0)
+elseif _parstatus = 2
+	_parstatus_color = rgb(255, 255, 0)
+elseif _parstatus = 3
+	_parstatus_color = rgb(255,136,0)
+elseif _parstatus = 4
+	_parstatus_color = rgb(255, 0, 0)
+elseif _parstatus = -1
+	_parstatus_color = rgb(255,255,255)
+else
+	_parstatus_color = rgb(0,0, 255)
+ende

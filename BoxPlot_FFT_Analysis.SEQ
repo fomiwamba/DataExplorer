@@ -1,0 +1,185 @@
+sequenz imc_logging "boxplot_fft_analysis started"
+; intput = {<_Parname>}
+
+tdata = tzuew(Ch_Config:Windowlength[1],"f")
+;tdata = lang?(signal1)
+ndata = tdata/xdel?(PA1)
+_sigx = PA1
+nn = lang?(_sigx)
+SetSegLang(_sigx,ndata)
+
+imax = nn/SegLang?(_sigx)
+
+_ordlinie = 1;DlgGetValue("Order")
+_length = ndata
+_overlap = 0
+_window = 2
+
+Ax_kask = leer;
+x_iqr = leer; Interquartile oder quartilabstand
+x_median = leer; Median -> x050 or q2
+x_mean = leer;
+x_min = leer; Max -> Boxplot Whisker
+x_max = leer; Min -> Boxplot Whisker
+x_lq = leer; LowerQuartile -> Boxplot Quartil -> q1
+x_uq = leer; UpperQuartile -> Boxplot Quartil -> q3
+x_lower = leer;
+x_upper = leer;
+x_std = leer;
+x_skew = leer;
+x_kurt = leer;
+x_range = leer;
+x_hist_kask = leer;
+
+ii = 1
+solange ii <= imax
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; BoxPlot
+	x = sort(_sigx:[ii],1)
+	n = lang?(x)
+	a1 = n*0.25
+	a2 = n*0.75
+	a3 = n*0.5
+	b1 = mod(n,4)
+	b2 = mod(n,4)
+	b3 = mod(n,2)
+	
+	wenn b1 = 0
+		x025 = 0.5*(x[a1]+x[a1+1]); wenn a 
+	sonst
+		x025 = x[a1]
+	end
+	wenn b2 = 0
+		x075 = 0.5*(x[a2]+x[a2+1]); wenn a 
+	sonst
+		x075 = x[a2]
+	end
+	wenn b3 = 0
+		x050 = 0.5*(x[a3]+x[a3+1]); wenn a 
+	sonst
+		x050 = x[a3]
+	end
+	x_iqr = binde(x_iqr, x075-x025); Interquartile oder quartilabstand
+	x_median = binde(x_median, x050); Median -> x050 or q2
+	x_mean = binde(x_mean,mean(_sigx:[ii]))
+	x_min = binde(x_min, min(_sigx:[ii])); Max -> Boxplot Whisker
+	x_max = binde(x_max, max(_sigx:[ii])); Min -> Boxplot Whisker
+	x_lq = binde(x_lq, x025); LowerQuartile -> Boxplot Quartil -> q1
+	x_uq = binde(x_uq, x075); UpperQuartile -> Boxplot Quartil -> q3
+	x_std = binde(x_std, Streu(_sigx:[ii]-mean(_sigx:[ii])));
+	x_range = binde(x_range, max(_sigx:[ii])-min(_sigx:[ii]))
+	x_skew = binde(x_skew, 1/n*summe(((_sigx:[ii]-mean(_sigx:[ii]))/Streu(_sigx:[ii]-mean(_sigx:[ii])))^3));
+	x_kurt = binde(x_kurt, 1/n*summe(((_sigx:[ii]-mean(_sigx:[ii]))/Streu(_sigx:[ii]-mean(_sigx:[ii])))^4));
+	;	x_lower = binde(x_lower,x025 - 1.5*(x075-x025))
+	;	x_upper = binde(x_upper,x075 + 1.5*(x075-x025))
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	nbins = 50
+	x_hist = leer
+	if (max(_sigx:[ii])-min(_sigx:[ii])) > 0
+	x_hist = histo(_sigx:[ii],(max(_sigx:[ii])-min(_sigx:[ii]))/nbins,nbins);
+	end
+	x_hist_kask = binde(x_hist_kask,x_hist);
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;FFT und Orbit
+	;	x = grenindex(R2D,1,50000)
+	;_Ax = AmpSpectrumPeak_1(Feature:ChannelX-mitte(Feature:ChannelX),_length,_window,_overlap,_average)
+	;	zeigen _sigx:[ii]
+	; search window_length = 2^n
+	_windowlength = _length
+	for i = 12 to 20
+		_windowlength_ = 2^i
+		if _windowlength_ > _windowlength
+			_windowlength_ = 2^(i-1)
+			break
+		ende
+	ende
+
+	dft_spec = 0; 1-> wird dftspektrum benutzt, 0-> wird fft benutzt
+	wenn dft_spec = 0
+		_x_g = grenindex(_sigx:[ii],1,_windowlength_ )
+	ende
+
+	if dft_spec
+		_Ax_ = dftspectrum(_x_g-mitte(_x_g),_window); langsamer aber genauere Auflösung
+		_Ax = _Ax_.b; kmp1(_Ax_)
+	else
+		if 1
+			fftoption _window 0
+			_Ax_ = fft(_x_g-mitte(_x_g)); viel schneller
+			_Ax = _Ax_.b; kmp1(_Ax_)
+		else
+			_Ax =AmpSpectrumRMS_1(_x_g,_windowlength_,_window,_overlap,1)
+		end
+	ende
+	
+	seteinheit(_Ax,einheit?(_sigx:[ii],1),1)
+	seteinheit(_Ax,"Hz",0)
+
+	if 0
+		fftoption 2 0; _windowfft
+		_Ax = wurz(2)*kmp1(dftspectrum(_sigx:[ii],_window))
+		seteinheit(_Ax,einheit?(PA1,1),1)
+	end
+	;_Ay = AmpSpectrumPeak_1(Feature:ChannelY-mitte(Feature:ChannelY),_length,_window,_overlap,_average)
+	
+	Ax_kask = binde(Ax_kask,_Ax)
+	
+	seteinheit(Ax_kask,einheit?(PA1,1),1)
+	seteinheit(Ax_kask,"Time",2)
+	xeinheit Ax_kask Hz
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	ii = ii +1
+ende
+x_pstd = x_mean + 1*x_std
+x_mstd = x_mean - 1*x_std
+x_lower_std = x_mean - 3*x_std
+x_upper_std = x_mean + 3*x_std
+x_lower_iqr = x_lq - 1.5*x_iqr
+x_upper_iqr = x_uq + 1.5*x_iqr
+
+;delta = 1.5*x_iqr; w = maximum whisker length
+
+Parameter_Sig = GrNeu();
+
+GrKanalAdd(Parameter_Sig,x_median)
+
+GrKanalAdd(Parameter_Sig,x_lq)
+GrKanalAdd(Parameter_Sig,x_uq)
+GrKanalAdd(Parameter_Sig,x_lower_iqr)
+GrKanalAdd(Parameter_Sig,x_upper_iqr)
+
+GrKanalAdd(Parameter_Sig,x_mean)
+GrKanalAdd(Parameter_Sig,x_max)
+GrKanalAdd(Parameter_Sig,x_min)
+GrKanalAdd(Parameter_Sig,x_pstd)
+GrKanalAdd(Parameter_Sig,x_mstd)
+GrKanalAdd(Parameter_Sig,x_lower_std)
+GrKanalAdd(Parameter_Sig,x_upper_std)
+
+GrKanalAdd(Parameter_Sig,x_iqr)
+GrKanalAdd(Parameter_Sig,x_range)
+GrKanalAdd(Parameter_Sig,x_skew)
+GrKanalAdd(Parameter_Sig,x_kurt)
+Parameter_Sig_mean = mean(Parameter_Sig)
+Parameter_Sig_min = min(Parameter_Sig)
+Parameter_Sig_max = max(Parameter_Sig)
+
+;Feature:A1X = A1X
+;Feature:P1X = P1X
+
+;Ax_mean = AmpSpectrumRMS_1(signal1,ndata,2,0,1)
+;Ax_kask = AmpSpectrumRMS(signal1,ndata,2,0,1,1)
+SetSegLang(Ax_kask,lang?(_Ax))
+Ax_mean = MatrixSumLines(Ax_kask,0)/imax;(ii-1)
+
+
+SetSegLang(x_hist_kask,lang?(x_hist))
+x_hist_mean = MatrixSumLines(x_hist_kask,0)/imax;(ii-1)
+nbins = 50
+x_hist_vec = rampe(Parameter_Sig_mean:x_min,(Parameter_Sig_mean:x_max-Parameter_Sig_mean:x_min)/nbins,nbins)
+data_hist = xyvon(x_hist_mean,x_hist_vec)
+
+;entf _*

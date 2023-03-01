@@ -1,0 +1,87 @@
+sequenz imc_logging "load_config_and_data_new_asset_folder started"
+
+wenn varexist?("input_verz_SignalAnalysis")
+	;input_verz = "D:\DataAnalytics\DataValidation\TSN_Measurements\";
+	DlgDeleteItem("FileList", 0)
+	DlgDeleteItem("SignalList1", 0)
+	_suchname = "*.dat"
+	_PathName = input_verz_SignalAnalysis
+	$filelist_mm = FsFileListNew(_pathname, _suchname, 0, 1, 2)
+	wenn $filelist_mm >= 1
+			
+		; Load Measurement file list
+		$cntfile = FsFileListGetCount($filelist_mm)
+		wenn $cntfile> 0
+			ii = 1
+			solange ii <= $cntfile
+				$filename = FsFileListGetName($filelist_mm, ii)
+				$filename_neu = FsSplitPath($filename,4)
+				$filename_path = FsSplitPath($filename,8)
+				sequenz Insert_Item "FileList" $filename
+				ii = ii +1
+			end
+					
+			FsFileListClose($filelist_mm)
+			
+			; Load Asset Config
+			path_configfile = AssetFolder + "\xlsconfig.xlsx"
+			;sequenz Inifile_RevB path_configfile;
+			sequenz ReadXlsConfig path_configfile
+				
+			; Load 1st measurement file
+			DlgSelectItem("FileList",1)
+			idx = DlgGetSelectedItem("FileList")
+			$filename = DlgGetItemText("FileList",idx)
+			;$filename = $filename_path + $filename
+			_fileid = FileOpenDSF($filename,100)
+			wenn _fileid > 0; and _filesize > 1000
+				_index = FileObjNum?(_fileid)
+				wenn _index <> 0
+					_count = 1
+					solange _count <= _index				
+						_parvalue = FileObjRead(_fileid,_count)
+						_Parname = FileObjName?(_fileid,_count)
+						_parnameneu = _parname;add(_parname,tadd("_",_Messdatum))
+						{<_Parnameneu>} = _parvalue
+						sequenz Insert_Item "SignalList1" _parnameneu
+						_count = _count + 1
+					ende
+				ende
+				_err = fileclose(_fileid)
+			ende
+								
+			; Load Channel Config
+			DlgSelectItem("SignalList1",1)
+			wenn varexist?("ChannelName")
+				idx = DlgFindItem("SignalList1",ChannelName)
+				DlgSelectItem("SignalList1",idx)
+			sonst
+				DlgSelectItem("SignalList1",1)
+				ChannelName = DlgGetItemText("SignalList1",1)
+			ende
+			_txtposi = TxWo(input_verz_SignalAnalysis,"\ConditionFiles_Completed\")
+			sequenz ReadConfigChannel
+			
+			;sequenz UpdateChannelConfigAndData
+			
+			if 0
+				CwLoadCCV("Vector","C:\BDA\SignalAnalysis\SA_OrbitAndVectorPlot.ccv")
+				CwLoadCCV("Orbit","C:\BDA\SignalAnalysis\SA_OrbitPlot.ccv")
+				CwLoadCCV("OrbitCenter","C:\BDA\SignalAnalysis\SA_OrbitCenterPlot.ccv")
+				CwLoadCCV("Fullspectrum","C:\BDA\SignalAnalysis\SA_Basp_kask_i.ccv")
+				CwLoadCCV("Fullspectrum_i","C:\BDA\SignalAnalysis\SA_Basp_i.ccv")
+				CwLoadCCV("ForwardBackward","C:\BDA\SignalAnalysis\SA_Basp_Parameters.ccv")
+
+				CwLoadCCV("TWF","C:\BDA\SignalAnalysis\SA_TWF.ccv")
+				CwLoadCCV("Ax_kask", "C:\BDA\SignalAnalysis\SA_spectrum_kask.ccv")
+				CwLoadCCV("Ax_i", "C:\BDA\SignalAnalysis\SA_spectrum_i.ccv")
+				CwLoadCCV("Boxplot","C:\BDA\SignalAnalysis\SA_boxplot.ccv")
+				CwLoadCCV("FFT_Feat","C:\BDA\SignalAnalysis\SA_A1X_P1X_RMS_iX.ccv")
+			ende
+		sonst
+			_err = FsGetLastError() 
+			zeigen (_err)
+			BoxNachricht("Info","Please select another AssetFolder","?1")
+		ende
+	ende
+ende

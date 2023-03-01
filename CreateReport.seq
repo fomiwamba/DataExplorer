@@ -1,0 +1,396 @@
+sequenz imc_logging "create_report started"
+entf *
+
+imc_Channel_overview = 1
+imc_Channel_report = 0
+imc_Channel_status_report = 0
+imc_Channel_orbit_report = 1
+imc_Operating_parameters = 0
+imc_descriptive_statistics_report = 1
+sues_channel_report = 1
+
+export_mode = "png";"pdf"
+
+; which assetfolder
+inputfile = "C:\BDA\ExpertAnalysis\CreateReport.txt"
+if FsFileExists(inputfile) = 1
+	idDatei= FileOpenASCII(inputfile,0 )
+	TxZeile = ""
+	ok = 0
+	count = 0
+	solange ok = 0
+		ok = FileLineRead( idDatei, TxZeile, 0 )
+		if ok = 0 
+			if count = 0
+				AssetFolder = TxZeile
+			ende
+			if count = 1
+				Channels = TxZeile
+			ende
+			count = count + 1
+		ende
+	ende
+	FileClose(idDatei)
+else
+	_path_assetfolder_selected = "C:\BDA\AssetFolderSelected.txt"
+
+	_idDatei= FileOpenASCII(_path_assetfolder_selected,0 )
+	_TxZeile = ""
+	_ok = 0
+	_count = 0
+	solange _ok = 0
+		_ok = FileLineRead( _idDatei, _TxZeile, 0 )
+		if _ok = 0 
+			if _count = 0
+				AssetFolder = _TxZeile
+			elseif _count = 1
+				OpMode = _TxZeile
+			ende
+		ende
+		_count = _count + 1
+	ende
+	FileClose(_idDatei)
+	
+	Channels = "AllChannels"
+	inputfile = "C:\BDA\ExpertAnalysis\CreateReport.txt"
+	_fh = FileOpenASCII(inputfile,1)
+	_err = FileLineWrite(_fh,AssetFolder,0)
+	_err = FileLineWrite(_fh,Channels,0)
+	_err = FileClose(_fh)
+end
+
+
+; load configuration
+path_configfile = AssetFolder + "\xlsconfig.xlsx" 
+path_configfile_temp = AssetFolder + "\temp1_xlsconfig.xlsx" 
+_erg = FsCopyFile(path_configfile,path_configfile_temp,2,0)
+;sequenz Inifile_RevB path_configfile;
+sequenz ReadXlsConfig path_configfile_temp;
+_erg =FsDeleteFile(path_configfile_temp)
+ChannelListeAll = Ch_Config:SigName
+
+
+sequenz search_item Asset_Props:Name "imc_Channel_overview"
+if search_index <>0
+	imc_Channel_overview = tzuew (Asset_Props:Val[search_index],"a")
+ende
+sequenz search_item Asset_Props:Name "imc_Channel_report"
+if search_index <>0
+	imc_Channel_report = tzuew (Asset_Props:Val[search_index],"a")
+ende
+sequenz search_item Asset_Props:Name "imc_Channel_status_report"
+if search_index <>0
+	imc_Channel_status_report = tzuew (Asset_Props:Val[search_index],"a")
+ende
+sequenz search_item Asset_Props:Name "imc_Channel_orbit_report"
+if search_index <>0
+	imc_Channel_orbit_report = tzuew (Asset_Props:Val[search_index],"a")
+ende
+sequenz search_item Asset_Props:Name "imc_Operating_parameters"
+if search_index <>0
+	imc_Operating_parameters = tzuew (Asset_Props:Val[search_index],"a")
+ende
+sequenz search_item Asset_Props:Name "imc_descriptive_statistics_report"
+if search_index <>0
+	imc_descriptive_statistics_report = tzuew (Asset_Props:Val[search_index],"a")
+ende
+
+
+
+if 1; folder where the report templates are
+	cadis_report_folder = "C:\BDA\ReportTemplates\"
+else
+	cadis_report_folder = assetfolder + "\reports\"
+ende
+
+
+cadis_report_template_channel = cadis_report_folder + "cadis_report_channel.drb"
+
+date_time_str = zeitintext(zeitsystem?(),3)
+date_time_str = tteil(date_time_str,7,4)+ tteil(date_time_str,4,2)+ tteil(date_time_str,1,2)+"_"+ tteil(date_time_str,12,2)+ tteil(date_time_str,15,2)+ tteil(date_time_str,18,2)
+
+
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Load FeatureTable_Clean.csv
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+featuretable_file = assetfolder + "\" + "Output\Features\" + "FeatureTable_Clean.csv"
+; channel_time_series_parameters
+file = featuretable_file
+importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+
+_fileid = FileOpenFAS(file, importsvorlage, 0); ascii_statusfile
+FeatDataAll = Grneu()
+wenn _fileid > 0
+	_anzPar = FileObjNum?(_fileid)
+	_index = 1
+
+	SOLANGE _index <= _anzPar  
+		_typ = FileObjType?(_fileid,_index)
+		wenn _typ = 1
+			_Parname = FileObjName?(_fileid,_index)
+			{<_Parname>} = FileObjRead(_fileid,_index)
+			if lang?({<_Parname>} ) > 1
+				wenn IsXY({<_Parname>})
+					{<_Parname>} = sort({<_Parname>},7)
+					FeatDataAll:{<_Parname>}={<_Parname>}
+				sonst
+					FeatDataAll:{<_Parname>}={<_Parname>}
+				ende
+			ende
+		ende
+		_index = _index + 1
+	ende
+	fileclose(_fileid)
+sonst
+	_err = FileErrCode?()
+	zeigen _err
+ende
+
+; search for measfiles
+_fileid = FileOpenXLS(file,0)
+wenn _fileid > 0
+	FileXLSSelectSheet(_fileid,1)
+	Measfiles = TxArrayCreate(1)
+	_ii = 1
+	SOLANGE _ii <=  2560
+		_PName = FileXLSCellRead(_fileid,_ii,1,0)
+		wenn tverg(_Pname,"FileId") = 0
+			col_ist = _ii
+			break
+		sonst
+			_ii = _ii + 1
+		ende
+	ENDE
+	_ii = 1
+	SOLANGE _ii <=  2^32
+		_PName = FileXLSCellRead(_fileid,col_ist,_ii+1,0)
+		wenn tverg(_Pname,"") = 0
+			break
+		sonst
+			Measfiles[_ii] = _PName
+			last = _ii
+			_ii = _ii + 1
+		ende
+	ENDE
+	; return Measfiles
+	err = FileClose(_fileid)
+ende
+date_time_lastfile = Measfiles [last]
+if txwo(date_time_lastfile,"L") = 1
+	date_time_lastfile = tteil(date_time_lastfile,2,tlang(date_time_lastfile))
+ende
+date_time_str = date_time_lastfile
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; load last measfile
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+measurementfile = ""
+MeasData = GrNeu()
+twf_ok = 0
+
+file_ext = "*" + date_time_lastfile + ".dat"
+_PathName = assetfolder + "\Output\TWF\"
+_FileListID=FsFileListNew(_PathName, file_ext,0,1,0)
+wenn _filelistid >= 0 
+	_FileCountMax=FsFileListGetCount(_FileListID)
+	wenn _FileCountMax>0
+		file =FsFileListGetName(_FileListID,1)
+			
+		measurementfile = file
+		;RgTextSet("measurementfile",fssplitpath(measurementfile,4),0)
+		RgTextSet("measurementfile",file_ext,0)
+			
+		_fileid = FileOpenDSF(file,100)
+		wenn _fileid > 0; and _filesize > 1000
+			_index = FileObjNum?(_fileid)
+			wenn _index <> 0
+				_count = 1
+				solange _count <= _index		
+					_Parname = FileObjName?(_fileid,_count)
+					_parvalue = FileObjRead(_fileid,_count)
+					if leng?(_parvalue) > 0 and min(_parvalue) < max(_parvalue)
+						{<_Parname>} = _parvalue
+						MeasData:{<_Parname>} = _parvalue
+					end
+					_count = _count + 1
+				ende
+			ende
+			_err = fileclose(_fileid)
+		sonst
+			_err = FileErrCode?()
+			zeigen _err
+		ende
+	ende
+	fsfilelistclose(_FileListID)
+sonst
+	_err = FsGetLastError() 
+	zeigen _err
+ende
+
+
+
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Load ChannelFeatureStatusTable, FeatureStatusTable and ChannelStatusTable
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+channel_status_vs_feature_file = assetfolder + "\" + "Output\Features\" + "ChannelFeatureStatusTable.csv" ; -> max(Status) of ChannelFeature
+ChannelListe = TxArrayCreate(0)	
+file = channel_status_vs_feature_file	
+if fsfileexists(file)
+	sequenz get_table_data_as_map
+	channel_status_vs_feature_map = Map
+	channel_status_vs_feature_rows = ParameterListe
+	channel_status_vs_feature_cols =ChannelListe
+	FeatureListe = ParameterListe
+end
+channel_status_vs_feature_map = MatrixTranspose(channel_status_vs_feature_map)
+
+ChannelListeAll = ChannelListe	
+
+
+
+channel_status_vs_time_file = assetfolder + "\" + "Output\Features\" + "ChannelStatusTable.csv"; -> max(Status) of Channel
+file = channel_status_vs_time_file
+if fsfileexists(file)
+	sequenz get_table_data_as_map
+	channel_status_vs_time_map = Map
+	channel_status_vs_time_rows = ParameterListe
+	channel_status_vs_time_cols =ChannelListe
+end
+channel_status_vs_time_map = MatrixTranspose(channel_status_vs_time_map)
+
+
+asset_status_vs_time_file = assetfolder + "\" + "Output\Features\" + "FeatureStatusTable.csv" ; -> Status of ChannelFeature
+file = asset_status_vs_time_file
+if fsfileexists(file)
+	sequenz get_table_data_as_map
+	asset_status_vs_time_map = Map
+	asset_status_vs_time_rows = ParameterListe
+	asset_status_vs_time_cols =ChannelListe
+	ParStatusMap = Map
+	Date_Time_List = ParameterListe; -> Date_Time
+	Par_Liste =ChannelListe; -> Par_Liste
+end
+asset_status_vs_time_cols_t = MatrixTranspose(asset_status_vs_time_map)
+
+
+asset_current_status = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"; Last Status of ChannelFeature
+file = asset_current_status
+if fsfileexists(file)
+	sequenz get_table_data_as_map
+	asset_current_status_map0 = Map
+	asset_current_status_rows = ParameterListe
+	asset_current_status_cols =ChannelListe
+end
+asset_current_status_map = MatrixTranspose(asset_current_status_map0)
+
+ChannelListe = ChannelListeAll
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Deckblatt seite update with channel status
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if imc_Channel_overview = 1
+	sequenz CreateChannelOverviewReport ; entspricht Channel-Status-Vs-Time + Current Channel Status
+	sequenz CreateChannelFeatureStatusReport
+end
+
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Channel seite update
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; open report_template
+if imc_Channel_report = 1
+	if tcomp(Channels,"AllChannels") = 0
+		ch_max = txarrayGetSize(ChannelListe)
+		ch_min =1
+		ChannelListe_ = ChannelListe
+	else
+		ch_max = 1
+		ch_min = 1
+		ChannelListe_ = txArrayCreate(0)
+		ChannelListe_[1] = Channels
+	ende
+
+	;ch_min = 34
+	;ch_max = 34
+	for ch = ch_min to ch_max
+		if 1
+			ist_channel = ChannelListe_[ch];
+		else
+			ist_channel = Channels;"V101"
+		ende
+		
+		twf_ok = 0
+		wenn GrChanNum?(MeasData) >= 0 
+			_count = 1
+			solange _count <= GrChanNum?(MeasData) 
+				_Parname = GrChanName?(MeasData,_count)
+				if tverg(_parname,ist_channel) = 0
+					_parvalue = MeasData:[_count]
+					{<_Parname>} = _parvalue
+					channelunit = einheit?({<_Parname>},1)
+					if max(_parvalue) > min(_parvalue)
+						twf_ok = 1
+					end
+					break
+				ende
+				_count = _count + 1
+			ende
+		ende
+	
+		if sues_channel_report = 0
+			sequenz CreateChannelReport
+		end
+	
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; create parameter status report and orbit report
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		if twf_ok = 1
+			if imc_Channel_status_report = 1
+				if sues_channel_report = 1
+					sequenz CreateSuesChannelReport
+					
+				else
+					sequenz CreateParameterTableStatusReport
+					if ch = 1
+						sequenz CreateOPReport
+					end
+				end
+				
+			end
+			if imc_Channel_orbit_report = 1
+				ind_channely = "None"
+				ind_tacho = "None"
+				channelx = currentsignal
+				sequenz search_item Ch_Config:SigName channelx; search_index
+				wenn search_index > 0
+					ind_channely = Ch_Config:OrbitChannelY[search_index]
+					ind_tacho = Ch_Config:TachoChannel[search_index]
+				ende		
+				if ind_channely <> "None" and ind_tacho <> "None"
+					sequenz CreateOrbitReport
+				end
+			end
+		ende
+		entf twf_ok
+	ende
+end
+
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Deckblatt seite update with ChannelvsFeaturesVsStatus, FrequencyParameters, FeatureParameters
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if  imc_descriptive_statistics_report = 1
+	sequenz CreateSuesReport
+	sequenz CreateDiagnosticParametersReport
+end
+
+
+;entf asset_status_vs_time_cols_t
+if 1
+	err =  RgDocClose( 1 )
+	sleep (2)
+	err = RgWindow(3)
+	;err = BoxNachricht("Info","Report done!","!1")
+ende

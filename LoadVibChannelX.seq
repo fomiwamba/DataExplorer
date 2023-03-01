@@ -1,0 +1,48 @@
+;sequenz LoadVibChannelX
+if varexist?("MeasData")
+	sequenz ClearSelectedPlot "VibrationAnalysis.TimeWaveForm"
+	sequenz ClearSelectedPlot "VibrationAnalysis.Boxplot"
+	sequenz ClearSelectedPlot "VibrationAnalysis.CascadeSpectrum"
+	sequenz ClearSelectedPlot "VibrationAnalysis.CurrentSpectrum"
+	sequenz ClearSelectedPlot "VibrationAnalysis.Visa_Parameters"
+	sequenz ClearSelectedPlot "VibrationAnalysis.VectorPlot"
+	sequenz ClearSelectedPlot "VibrationAnalysis.Orbit"
+	sequenz ClearSelectedPlot "VibrationAnalysis.StaticPosition"
+	sequenz ClearSelectedPlot "VibrationAnalysis.CascadeFullSpectrum"
+	sequenz ClearSelectedPlot "VibrationAnalysis.CurrentFullSpectrum"
+	sequenz ClearSelectedPlot "VibrationAnalysis.Forward_Backward_Par"
+
+	;				CwLoadCCV("VibrationAnalysis.VectorPlot","C:\BDA\ExpertAnalysis\ViSA_OrbitAndVectorPlot.ccv")
+	;				CwLoadCCV("VibrationAnalysis.Orbit","C:\BDA\ExpertAnalysis\ViSA_OrbitPlot.ccv")
+	;				CwLoadCCV("VibrationAnalysis.StaticPosition","C:\BDA\ExpertAnalysis\ViSA_OrbitCenterPlot.ccv")
+	;				CwLoadCCV("VibrationAnalysis.CascadeFullSpectrum","C:\BDA\ExpertAnalysis\ViSA_Basp_kask_i.ccv")
+	;				CwLoadCCV("VibrationAnalysis.CurrentFullSpectrum","C:\BDA\ExpertAnalysis\ViSA_Basp_i.ccv")
+	;				CwLoadCCV("VibrationAnalysis.Forward_Backward_Par","C:\BDA\ExpertAnalysis\ViSA_Basp_Parameters.ccv")
+	;
+	;				CwLoadCCV("VibrationAnalysis.TimeWaveform","C:\BDA\ExpertAnalysis\ViSA_TWF.ccv")
+	;				CwLoadCCV("VibrationAnalysis.CascadeSpectrum", "C:\BDA\ExpertAnalysis\ViSA_spectrum_kask.ccv")
+	;				CwLoadCCV("VibrationAnalysis.CurrentSpectrum", "C:\BDA\ExpertAnalysis\ViSA_spectrum_i.ccv")
+	;				CwLoadCCV("VibrationAnalysis.Boxplot","C:\BDA\ExpertAnalysis\ViSA_boxplot.ccv")
+	;				CwLoadCCV("VibrationAnalysis.Visa_Parameters","C:\BDA\ExpertAnalysis\ViSA_parameters.ccv")
+
+
+	_idx = PnGetSelectedItem("ChannelX")
+	ChannelName = PnGetItemText("ChannelX",_idx)
+	currentsignal = ChannelName
+	sequenz ReadConfigChannel
+
+	sequenz search_item Ch_Config:SigName ChannelName; search_index
+	wenn search_index > 0 and ind_channely <> "None"	
+		;	MeasData:ChannelX = MeasData:{<ChannelName>}
+		;	ChannelX = MeasData:{<ChannelName>}
+		;	MeasData:ChannelY = MeasData:{<ChannelYName>}
+		;	ChannelY = MeasData:{<ChannelYName>}
+	
+		X_off = mvmean(ChannelX,_t_ntd,_t_ntd)
+		Y_off = mvmean(ChannelY,_t_ntd,_t_ntd)
+		PnSetvalue("VibrationAnalysis.X_offset",0-X_off[1])
+		PnSetvalue("VibrationAnalysis.Y_offset",0-Y_off[1])
+	end
+else
+	_err = boxnachricht("Info: ","Please select a measurement file first!","!1")
+end

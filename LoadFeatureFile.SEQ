@@ -1,0 +1,114 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sequenz imc_logging "load_feature_file started"
+
+_parfiltername = PnGetText("DataExploration.ParFilterInput")
+_ParFilterStatus = PnGetValue("DataExploration.ParFilter")
+
+
+FeatData = GrNeu()
+FeatListe = TxArrayCreate(0)
+_item = 0
+;_file = OutputFolder + "\Features\" + "FeatureTable_Clean_Famos.csv"
+_file = OutputFolder + "\Features\" + _suchname + ".csv"
+
+importsvorlage = "#ImportAscii1.dll|ascii_pythonfile";"#ImportAscii1.dll|ascii_dirom_statusfile"
+_fileid = FileOpenFAS(_file, importsvorlage, 0); ascii_statusfile
+wenn _fileid > 0
+	_anzPar = FileObjNum?(_fileid)
+	_index = 1
+	SOLANGE _index <= _anzPar  
+		_typ = FileObjType?(_fileid,_index)
+		wenn _typ = 1
+			_Parname = FileObjName?(_fileid,_index)
+			{<_Parname>} = FileObjRead(_fileid,_index)
+			wenn IsXY({<_Parname>})
+				{<_Parname>} = sort({<_Parname>},7)
+				FeatData:{<_Parname>}={<_Parname>}
+				_item = _item + 1
+				FeatListe[_item] = _Parname
+			sonst
+				FeatData:{<_Parname>}={<_Parname>}
+				_item = _item + 1
+				FeatListe[_item] = _Parname
+			ende
+			wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+				DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+				FeatData:Date_Time=DateTimeVec
+			ende
+			;sequen
+			if 0 ;delete_item "ParameterListe" _Parname
+				if txwo(_parname,_parfiltername) > 0 and _parfiltername <>"" and _ParFilterStatus = 1
+					sequenz insert_item "DataExploration.ParameterListe" _Parname
+				end
+				if _parfiltername ="" or _ParFilterStatus = 0
+					sequenz insert_item "DataExploration.ParameterListe" _Parname
+				end
+			end
+		ende
+		_index = _index + 1
+	ende
+	fileclose(_fileid)
+	FeatData00 = FeatData;
+ende
+	
+	
+;_file = OutputFolder + "\Features\" + "FeatureTable_Clean_Mean.csv"
+_file = OutputFolder + "\Features\" + _suchname + ".csv"
+importsvorlage = "#ImportAscii1.dll|ascii_pythonfile";"#ImportAscii1.dll|ascii_dirom_statusfile"
+_fileid = FileOpenFAS(_file, importsvorlage, 0); ascii_statusfile
+wenn _fileid > 0
+	_fileid = FileOpenXLS(_file,0)
+		
+	wenn _fileid > 0
+		FileXLSSelectSheet(_fileid,1)
+
+		;MeasOverviewData = GrNeu()
+		_par_data = txarraycreate(0)
+		_jj = 1
+		SOLANGE _jj <=  2560
+			_PName = FileXLSCellRead(_fileid,_jj,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				if  txwo(_pname, "FileId") <> 0  or txwo(_pname, "Date_Time") <> 0; or
+					_kkk = 1
+					SOLANGE _kkk <= 2560;_cols
+						_partext = FileXLSCellRead(_fileid,_jj,_kkk+1,0) 
+						wenn tverg(_Partext,"") = 0
+							break
+						sonst
+							_par_data[_kkk] = _partext
+						end								
+						_kkk = _kkk + 1
+					ende
+					FeatData:{<_PName>} = _par_data
+				ENDE
+				_jj = _jj + 1
+			ende
+		end
+	end
+	err = FileClose(_fileid)
+	FeatData00 = FeatData;
+ende
+
+
+
+
+wenn varexist?("FeatData")
+	;		Idx = PnFindItem("ParameterListe",ParName)
+	;		wenn idx <> 0
+	;			PnSelectItem("ParameterListe",Idx)
+	;			_index = PnGetSelectedItem("ParameterListe")
+	sequenz ClearSelectedPlot "TrendPlot"
+	;sequenz ClearSelectedPlot "CascadePlot"
+		
+	;sequenz ShowParameterTrendAnd3DFFT
+	;		ende
+ende
+
+
+entf _*
+

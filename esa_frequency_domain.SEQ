@@ -1,0 +1,405 @@
+sequenz imc_logging "esa_frequency_domain started"
+; Inputs: U_sig, I_sig, freqline_Hz_np, RunningSpeed, Polpaar_np
+; Outputs: U_freqline_vec, U_sig_spec, U_sig_demod, U_sig_spec_demod, I_rotfreq_vec, I_sig_spec, I_sig_demod, I_sig_spec_demod, THD_All, HD_Odd, HD_Even, U_HD_pve, U_HD_nve, HD_Zero
+
+fftoption 2 0
+
+U1_sig = U_sig:[1]
+;U1_sig_spec = dftSpectrum(U1_sig,2);,_n,_window,_overlap,1)
+U1_sig_spec = fft(U1_sig);,_n,_window,_overlap,1)
+U1_sig_spec = U1_sig_spec.b
+;freqline = posi(U1_sig_spec,max(gren(U1_sig_spec,1,70)))
+;U_freqline_vec = binde(U_freqline_vec,freqline)
+;U_synchfreq_vec = binde(U_synchfreq_vec,freqline/Polpaar_np)
+;sequenz DemodulationElectricalSignal U1_sig; -> sig_demodESA_Data:U_crest_2
+U1_sig_demod = U_sig_demod:U1-mean(U_sig_demod:U1)
+U1_sig_spec_demod = fft(U1_sig_demod);,_n,_window,_overlap,1)
+U1_sig_spec_demod = U1_sig_spec_demod.b
+
+sequenz HarmonicDistortion U1_sig U1_sig_spec
+U_THD_all = binde(U_THD_all,HD_all)
+U_HD_pve = binde(U_HD_pve,HD_pos)
+U_HD_nve = binde(U_HD_nve,HD_neg)
+U_HD_zero = binde(U_HD_zero,HD_zero)
+U_HD_odd = binde(U_HD_odd,HD_odd)
+U_HD_even = binde(U_HD_even,HD_even)
+Harmonics = Harmonics/max(Harmonics)
+U1_Harmonics = binde(U1_Harmonics, Harmonics)
+	
+U2_sig = U_sig:[2]
+;U2_sig_spec = dftSpectrum(U2_sig,2);,_n,_window,_overlap,1)
+U2_sig_spec = fft(U2_sig);,_n,_window,_overlap,1)
+U2_sig_spec = U2_sig_spec.b
+;freqline = posi(U2_sig_spec,max(gren(U2_sig_spec,1,70)))
+;U_freqline_vec = binde(U_freqline_vec,freqline)
+;U_synchfreq_vec = binde(U_synchfreq_vec,freqline/Polpaar_np)
+;sequenz DemodulationElectricalSignal U2_sig; -> sig_demod
+U2_sig_demod = U_sig_demod:U2-mean(U_sig_demod:U2)
+
+U2_sig_spec_demod = fft(U2_sig_demod);,_n,_window,_overlap,1)
+U2_sig_spec_demod = U2_sig_spec_demod.b
+
+sequenz HarmonicDistortion U2_sig U2_sig_spec
+U_THD_all = binde(U_THD_all,HD_all)
+U_HD_pve = binde(U_HD_pve,HD_pos)
+U_HD_nve = binde(U_HD_nve,HD_neg)
+U_HD_zero = binde(U_HD_zero,HD_zero)
+U_HD_odd = binde(U_HD_odd,HD_odd)
+U_HD_even = binde(U_HD_even,HD_even)
+Harmonics = Harmonics/max(Harmonics)
+U2_Harmonics = binde(U2_Harmonics, Harmonics)
+	
+U3_sig = U_sig:[3]
+;U3_sig_spec = dftSpectrum(U3_sig,2);,_n,_window,_overlap,1)
+U3_sig_spec = fft(U3_sig);,_n,_window,_overlap,1)
+U3_sig_spec = U3_sig_spec.b
+;freqline = posi(U3_sig_spec,max(gren(U3_sig_spec,1,70)))
+;U_freqline_vec = binde(U_freqline_vec,freqline)
+;U_synchfreq_vec = binde(U_synchfreq_vec,freqline/Polpaar_np)
+;sequenz DemodulationElectricalSignal U3_sig; -> sig_demod
+U3_sig_demod = U_sig_demod:U3-mean(U_sig_demod:U3)
+U3_sig_spec_demod = fft(U3_sig_demod);,_n,_window,_overlap,1)
+U3_sig_spec_demod = U3_sig_spec_demod.b
+sequenz HarmonicDistortion U3_sig U3_sig_spec
+U_THD_all = binde(U_THD_all,HD_all)
+U_HD_pve = binde(U_HD_pve,HD_pos)
+U_HD_nve = binde(U_HD_nve,HD_neg)
+U_HD_zero = binde(U_HD_zero,HD_zero)
+U_HD_odd = binde(U_HD_odd,HD_odd)
+U_HD_even = binde(U_HD_even,HD_even)
+Harmonics = Harmonics/max(Harmonics)
+U3_Harmonics = binde(U3_Harmonics, Harmonics)
+	
+I1_sig = I_sig:[1]
+;I1_sig_spec = dftSpectrum(I1_sig,2);,_n,_window,_overlap,1)
+I1_sig_spec = fft(I1_sig);,_n,_window,_overlap,1)
+I1_sig_spec = I1_sig_spec.b
+
+;sequenz DemodulationElectricalSignal I1_sig; -> sig_demod
+I1_sig_demod = I_sig_demod:I1-mean(I_sig_demod:I1)
+I1_sig_spec_demod = fft(I1_sig_demod);,_n,_window,_overlap,1)
+I1_sig_spec_demod = I1_sig_spec_demod.b
+;rotfreq = posi(gren(I1_sig_spec_demod,U_freqline_vec[1]/Polpaar_np-1,U_freqline_vec[1]/Polpaar_np) ,max(gren(I1_sig_spec_demod,U_freqline_vec[1]/Polpaar_np-1,U_freqline_vec[1]/Polpaar_np)))
+;I_rotfreq_vec  = binde(I_rotfreq_vec,rotfreq)
+sequenz HarmonicDistortion I1_sig I1_sig_spec
+I_THD_all = binde(I_THD_all,HD_all)
+I_HD_pve = binde(I_HD_pve,HD_pos)
+I_HD_nve = binde(I_HD_nve,HD_neg)
+I_HD_zero = binde(I_HD_zero,HD_zero)
+I_HD_odd = binde(I_HD_odd,HD_odd)
+I_HD_even = binde(I_HD_even,HD_even)
+Harmonics = Harmonics/max(Harmonics)
+I1_Harmonics = binde(I1_Harmonics, Harmonics)
+	
+I2_sig = I_sig:[2]
+;I2_sig_spec = dftSpectrum(I2_sig,2);,_n,_window,_overlap,1)
+I2_sig_spec = fft(I2_sig);,_n,_window,_overlap,1)
+I2_sig_spec = I2_sig_spec.b
+;sequenz DemodulationElectricalSignal I2_sig; -> sig_demod
+I2_sig_demod =I_sig_demod:I2-mean(I_sig_demod:I2)
+I2_sig_spec_demod = fft(I2_sig_demod);,_n,_window,_overlap,1)
+I2_sig_spec_demod = I2_sig_spec_demod.b
+;rotfreq = posi(gren(I2_sig_spec_demod,U_freqline_vec[2]/Polpaar_np-1,U_freqline_vec[2]/Polpaar_np) ,max(gren(I2_sig_spec_demod,U_freqline_vec[2]/Polpaar_np-1,U_freqline_vec[2]/Polpaar_np)))
+;I_rotfreq_vec  = binde(I_rotfreq_vec,rotfreq)
+sequenz HarmonicDistortion I2_sig I2_sig_spec
+I_THD_all = binde(I_THD_all,HD_all)
+I_HD_pve = binde(I_HD_pve,HD_pos)
+I_HD_nve = binde(I_HD_nve,HD_neg)
+I_HD_zero = binde(I_HD_zero,HD_zero)
+I_HD_odd = binde(I_HD_odd,HD_odd)
+I_HD_even = binde(I_HD_even,HD_even)
+Harmonics = Harmonics/max(Harmonics)
+I2_Harmonics = binde(I2_Harmonics, Harmonics)
+	
+I3_sig = I_sig:[3]
+;I3_sig_spec = dftSpectrum(I3_sig,2);,_n,_window,_overlap,1)
+I3_sig_spec = fft(I3_sig);,_n,_window,_overlap,1)
+I3_sig_spec = I3_sig_spec.b
+;sequenz DemodulationElectricalSignal I3_sig; -> sig_demod
+I3_sig_demod = I_sig_demod:I3-mean(I_sig_demod:I3)
+I3_sig_spec_demod = fft(I3_sig_demod);,_n,_window,_overlap,1)
+I3_sig_spec_demod = I3_sig_spec_demod.b
+;rotfreq = posi(gren(I3_sig_spec_demod,U_freqline_vec[3]/Polpaar_np-1,U_freqline_vec[3]/Polpaar_np) ,max(gren(I3_sig_spec_demod,U_freqline_vec[3]/Polpaar_np-1,U_freqline_vec[3]/Polpaar_np)))
+;I_rotfreq_vec  = binde(I_rotfreq_vec,rotfreq)
+sequenz HarmonicDistortion I3_sig I3_sig_spec	 
+I_THD_all = binde(I_THD_all,HD_all)
+I_HD_pve = binde(I_HD_pve,HD_pos)
+I_HD_nve = binde(I_HD_nve,HD_neg)
+I_HD_zero = binde(I_HD_zero,HD_zero)
+I_HD_odd = binde(I_HD_odd,HD_odd)
+I_HD_even = binde(I_HD_even,HD_even)
+Harmonics = Harmonics/max(Harmonics)
+I3_Harmonics = binde(I3_Harmonics, Harmonics)
+
+
+seteinheit(U1_sig_spec,einheit? (U1_sig, 1),1)
+seteinheit(U2_sig_spec,einheit? (U2_sig, 1),1)
+seteinheit(U3_sig_spec,einheit? (U3_sig, 1),1)
+seteinheit(U1_sig_spec_demod,einheit? (U1_sig, 1),1)
+seteinheit(U2_sig_spec_demod,einheit? (U2_sig, 1),1)
+seteinheit(U3_sig_spec_demod,einheit? (U3_sig, 1),1)
+seteinheit(I1_sig_spec,einheit? (I1_sig, 1),1)
+seteinheit(I1_sig_spec,einheit? (I2_sig, 1),1)
+seteinheit(I1_sig_spec,einheit? (I3_sig, 1),1)
+seteinheit(I1_sig_spec_demod,einheit? (I1_sig, 1),1)
+seteinheit(I1_sig_spec_demod,einheit? (I2_sig, 1),1)
+seteinheit(I1_sig_spec_demod,einheit? (I3_sig, 1),1)
+
+		
+U1_unit = einheit? (U1_sig, 1)
+sequenz Create_EventData_STFT "U1_kask" U1_sig_spec U1_unit
+sequenz Create_EventData_STFT "U1_demod_kask" U1_sig_spec_demod U1_unit
+U2_unit = einheit? (U2_sig, 1)
+sequenz Create_EventData_STFT "U2_kask" U2_sig_spec U2_unit
+sequenz Create_EventData_STFT "U2_demod_kask" U2_sig_spec_demod U2_unit
+U3_unit = einheit? (U3_sig, 1)
+sequenz Create_EventData_STFT "U3_kask" U3_sig_spec U3_unit
+sequenz Create_EventData_STFT "U3_demod_kask" U3_sig_spec_demod U3_unit
+I1_unit = einheit? (I1_sig, 1)
+sequenz Create_EventData_STFT "I1_kask" I1_sig_spec I1_unit
+sequenz Create_EventData_STFT "I1_demod_kask" I1_sig_spec_demod I1_unit
+I2_unit = einheit? (I2_sig, 1)
+sequenz Create_EventData_STFT "I2_kask" I2_sig_spec I2_unit
+sequenz Create_EventData_STFT "I2_demod_kask" I2_sig_spec_demod I2_unit
+I3_unit = einheit? (I3_sig, 1)
+sequenz Create_EventData_STFT "I3_kask" I3_sig_spec I3_unit
+sequenz Create_EventData_STFT "I3_demod_kask" I3_sig_spec_demod I3_unit
+
+
+
+I1_harmonics_seg = I1_harmonics
+I2_harmonics_seg = I2_harmonics
+I3_harmonics_seg = I3_harmonics
+U1_harmonics_seg = U1_harmonics
+U2_harmonics_seg = U2_harmonics
+U3_harmonics_seg = U3_harmonics
+setsegLang(I1_harmonics_seg,lang?(Harmonics))
+setsegLang(U1_harmonics_seg,lang?(Harmonics))
+setsegLang(I2_harmonics_seg,lang?(Harmonics))
+setsegLang(U2_harmonics_seg,lang?(Harmonics))
+setsegLang(I3_harmonics_seg,lang?(Harmonics))
+setsegLang(U3_harmonics_seg,lang?(Harmonics))
+	
+I1_spec_ = binde(I1_spec_,I1_sig_spec)
+I2_spec_ = binde(I2_spec_,I2_sig_spec)
+I3_spec_ = binde(I3_spec_,I3_sig_spec)
+U1_spec_= binde(U1_spec_,U1_sig_spec)
+U2_spec_ = binde(U2_spec_,U2_sig_spec)
+U3_spec_ = binde(U3_spec_,U3_sig_spec)
+I1_spec = I1_spec_
+I2_spec = I2_spec_
+I3_spec = I3_spec_
+U1_spec = U1_spec_
+U2_spec = U2_spec_
+U3_spec = U3_spec_
+
+setsegLang(I1_spec,lang?(I1_sig_spec))
+setsegLang(U1_spec,lang?(U1_sig_spec))
+setsegLang(I2_spec,lang?(I2_sig_spec))
+setsegLang(U2_spec,lang?(U2_sig_spec))
+setsegLang(I3_spec,lang?(I3_sig_spec))
+setsegLang(U3_spec,lang?(U3_sig_spec))
+	
+I1_demod_spec_ = binde(I1_demod_spec_,I1_sig_spec_demod)
+I2_demod_spec_ = binde(I2_demod_spec_,I2_sig_spec_demod)
+I3_demod_spec_ = binde(I3_demod_spec_,I3_sig_spec_demod)
+U1_demod_spec_ = binde(U1_demod_spec_,U1_sig_spec_demod)
+U2_demod_spec_ = binde(U2_demod_spec_,U2_sig_spec_demod)
+U3_demod_spec_ = binde(U3_demod_spec_,U3_sig_spec_demod)
+I1_demod_spec = I1_demod_spec_
+I2_demod_spec = I2_demod_spec_
+I3_demod_spec = I3_demod_spec_
+U1_demod_spec = U1_demod_spec_
+U2_demod_spec = U2_demod_spec_
+U3_demod_spec = U3_demod_spec_
+setsegLang(I1_demod_spec,lang?(I1_sig_spec_demod))
+setsegLang(U1_demod_spec,lang?(U1_sig_spec_demod))
+setsegLang(I2_demod_spec,lang?(I2_sig_spec_demod))
+setsegLang(U2_demod_spec,lang?(U2_sig_spec_demod))
+setsegLang(I3_demod_spec,lang?(I3_sig_spec_demod))
+setsegLang(U3_demod_spec,lang?(U3_sig_spec_demod))
+
+
+if transient = 0 
+	if _nn > 1
+		I1_Harmonics_mean = MatrixSumLines(I1_harmonics_seg,0)/_nn 
+		U1_Harmonics_mean = MatrixSumLines(U1_harmonics_seg,0)/_nn 
+		I2_Harmonics_mean = MatrixSumLines(I2_harmonics_seg,0)/_nn 
+		U2_Harmonics_mean = MatrixSumLines(U2_harmonics_seg,0)/_nn 
+		I3_Harmonics_mean = MatrixSumLines(I3_harmonics_seg,0)/_nn 
+		U3_Harmonics_mean = MatrixSumLines(U3_harmonics_seg,0)/_nn 
+	
+		i_spec:I1_spec = MatrixSumLines(I1_spec,0)/_nn 
+		u_spec:U1_spec = MatrixSumLines(U1_spec,0)/_nn 
+		i_spec:I2_spec = MatrixSumLines(I2_spec,0)/_nn 
+		u_spec:U2_spec = MatrixSumLines(U2_spec,0)/_nn 
+		i_spec:I3_spec = MatrixSumLines(I3_spec,0)/_nn 
+		u_spec:U3_spec = MatrixSumLines(U3_spec,0)/_nn 
+	
+		i_demod_spec:I1_demod_spec = MatrixSumLines(I1_demod_spec,0)/_nn 
+		u_demod_spec:U1_demod_spec = MatrixSumLines(U1_demod_spec,0)/_nn 
+		i_demod_spec:I2_demod_spec = MatrixSumLines(I2_demod_spec,0)/_nn 
+		u_demod_spec:U2_demod_spec = MatrixSumLines(U2_demod_spec,0)/_nn 
+		i_demod_spec:I3_demod_spec = MatrixSumLines(I3_demod_spec,0)/_nn 
+		u_demod_spec:U3_demod_spec = MatrixSumLines(U3_demod_spec,0)/_nn 
+	else
+		u_spec:U1_spec = U1_spec:[_nn]
+		u_spec:U2_spec = U2_spec:[_nn]
+		u_spec:U3_spec = U3_spec:[_nn]
+		i_spec:I1_spec = I1_spec:[_nn]
+		i_spec:I2_spec = I2_spec:[_nn]
+		i_spec:I3_spec = I3_spec:[_nn]
+		
+		u_demod_spec:U1_demod_spec = U1_demod_spec:[_nn]
+		u_demod_spec:U2_demod_spec = U2_demod_spec:[_nn]
+		u_demod_spec:U3_demod_spec = U3_demod_spec:[_nn]
+		i_demod_spec:I1_demod_spec = I1_demod_spec:[_nn]
+		i_demod_spec:I2_demod_spec = I2_demod_spec:[_nn]
+		i_demod_spec:I3_demod_spec = I3_demod_spec:[_nn]
+	
+		I1_Harmonics_mean = I1_harmonics_seg
+		U1_Harmonics_mean = U1_harmonics_seg
+		I2_Harmonics_mean = I2_harmonics_seg
+		U2_Harmonics_mean = U2_harmonics_seg
+		I3_Harmonics_mean = I3_harmonics_seg
+		U3_Harmonics_mean = U3_harmonics_seg
+	ende
+	
+
+else
+	u_spec:U1_spec = U1_spec:[_nn]
+	u_spec:U2_spec = U2_spec:[_nn]
+	u_spec:U3_spec = U3_spec:[_nn]
+	i_spec:I1_spec = I1_spec:[_nn]
+	i_spec:I2_spec = I2_spec:[_nn]
+	i_spec:I3_spec = I3_spec:[_nn]
+	
+	u_demod_spec:U1_demod_spec = U1_demod_spec:[_nn]
+	u_demod_spec:U2_demod_spec = U2_demod_spec:[_nn]
+	u_demod_spec:U3_demod_spec = U3_demod_spec:[_nn]
+	i_demod_spec:I1_demod_spec = I1_demod_spec:[_nn]
+	i_demod_spec:I2_demod_spec = I2_demod_spec:[_nn]
+	i_demod_spec:I3_demod_spec = I3_demod_spec:[_nn]
+	
+	I1_Harmonics_mean = I1_harmonics:[_nn]
+	U1_Harmonics_mean = U1_harmonics:[_nn]
+	I2_Harmonics_mean = I2_harmonics:[_nn]
+	U2_Harmonics_mean = U2_harmonics:[_nn]
+	I3_Harmonics_mean = I3_harmonics:[_nn]
+	U3_Harmonics_mean = U3_harmonics:[_nn]
+end
+
+sequenz select_stft_to_display
+
+PhaseData:U_THD_All = U_THD_All
+PhaseData:U_HD_Odd = U_HD_Odd
+PhaseData:U_HD_Even = U_HD_Even
+PhaseData:U_HD_pve = U_HD_pve
+PhaseData:U_HD_nve = U_HD_nve
+PhaseData:U_HD_Zero = U_HD_Zero
+
+PhaseData:I_THD_All = I_THD_All
+PhaseData:I_HD_Odd = I_HD_Odd
+PhaseData:I_HD_Even = I_HD_Even
+PhaseData:I_HD_pve = I_HD_pve
+PhaseData:I_HD_nve = I_HD_nve
+PhaseData:I_HD_Zero = I_HD_Zero
+	
+;PhaseData:U_FreqLineVec = U_freqline_vec 
+;PhaseData:U_SynchFreqVec = U_synchfreq_vec 
+;PhaseData:I_RotFreqVec = I_rotfreq_vec 
+
+	
+
+
+wenn 0
+	; stator mechanical damage -> StatorSlotPassFrequency + LF sidebands		-> RS * SSL +/- FL
+	; stator electrical damage -> StatorSlotPassFrequency + LF sidebands + RS sidebands 		-> RS * SSL +/- FL +/- RS
+	; rotor indicator -> RotorBarPassFrequency + LF sidebands
+	; static eccentricity -> RotorBarPassFrequency + LF sidebands & 2*LF sidedands	-> RS*RB+-j*FL, j = 1,3,5,... 
+	; dynamic eccentricity -> RotorBarPassFrequency + LF sidebands & 2*LF sidedands + RS sidebands 	-> RS*RB+-j*FL+-k*RS, j = 1,3,5,... , k = 1,2,3
+	; Bearing Damage -> m*RS*BF+-FL, m = 1,2,3
+	; mechanical unbalance -> RS*RB+-j*FL, j = 2,4,..
+
+
+	; Static Eccentricity; RS*RB+-j*FL, j = 1,3,5,... -> static eccentricity
+	;7.8.1.6.Static eccentricity, 	;The determination of static eccentricity is based on the detection, in high-frequency spectra, of peaks at 	;the following frequencies:
+	;RS * RB +/- j*FL with j = 1, 3, 5, 7, 9, 11
+	;In this case, the rotor CF has 1x and 3x line frequency sidebands which indicates
+	;static eccentricity. The additional peaks show the 120 Hz, 240 Hz, 120 Hz pattern
+	;that indicates mechanical unbalance.
+
+	; -> the rotor central frequency = RS * RB
+	SE_Carrier = RotorBarPassFrequency
+	SE_Modulations = freqline 
+	ESA_Metrics:SE_Carrier = RotorBarPassFrequency
+	ESA_Metrics:SE_Modulations = freqline
+
+	; Dynamic Eccentricity; ; RS*RB+-j*FL+-k*RS, j = 1,3,5,... , k = 1,2,3 -> dynamic eccentricity
+	;7.8.1.7.Dynamic eccentricity, 	;The determination of dynamic eccentricity is based on the detection, in high-frequency spectra, of peaks	;at the following frequencies:
+	;RS * RB +/- j*FL +/- k * RS with j = 1, 3, 5, 7, 9, 11, … and k= 1, 2, 3
+	;
+	DE_Carrier = RotorBarPassFrequency
+	DE_Modulation1 = freqline 
+	DE_Modulation2 = RotatingFrequency
+	ESA_Metrics:DE_Carrier = RotorBarPassFrequency
+	ESA_Metrics:DE_Modulation1 =freqline
+	ESA_Metrics:DE_Modulation2 = RotatingFrequency
+
+	; RS*SSL+-FL -> Stator mechanical damage
+	;7.8.1.8.Stator mechanical damage, 	;The determination of stator mechanical damage is based on the detection, in high-frequency spectra, of 	;peaks at the following frequencies:
+	;RS * SSL +/- FL
+	; mechanical Stator problem are noticeable by 2 peaks in the current specra which are divided by 120 Hz (2*freqline) and if the following context is valid: Integer = CenterFrequency /(RS * p * phases *m), where m = integer -> CenterFreq = n * RS * p * Phases
+	; CenterFrequency = (Fp1 + Fp2)/2, Integer = CenterFrequency /(RS * Polpaar_np * phases)
+	StatorDamage_Carrier = StatorSlotPassFrequency
+	StatorDamage_Modulation = freqline 
+	ESA_Metrics:StatorDamage_Carrier = StatorSlotPassFrequency
+	ESA_Metrics:StatorDamage_Modulation = freqline 
+
+	; stator winding problem -> CF = StatorSlotPassFrequency, Modulation = RotFrequency
+
+	; Rotor mechanical damage
+	; Compare Amplitude@freqline -> Afl with Amplitude@freqline-ppf -> Afp
+	; Afp/Afl <0.1 -> Excellent
+	; Afp/Afl <0.2 -> Good
+	; Afp/Afl <0.4 -> Moderate
+	; Afp/Afl <0.79 -> Rotorbar crack may be developping or pb with high resistance joints
+	; Afp/Afl <1.58 -> Two rotor bars likely cracked or broken and pb with high resistance joints likely perform vibration
+	; Afp/Afl <3.16 -> Multiple cracked or broken rotor bars and end rings indicated, also slip ring and joint problems
+	; Afp/Afl >3.16 -> Multiple cracked or broken rotor bars and end ring very likely, severe problems throughout
+	;Through review of the data, several ‘rules of thumb’ can be determined:
+	;1. Broken rotor bars are figured as slip frequency side bands of the fundamental
+	;frequency. For example, .75 Hz sidebands of 60 Hz for this example. The
+	;amplitude must be at least -35dB for the bars to be in poor condition.
+	;2. Side bands around center frequencies indicate problems.
+
+	;RotorDamage_Carrier = freqline
+	;RotorDamage_Modulation = PPF 
+	;ESA_Metrics:RotorDamage_Carrier = RotorDamage_Carrier
+	;ESA_Metrics:RotorDamage_Modulation = RotorDamage_Modulation 
+	
+	; m*RS*BF+-FL, m = 1,2,3 -> Bearing damage, BF = Bearing Freq
+	;7.8.1.9.Bearing damage, 	;The system searches for the peaks at the following frequencies: 	;m[RS * BM] +/- FL with m = 1, 2,3 … 	;with BM corresponding to the characteristic frequencies of the bearing.
+	; Problem of the bearings are visible through peaks in the current spectra at figures which are no tinteger multiples of RS
+	if varexist?("BearingFrequency")
+		m = 1
+		BearingDamage_Carrier = m*RotatingFrequency*BearingFrequency
+		BearingDamage_Modulation =  freqline 
+		ESA_Metrics:BearingDamage_Carrier = m*RotatingFrequency*BearingFrequency
+		ESA_Metrics:BearingDamage_Modulation =  freqline 
+	end
+		
+
+	;7.8.1.20.Mechanical unbalance and misalignment
+	;Mechanical unbalance & misalignment are based on the RS peak amplitude versus the quadratic sum of
+	;all peaks in the RMS demodulated spectrum from 0 to line frequency.
+	;The parameter is on alarm if RS peak amplitude > 0.07 * sum of peaks
+
+	; -> if Rotor central frequency = RS * RB + additional peaks at CF + 120 Hz, CF + 240 Hz
+	;Mechanical unbalance is found by determining the rotor bars times running speed,
+	;as in our example, 47 bars times 29.33 Hz is 1378.5 Hz. There will be line
+	;frequency sidebands around the center frequency, then a space of 4 times line
+	;frequency, then two twice line frequency peaks.
+	;The pattern is twice line frequency, four times line frequency, twice line frequency.
+	;In a 60 Hz system, this will appear as 120 Hz, 240 Hz, 120 Hz.
+end

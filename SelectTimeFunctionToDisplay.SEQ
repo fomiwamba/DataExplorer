@@ -1,0 +1,42 @@
+sequenz imc_logging "select_time_function_to_display started"
+
+wenn streamingfeatureextraction = 0
+	idx = PnGetSelectedItem("ESA_metrics_List")
+	_txt = PnGetItemText("ESA_metrics_List", idx)
+
+	if tverg(_txt, "RealPower_W") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = RealPower_W
+	ende
+	if tverg(_txt, "MechPower_W") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = MechPower_W
+	ende
+	if tverg(_txt, "Torque_Nm") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = Torque_Nm
+	ende
+	if tverg(_txt, "MechRotFreq") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = MechRotFreq
+	ende
+	if tverg(_txt, "RealPower_W_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = RealPower_W_red
+	ende
+	if tverg(_txt, "MechPower_W_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = MechPower_W_red
+	ende
+	if tverg(_txt, "Torque_Nm_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = Torque_Nm_red
+	ende
+	if tverg(_txt, "MechRotFreq_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = MechRotFreq_red
+	ende
+	if tverg(_txt, "AppPower_VA_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = AppPower_VA_red
+	ende
+	if tverg(_txt, "ReactivePower_VAS_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = ReactivePower_VAS_red
+	ende
+	if tverg(_txt, "CosPhi_red") = 0; freq_task = "FrequencyLine"; FL
+		esa_time_data = CosPhi_red
+	ende
+
+ende
+

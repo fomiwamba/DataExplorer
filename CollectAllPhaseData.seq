@@ -1,0 +1,74 @@
+sequenz imc_logging "collect_all_phase_data started"
+
+;Sequenz CollectAllPhaseData u_eff; -> Input: U_eff[ph1,ph2,ph3], Output: [U_eff[1], U_eff[2], U_eff[3], U_eff_total, U_eff_avg, U_eff_unbalance]
+PhaseData = PA1
+TimeVec = PA2
+_kk = 1
+_anz = GrKanalZahl?(PhaseData)
+PhaseDataExt = GrNeu()
+ESA_Parameter = GrNeu()
+;ESA_Parameter:TimeVec = TimeVec
+SOLANGE _kk <= _anz
+	_VarName = GrKanalName?(PhaseData,_kk);"_211Ax";
+	{<_VarName>} = PhaseData:[_kk]
+	
+	_xyz = 1
+	solange _xyz <= 3
+		_Parname_esa = _VarName +"_"+ tform(_xyz, "") 
+		ESA_Parameter:{<_Parname_esa>} = {<_VarName>}[_xyz]
+		_xyz = _xyz +1
+	ende
+	
+	Input = {<_VarName>}
+	Input_total = sum(Input)
+	Input_avg = mean(Input)
+	Input_std = streu(Input)
+	Input_max = max(Input)
+	; Unbalance
+	Input_unbalance = leer
+	_ii = 1
+	solange _ii <= 3
+		Input_unbalance = binde(Input_unbalance, abs(Input_avg-Input[_ii])/Input_avg*100)
+		_ii = _ii +1
+	ende
+	Input_unbalance_max = max(Input_unbalance)
+	{<_VarName>} = binde({<_VarName>} , Input_total)
+	{<_VarName>}  = binde({<_VarName>} , Input_avg)
+	{<_VarName>}  = binde({<_VarName>} , Input_std)
+	{<_VarName>}  = binde({<_VarName>} , Input_unbalance_max)
+	
+	;wenn tverg("U_eff",_VarName) = 0 or tverg("I_eff",_VarName) = 0  or tverg("U_peak",_VarName) = 0 or tverg("I_peak",_VarName) = 0  or tverg("U_crest",_VarName) = 0 or tverg("I_crest",_VarName) = 0or tverg("PowerFactor",_VarName) = 0 or tverg("Impedance",_VarName) = 0
+	_Parname_esa = _VarName +"_"+ "avg"
+	ESA_Parameter:{<_Parname_esa>} = input_avg
+	_Parname_esa = _VarName +"_"+ "std"
+	ESA_Parameter:{<_Parname_esa>} = input_std
+	_Parname_esa = _VarName +"_"+ "max"
+	ESA_Parameter:{<_Parname_esa>} = Input_max
+	_Parname_esa = _VarName +"_"+ "total"
+	ESA_Parameter:{<_Parname_esa>} = 0 
+	_Parname_esa = _VarName +"_"+ "unbalance"
+	ESA_Parameter:{<_Parname_esa>} = 0
+	;ende
+	wenn tverg("Real_Power_W",_VarName) = 0 or tverg("Apparent_Power_VA",_VarName)  = 0 or tverg("Reactive_Power_VARS",_VarName) = 0
+		_Parname_esa = _VarName +"_"+ "total"
+		ESA_Parameter:{<_Parname_esa>} = Input_total 
+	ende
+	
+	wenn tverg("U_eff",_VarName) = 0 or tverg("I_eff",_VarName) = 0 or tverg("Impedance",_VarName) = 0 
+		_Parname_esa = _VarName +"_"+ "unbalance"
+		ESA_Parameter:{<_Parname_esa>} = Input_unbalance_max
+	ende
+;	wenn tverg("U_vdf",_VarName) = 0 or tverg("I_thdf",_VarName) = 0 or tverg("U_variation",_VarName) = 0 or tverg("I_variation",_VarName) = 0 
+;		_Parname_esa = _VarName +"_"+ "max"
+;		ESA_Parameter:{<_Parname_esa>} = Input_max
+;	ende
+	;	wenn tverg("FreqLineVec",_VarName) = 0 or tverg("RotFreqVec",_VarName) = 0  
+	;	_Parname_esa = _VarName +"_"+ "avg"
+	;	ESA_Parameter:{<_Parname_esa>} = input_avg
+	;	_Parname_esa = _VarName +"_"+ "std"
+	;	ESA_Parameter:{<_Parname_esa>} = input_std
+	;	ende
+		
+	PhaseDataExt:{<_VarName>} = {<_VarName>}
+	_kk = _kk + 1
+ende

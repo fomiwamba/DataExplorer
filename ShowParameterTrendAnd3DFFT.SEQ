@@ -1,0 +1,155 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Ausgewählter Parameter
+; Output: Ausgewählte Messungszeitpunkt
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "show_parameter_trend_and_3d_fft started"
+
+;_index = PnGetSelectedItem("DataExploration.ParameterListe")
+_index =PnTableGetSelectedRows("ParameterOverview.VISA_table")
+wenn lang?(_index) > 0
+	_Parname = ParameterStatusListe[_index]
+	{<_Parname>} = FeatData:{<_Parname>}
+	
+	if PnGetValue("ParameterOverview.ResetPlot")
+		sequenz ClearSelectedPlot "ParameterOverview.VISA_plot"
+	end
+	
+	index = PnGetvalue("ParameterOverview.VISA_axis")
+	wenn index = 1; TrendPlot_vs_Date
+		{<_Parname>} = FeatData:{<_Parname>}
+		xaxis = 1
+	else
+		if  IsXY({<_Parname>})
+			{<_Parname>} = kmpy(FeatData:{<_Parname>})
+		else
+			{<_Parname>} = xdel({<_Parname>},1)
+		ende
+		xaxis = 0
+	ende
+	_pardata0 = {<_Parname>};FeatData:{<_Parname>}
+	
+	sequenz FindFeatureNameAndUnit ; from xlsconfig.
+	
+	;	PnSetText("DataExploration.Channel",_signame)
+	;	PnSetText("DataExploration.FeatureIdx",tform(_index,"f4.0"))
+	;	PnSetText("DataExploration.ChUnit",_ChannelUnit )
+
+	
+	;Neu - 10092019 - Francis
+	;---------------------------------------------
+	_parname_ = _parname
+	if txwo(_parname_,".") > 0
+		_parname_ = txreplace( _parname_,".","_",0,1)
+	end
+	if txwo(_parname_ ," ") > 0
+		_parname_ = txreplace( _parname_ ," ","_",0,1)
+	end
+	if txwo(_parname_ ,"\") > 0
+		_parname_ = txreplace( _parname_ ,"\","_",0,1)
+	end
+	if txwo(_parname_ ,"/") > 0
+		_parname_ = txreplace( _parname_ ,"/","_",0,1)
+	end
+	{<_parname_>} =  {<_Parname>}
+	;---------------------------------------------
+	line_width = PnGetValue("ParameterOverview.line_width")
+	if line_width >= 1
+		line_width = 1
+	end
+	page_ist = PnGetActivePage()
+	if page_ist = 3
+		sequenz plot_2d_trend {<_Parname_>} xaxis "ParameterOverview.VISA_plot"
+	else
+		sequenz plot_2d_trend {<_Parname_>} xaxis "ChannelOverview.VISA_plot"
+	end
+	; build and load boxplot, histogram, fft_averaged and fft3d
+	
+	if 0
+		sequenz build_parameter_avg_boxplot; input = _Parname, output = Parameter_avg_boxplot
+	end
+	
+	currentchannel = _signame
+	
+	sequenz ShowSelected3DSpectrum
+	;sequenz ShowParameterTableStatus
+	;sequenz ViewMeasurementFromMarker
+	;sequenz ViewMeasurementPoint
+	
+	;_Parname = PnGetItemText("DataExploration.ParameterListe", _index)
+	;sequenz FindFeatureNameAndUnit ; from xlsconfig.
+	
+	FeatStatSevListe = TxArrayCreate(0)
+	FeatStatSevData = GrNeu()
+	view_sev = PnGetValue("ParameterOverview.view_sev")
+	if view_sev = 0
+		_file = AssetFolder + "\Output\Features\" + "FeatureStatusTable.csv"
+	else
+		_file = AssetFolder + "\Output\Features\" + "FeatureSeverityTable.csv"
+	end
+	importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+	_fileid = FileOpenFAS(_file, importsvorlage, 0); ascii_statusfile
+	_item = 0
+	wenn _fileid > 0
+		_anzPar = FileObjNum?(_fileid)
+		_index = 1
+		SOLANGE _index <= _anzPar  
+			_typ = FileObjType?(_fileid,_index)
+			wenn _typ = 1
+				_Parname = FileObjName?(_fileid,_index)
+				{<_Parname>} = FileObjRead(_fileid,_index)
+				wenn IsXY({<_Parname>})
+					{<_Parname>} = sort({<_Parname>},7)
+					FeatStatSevData:{<_Parname>}={<_Parname>}
+					_item = _item + 1
+					FeatStatSevListe[_item] = _Parname
+				sonst
+					FeatStatSevData:{<_Parname>}={<_Parname>}
+					_item = _item + 1
+					FeatStatSevListe[_item] = _Parname
+				ende
+				wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+					DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+					FeatStatSevData:Date_Time=DateTimeVec
+				ende
+			ende
+			_index = _index + 1
+		ende
+		fileclose(_fileid)
+	ende
+	
+	sequenz ClearSelectedPlot "ParameterOverview.Status_plot"
+	_index =PnTableGetSelectedRows("ParameterOverview.VISA_table")
+	wenn _index > 0
+		if view_sev = 0
+			_Parname = ParameterStatusListe[_index] + "-Status"
+		else
+			_Parname = ParameterStatusListe[_index] + "-Sev"
+		end
+	end
+	_paridx = GrChanFind(FeatStatSevData,_Parname)
+	if _paridx > 0
+		{<_Parname>} = FeatStatSevData:{<_Parname>}
+		;	if  IsXY({<_Parname>})
+		;		{<_Parname>} = kmpy({<_Parname>})
+		;	else
+		;		{<_Parname>} = xdel({<_Parname>},1)
+		;	ende
+
+		index = PnGetvalue("ParameterOverview.VISA_axis")
+		wenn index = 1; TrendPlot_vs_Date
+			{<_Parname>} = FeatData:{<_Parname>}
+			xaxis = 1
+		else
+			xaxis = 0
+			{<_Parname>} = kmpy({<_Parname>})
+		end
+		sequenz FindFeatureNameAndUnit ; from xlsconfig.
+		page_ist = PnGetActivePage()
+		if page_ist = 3
+			sequenz plot_2d_trend {<_Parname>} xaxis "ParameterOverview.Status_plot"
+		else
+			sequenz plot_2d_trend {<_Parname>} xaxis "ChannelOverview.Status_plot"
+		end
+	end
+ende
+

@@ -1,0 +1,9 @@
+D:\Projekte\CNT_RCP
+D:\Projekte\CNT_RCP\Output\Features\S107_FFT_Mag_Trend.csv
+D:\Projekte\CNT_RCP\Output\Features\FeatureTable_Clean_Famos.csv
+OFF
+OFF
+0.05
+200.00
+08.07.2012 13:34:12
+06.07.2022 13:34:12

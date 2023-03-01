@@ -1,0 +1,47 @@
+if 1
+	sig_x = S106_mean
+	sig_y = S107_mean
+	speed = K1_speed
+else
+	sig_x = PA1
+	sig_y = PA2
+	speed = PA3
+end
+
+
+if 1
+	sig_x_mean = S106_mean
+	sig_y_mean = S107_mean
+	speed_mean = K1_speed
+else
+	sig_x_mean = mvmean(sig_x,Tf,Tf)
+	sig_y_mean = mvmean(sig_y,Tf,Tf)
+	speed_mean = mvmean(sig_speed,Tf,Tf)
+end
+
+if isxy(sig_x_mean) = 1
+	sig_x_mean_ = xy(speed_mean.y,sig_x_mean.y)
+	sig_y_mean_ = xy(speed_mean.y,sig_y_mean.y)
+else
+	sig_x_mean_ = xy(speed_mean,sig_x_mean)
+	sig_y_mean_ = xy(speed_mean,sig_y_mean)
+end
+
+static_center = kompl(sig_x_mean_, sig_y_mean_)
+static_center_red = red(static_center,100)
+
+sig_x_ = xy(speed.y,sig_x.y)
+sig_y_ = xy(speed.y,sig_y.y)
+
+static_center = kompl(sig_x_, sig_y_)
+static_center_red = red(orbit,100)
+
+	sig_x_mean = S106_mean
+	sig_y_mean = S107_mean
+	speed_mean = K1_speed
+	sig_x_mean_ = xy(speed_mean.y,sig_x_mean.y)
+	sig_y_mean_ = xy(speed_mean,sig_y_mean)
+	static_center = kompl(sig_x_mean_, sig_y_mean_)
+	static_center_red = static_center;(static_center,1)
+	static_center_start = static_center[1]
+	static_center_end = static_center[lang?(static_center)]

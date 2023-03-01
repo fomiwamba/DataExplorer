@@ -1,0 +1,111 @@
+wenn streamingfeatureextraction = 0
+	idx = PnGetSelectedItem("ESA_STFT_List")
+	_txt = PnGetItemText("ESA_STFT_List", idx)
+
+	if tverg(_txt, "U1_stft") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft = U1_kask
+	ende
+	if tverg(_txt, "U2_stft") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft = U2_kask
+	ende
+	if tverg(_txt, "U3_stft") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft = U3_kask
+	ende
+	if tverg(_txt, "I1_stftd") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft = I1_kask
+	ende
+	if tverg(_txt, "I2_stft") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft = I2_kask
+	ende
+	if tverg(_txt, "I3_stft") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft = I3_kask
+	ende
+	idx = PnGetSelectedItem("ESA_STFT_Demod_List")
+	_txt = PnGetItemText("ESA_STFT_Demod_List", idx)
+
+	if tverg(_txt, "U1_stft_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft_demod = U1_demod_kask
+	ende
+	if tverg(_txt, "U2_stft_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft_demod = U2_demod_kask
+	ende
+	if tverg(_txt, "U3_stft_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft_demod = U3_demod_kask
+	ende
+	if tverg(_txt, "I1_stft_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft_demod = I1_demod_kask
+	ende
+	if tverg(_txt, "I2_stft_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft_demod = I2_demod_kask
+	ende
+	if tverg(_txt, "I3_stft_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_stft_demod = I3_demod_kask
+	ende
+	
+	idx = PnGetSelectedItem("Harmonics_List")
+	_txt = PnGetItemText("Harmonics_List", idx)
+
+	if tverg(_txt, "U1_harmonics") = 0; freq_task = "FrequencyLine"; FL
+		esa_harmonics = U1_Harmonics_seg
+	ende
+	if tverg(_txt, "U2_harmonics") = 0; freq_task = "FrequencyLine"; FL
+		esa_harmonics = U2_Harmonics_seg
+	ende
+	if tverg(_txt, "U3_harmonics") = 0; freq_task = "FrequencyLine"; FL
+		esa_harmonics = U3_Harmonics_seg
+	ende
+	if tverg(_txt, "I1_harmonics") = 0; freq_task = "FrequencyLine"; FL
+		esa_harmonics = I1_Harmonics_seg
+	ende
+	if tverg(_txt, "I2_harmonics") = 0; freq_task = "FrequencyLine"; FL
+		esa_harmonics = I2_Harmonics_seg
+	ende
+	if tverg(_txt, "I3_harmonics") = 0; freq_task = "FrequencyLine"; FL
+		esa_harmonics = I3_Harmonics_seg
+	ende
+	
+		idx = PnGetSelectedItem("ESA_Spectrum_List")
+	_txt = PnGetItemText("ESA_Spectrum_List", idx)
+
+	if tverg(_txt, "U1_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec = u_spec:[1]
+	ende
+	if tverg(_txt, "U2_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec = u_spec:[2]
+	ende
+	if tverg(_txt, "U3_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec = u_spec:[3]
+	ende
+	if tverg(_txt, "I1_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec = i_spec:[1]
+	ende
+	if tverg(_txt, "I2_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec = i_spec:[2]
+	ende
+	if tverg(_txt, "I3_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec = i_spec:[3]
+	ende
+	
+	
+	idx = PnGetSelectedItem("ESA_spectrum_demod_List")
+	_txt = PnGetItemText("ESA_spectrum_demod_List", idx)
+
+	if tverg(_txt, "U1_spec_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec_demod = u_demod_spec:[1]
+	ende
+	if tverg(_txt, "U2_spec_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec_demod = u_demod_spec:[2]
+	ende
+	if tverg(_txt, "U3_spec_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec_demod = u_demod_spec:[3]
+	ende
+	if tverg(_txt, "I1_spec_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec_demod = i_demod_spec:[1]
+	ende
+	if tverg(_txt, "I2_spec_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec_demod = i_demod_spec:[2]
+	ende
+	if tverg(_txt, "I3_spec_demod") = 0; freq_task = "FrequencyLine"; FL
+		esa_spec_demod = i_demod_spec:[3]
+	ende
+ende

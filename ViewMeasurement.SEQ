@@ -1,0 +1,253 @@
+sequenz imc_logging "view_measurement started"
+
+wenn _index1 <> 0 and _index2 <>0
+	_Parname = DlgGetItemText("MeasListeDate", _index2)
+	;	DlgSetText("MeasDateIdx",tform(_index2,"f4.0"))
+	;OL3_SVM_CFT_20170131_102726
+	;_parname = "20180329_090220"
+	
+	_t = tteil(_parname,1,2)
+	_m = tteil(_parname,4,2)
+	_j = tteil(_parname,7,4)
+	_hh = tteil(_parname,12,2)
+	_mm = tteil(_parname,15,2)
+	_ss = tteil(_parname,15,2)
+	
+	;	_j = tteil(_parname,1,4)
+	;	_m = tteil(_parname,5,2)
+	;	_t = tteil(_parname,7,2)
+	;	_hh = tteil(_parname,10,2)
+	;	_mm = tteil(_parname,12,2)
+	;	_ss = tteil(_parname,14,2)
+	
+	_Sek=TzuEW(_ss,"e")
+	_Min=TzuEW(_mm,"e")
+	_Stun=TzuEW(_hh,"e")
+	_Tag=TzuEW(_t,"e")
+	_Monat=TzuEW(_m,"e")
+	_Jahr=TzuEW(_j,"e")
+	Messdatum_zahl0=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+	
+	
+	_file_search = "*"+_j+_m+_t+"_"+"*.dat"
+	;_file_search = "*"+_j+_m+_t+"_"+_hh+"*.dat"
+	;_file_search = "*"+_j+_m+_t+"_"+_hh+ _mm+"*.dat"; Fomi KKG, 20181127
+	DlgSetText("MeasDate",_Parname)
+	_pathname = TWFFile;
+	;	TWFFile = CompletedFolder
+	_FileListID=FsFileListNew(_PathName, _file_search,0,1,2)
+	
+	wenn _filelistid >= 1 
+		_FileCountMax=FsFileListGetCount(_FileListID)
+		wenn _FileCountMax <= 1
+			_file_id = 1
+		sonst
+			_file_i = 1
+			_file_date = leer
+			solange _file_i <= _FileCountMax
+				$filename=FsFileListGetName(_FileListID,_file_i)
+				sequenz filename2filedate
+				wenn _Messdatum_zahl<=Messdatum_zahl0
+					_file_date = binde(_file_date,_Messdatum_zahl)
+				end
+				; finde all t_file_i with t_file_i < t(_parname)
+				; sort t_file_i
+				; max(t_file_i) -> file_i
+				_file_i = _file_i +1
+			ende
+			a = max(_file_date)
+			_file_id = lang?(_file_date);posi(_file_date, max(_file_date))
+		ende
+		chname = DlgGetText("Channel")
+		_FileName=FsFileListGetName(_FileListID,_file_id)
+		currentfile = _FileName
+		DlgSetText("MeasFile",_FileName)
+		_fileid = FileOpenDSF(_filename,100)
+		wenn _fileid > 0; and _filesize > 1000
+			_index = FileObjNum?(_fileid)
+			wenn _index <> 0
+				_count = 1
+				solange _count <= _index				
+					_parvalue = FileObjRead(_fileid,_count)
+					_Parname = FileObjName?(_fileid,_count)
+					{<_Parname>} = _parvalue
+					wenn tverg(_Parname,Chname) = 0
+						signal1 = {<_Parname>}
+						tdata = 10; sec
+						break
+					ende
+					_count = _count + 1
+				ende
+			ende
+			_err = fileclose(_fileid)
+		ende
+		fsfilelistclose(_FileListID)
+	sonst
+		_hh_neu = tzuew(_hh,"f")-1
+		wenn _hh_neu < 0
+			_hh_neu = 23
+		ende
+		_hh_neu = tform(_hh_neu,"f1.0")
+		wenn tlang(_hh_neu)<2
+			_hh_neu = "0"+_hh_neu
+		end
+		_file_search = "*"+_j+_m+_t+"_"+"*.dat"
+		;_file_search = "*"+_j+_m+_t+"_"+_hh+"*.dat"
+		;_file_search = "*"+_j+_m+_t+"_"+_hh+ _mm+"*.dat"; Fomi KKG, 20181127
+		DlgSetText("MeasDate",_Parname)
+		_pathname = TWFFile;
+		;	TWFFile = CompletedFolder
+		_FileListID=FsFileListNew(_PathName, _file_search,0,1,2)
+		
+		wenn _filelistid >= 1 
+			_FileCountMax=FsFileListGetCount(_FileListID)
+			_file_i = 1
+			_file_date = leer
+			solange _file_i <= _FileCountMax
+				$filename=FsFileListGetName(_FileListID,_file_i)
+				sequenz filename2filedate
+				wenn _Messdatum_zahl<=_Messdatum_zahl0
+					_file_date = binde(_file_date,_Messdatum_zahl)
+				end
+				; finde all t_file_i with t_file_i < t(_parname)
+				; sort t_file_i
+				; max(t_file_i) -> file_i
+				_file_i = _file_i +1
+			ende
+			_file_id = posi(_file_date, max(_file_date))
+			$filename=FsFileListGetName(_FileListID,_file_id)
+			fsfilelistclose(_FileListID)
+			
+			
+			chname = DlgGetText("Channel")
+			_FileName=FsFileListGetName(_FileListID,_file_íd)
+			DlgSetText("MeasFile",_FileName)
+			currentfile = _FileName
+			_fileid = FileOpenDSF(_filename,100)
+			wenn _fileid > 0; and _filesize > 1000
+				_index = FileObjNum?(_fileid)
+				wenn _index <> 0
+					_count = 1
+					solange _count <= _index				
+						_parvalue = FileObjRead(_fileid,_count)
+						_Parname = FileObjName?(_fileid,_count)
+						{<_Parname>} = _parvalue
+						wenn tverg(_Parname,Chname) = 0
+							signal1 = {<_Parname>}
+							tdata = 10; sec
+							break
+						ende
+						_count = _count + 1
+					ende
+				ende
+				_err = fileclose(_fileid)
+			ende
+		ende
+	ende
+	
+	wenn _count <= _index
+		;	DlgSetText("Channel",_Pname)
+		CwSelectMode("title")
+		ret = CwIsWindow("TimeWaveForm")
+		wenn ret <> 0
+			CwSelectWindow("TimeWaveForm")
+		ende
+		CwSelectByIndex("y-axis",1)
+		CwDeleteElement("axis")
+		
+		sequenz plot_2d_trend signal1 1 "TimeWaveForm"
+		cw_verz = "C:\BDA\FeatureTrendAnalysis\"
+		CwLoadCCV("TimeWaveForm",cw_verz + "twf.ccv")
+		
+		entf Parameter_Sig_mean
+		entf Ax_mean
+		entf Ax_kask
+		entf data_hist
+		
+		; build and load boxplot, histogram, fft_averaged and fft3d
+		sequenz BoxPlot_FFT_Analysis
+		
+		; boxplot
+		CwSelectMode("title")
+		ret = CwIsWindow("BoxPlotMean")
+		wenn ret <> 0
+			CwSelectWindow("BoxPlotMean")
+		ende
+		CwSelectByIndex("y-axis",1)
+		CwDeleteElement("axis")
+		
+		_ii = 1
+		solange _ii <= GrKanalZahl?(Parameter_Sig_mean)
+			wenn _ii = 1
+				CwNewChannel("append new axis",Parameter_Sig_mean:[_ii])
+			sonst
+				CwNewChannel("append last axis",Parameter_Sig_mean:[_ii])
+			ende
+			CwSelectByChannel("line",Parameter_Sig_mean:[_ii])
+			CwLineSet("symbol",0)
+			_ii = _ii +1
+		ende
+		
+		CwLoadCCV("BoxPlotMean",cw_verz + "boxplotmean.ccv")
+		
+		; histplot
+		CwSelectMode("title")
+		ret = CwIsWindow("HistPlot")
+		wenn ret <> 0
+			CwSelectWindow("HistPlot")
+		ende
+		CwSelectByIndex("y-axis",1)
+		CwDeleteElement("axis")
+		CwNewChannel("append new axis",data_hist)
+		CwSelectByChannel("line",data_hist)
+		;CwLineSet("symbol",0)
+		CwLineSet("symbol",0)
+		CwLoadCCV("HistPlot",cw_verz + "histplot.ccv")
+		
+		; averaged fft
+		CwSelectMode("title")
+		ret = CwIsWindow("FFT_averaged")
+		wenn ret <> 0
+			CwSelectWindow("FFT_averaged")
+		ende
+		CwSelectByIndex("y-axis",1)
+		CwDeleteElement("axis")
+		CwNewChannel("append new axis",Ax_mean)
+		CwSelectByChannel("line",Ax_mean)
+		CwLineSet("symbol",0)
+		CwLoadCCV("FFT_averaged",cw_verz + "Ax_mean.ccv")
+		
+		;3d fft
+		CwSelectMode("title")
+		ret = CwIsWindow("FFT3D")
+		wenn ret <> 0
+			CwSelectWindow("FFT3D")
+		ende
+		CwSelectByIndex("y-axis",1)
+		CwDeleteElement("axis")
+		Ax_kask0 = Ax_kask
+		sequenz plot_3d_trend Ax_kask 1 "FFT3D"
+		CwLoadCCV("FFT3D",cw_verz + "Ax_kask_normal.ccv")
+		
+		
+		; Parametertable
+		_ii = 1
+		solange _ii <= GrKanalZahl?(Parameter_Sig_mean)
+			DlgSetCellText("ParameterTable",_ii,1,GrKanalName?(Parameter_Sig_mean,_ii))
+			DlgSetCellValue("ParameterTable",_ii,2,Parameter_Sig_min:[_ii])
+			DlgSetCellValue("ParameterTable",_ii,3,Parameter_Sig_mean:[_ii])
+			DlgSetCellValue("ParameterTable",_ii,4,Parameter_Sig_max:[_ii])
+			_ii = _ii +1 
+		ende
+		
+	sonst
+		BoxNachricht("Info","Measurement Signal not present in the measurement file","?1")
+	ende
+	
+	;	BoxNachricht("Next Step","Please Configure the time period and/or parameter interval then click on ApplyFilter","?1")
+sonst
+	;	BoxNachricht("Next Step","Please Select a Parameter from the Feature List","?1")
+ende
+
+
+;test

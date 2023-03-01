@@ -1,0 +1,45 @@
+sequenz imc_logging "update_group_list started"
+
+_Idx = PnGetSelectedItem("LabelList")
+if _Idx > 0
+	ist_label = PnGetItemText("LabelList",_Idx)
+
+	_path_label = AssetFolder + "\Output\Label.txt"
+	_fh = FileOpenASCII(_path_label,1)
+	if _fh > 0
+		_err = FileLineWrite(_fh,ist_label,0)
+		_err = FileClose(_fh)
+	sonst
+		_err = FileErrCode?() 
+		zeigen _err
+	ende
+	
+	_erg = boxnachricht("Info","Please wait until the labelgrouplist has been built!","!1")
+	_ret = Execute( "C:\python37\python.exe", "C:\BDA\AI\CADIS_BuildLabelGroup.py", "", 2,-1)
+	
+	; load labelgrouplist
+	PnDeleteItem("LabelGroupList",0)
+	sequenz insert_item "LabelGroupList" "None"
+	_path_labelgroup_list = AssetFolder + "\Output\LabelGroupList.txt"
+	_fhn= FileOpenASCII( _path_labelgroup_list,0 )
+	if _fhn > 0
+		_TxZeile = ""
+		_ok = 0
+		_count = 1
+		LabelGroupList = TxArrayCreate(0)
+		solange _ok = 0
+			_ok = FileLineRead( _fhn, _TxZeile, 0 )
+			if _ok = 0 and _count >= 1
+				LabelGroupList[_count] = _TxZeile
+				sequenz insert_item "LabelGroupList" LabelGroupList[_count]
+			ende
+			_count = _count + 1
+		ende
+		FileClose(_fhn)
+	sonst
+		_err = FileErrCode?()
+		zeigen _err
+	ende
+ende
+	
+entf _*

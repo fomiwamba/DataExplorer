@@ -1,0 +1,73 @@
+;sequenz LoadFolderFileList
+sequenz imc_logging "load_folder_file_list started"
+
+_erg = FsFileExists(sicherungsfolder)
+_file_ext = ""
+if _erg = 2
+	tdms_files = 0
+	d7d_files = 0
+	dat_files = 0
+	csv_files = 0
+	txt_files = 0
+	searchname = "*.tdms"
+
+	_PathName = sicherungsfolder; AssetFolder + "\ConditionFiles"
+	_filelist_mm = FsFileListNew(_pathname, "*.*", 0, 1, 2)
+	wenn _filelist_mm > 0
+		_cntfile = FsFileListGetCount(_filelist_mm)
+		wenn _cntfile > 0
+			_filename_mm = FsFileListGetName(_filelist_mm, 1)
+			_file_ext = fssplitPath(_filename_mm,3)
+			if tverg(_file_ext, ".tdms") = 0 or tverg(_file_ext, ".tdms_index") = 0
+				tdms_files = 1
+				_file_ext = ".tdms"
+				searchname = "*" + _file_ext
+			elseif tverg(_file_ext, ".d7d") = 0
+				d7d_files = 1
+				searchname = "*" + _file_ext
+			elseif tverg(_file_ext, ".dat") = 0
+				dat_files = 1
+				searchname = "*" + _file_ext
+			elseif tverg(_file_ext, ".csv") = 0
+				csv_files = 1
+				searchname = "*" + _file_ext
+			elseif tverg(_file_ext, ".txt") = 0
+				txt_files = 1
+				searchname = "*" + _file_ext
+			else
+				tdms_files = 1
+				searchname = "*.tdms"
+			end
+		end
+		FsFileListClose(_filelist_mm)
+	end
+
+	_filelist_mm = FsFileListNew(_pathname, searchname, 0, 1, 2)
+	FolderFileList = TxArrayCreate(0)
+	wenn _filelist_mm > 0
+		cntfile = FsFileListGetCount(_filelist_mm)
+		wenn cntfile> 0
+			_mm = 1
+			_counter = 0
+			SOLANGE _mm <= cntfile
+				_filename = FsFileListGetName(_filelist_mm, _mm)
+				sequenz filename2filedate
+
+				;_datumFrom = PnGetValue("Datefrom")
+				;_datumTo = PnGetValue("Dateto")
+				wenn _Messdatum_zahl >= _DatumFrom and _Messdatum_zahl <= _DatumTo 
+					_counter = _counter + 1
+					FolderFileList[_counter] = _filename       																	 ;FsSplitPath(_filename,4)
+					filename_short = FsSplitPath(_filename,4)
+					sequenz Insert_Item "Filelist" filename_short
+				ENDE
+				_mm = _mm + 1
+			end
+			AnzFiles = _cntfile
+		ende
+		FsFileListClose(_filelist_mm)
+	sonst
+		_err = FsGetLastError() 
+		zeigen _err
+	ende
+ende

@@ -1,0 +1,153 @@
+sequenz imc_logging "get_table_data_as_map started"
+; sequenz get table_data_as_map
+
+; input = file
+;outputs = ParameterListe, ChannelListe, Map
+if fsfileexists(file)
+	_fileid = FileOpenXLS(file,0)
+	wenn _fileid > 0
+		; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+		FileXLSSelectSheet(_fileid,1)
+		ParameterListe = TxArrayCreate(1)
+		ChannelListe = TxArrayCreate(1)
+		_ii = 1
+		SOLANGE _ii <=  2560
+			_PName = FileXLSCellRead(_fileid,1,_ii+1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				ParameterListe[_ii] = _PName
+				_ii = _ii + 1
+			ende
+		ENDE
+
+		_ii = 1
+		SOLANGE _ii <=  2560
+			if txwo(file, "ChannelStatusTable") <> 0 or txwo(file, "FeatureStatusTable") <> 0 or txwo(file, "FeatureSeverityTable") <> 0 or txwo(file, "ChannelSeverityTable") <> 0
+				_PName = FileXLSCellRead(_fileid,_ii+2,1,0)
+			ende
+			if txwo(file, "ChannelFeatureStatusTable") <> 0 or txwo(file, "current_parameter_table_status") <> 0
+				_PName = FileXLSCellRead(_fileid,_ii+1,1,0)
+			ende	
+			if txwo(file, "current_severity_table_status") <> 0
+				_PName = FileXLSCellRead(_fileid,_ii,1,0)
+			ende	
+			if txwo(file, "SuesCurrentStatusTable") <> 0
+				_PName = FileXLSCellRead(_fileid,_ii,1,0)
+			ende
+			if txwo(file, "SuesStatusTable") <> 0
+				_PName = FileXLSCellRead(_fileid,_ii,1,0)
+			ende
+			
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				ChannelListe[_ii] = _PName
+				_ii = _ii + 1
+			ende
+		ENDE
+		; return ParameterListe, ChannelListe
+		err = FileClose(_fileid)
+	ende
+
+
+	_x = leer
+	_groupart = 1;
+	Ímportsvorlage = "#ImportAscii1.dll|ascii_status_severity_table"
+	_fileid = FileOpenFAS(file, Ímportsvorlage, 0); ascii_statusfile
+	wenn _fileid > 0
+		_anzPar = FileObjNum?(_fileid)
+		_index = 1
+		SOLANGE _index <= _anzPar  
+			;zeigen _index
+			_typ = FileObjType?(_fileid,_index)
+			wenn _typ = 1
+				_Parname = FileObjName?(_fileid,_index)
+				{<_Parname>} = FileObjRead(_fileid,_index)
+								
+				file_name = FsSplitPath(file,2)
+				parname_trend = file_name
+				
+				wenn _groupart = 1; Segment
+					wenn _index = 1				
+						{<parname_trend>} = GrNeu()
+						{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+					sonst
+						{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+					ende
+					entf _Parname
+					entf {<_Parname>}
+				else
+					wenn _index > 1
+						EventAppend({<parname_trend>},{<_Parname>},0)
+					ende				
+					wenn _index = 1				
+						{<parname_trend>} = EventNew({<_Parname>},0)
+					ende
+					wenn _index > 1
+						EventAppend({<parname_trend>},{<_Parname>},0)
+					ende					
+					_eventnr = EventNum?({<parname_trend>})
+					_Messdatum = _Parname
+					_Sek_ = TTeil(_Messdatum,18,2)
+					_Sek=TzuEW(_Sek_,"e")
+					_Min_ = TTeil(_Messdatum,15,2)
+					_Min=TzuEW(_Min_,"e")
+					_Stun_ = TTeil(_Messdatum,12,2)
+					_Stun=TzuEW(_Stun_,"e")
+					_Tag_ = TTeil(_Messdatum,9,2)
+					_Tag=TzuEW(_Tag_,"e")
+					_Monat_ = TTeil(_Messdatum,6,2)
+					_Monat=TzuEW(_Monat_,"e")
+					_Jahr_ = TTeil(_Messdatum,1,4)
+					_Jahr=TzuEW(_Jahr_,"e")
+					_Messdatum_zahl=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+										
+					Ttrig = _Messdatum_zahl
+										
+					EventProp({<parname_trend>},_eventnr,0,Ttrig)
+				ende
+			ende
+			_index = _index + 1
+		ende
+		
+		wenn _anzPar > 1
+			Map = {<parname_trend>}
+			wenn _groupart = 1 
+				_EwSegLang = lang?(Map:[1])
+				_group = GrBinde(Map,0)
+				SetSegLang(_group,_EwSegLang)
+				Map = _group
+				if txwo(file, "ChannelStatusTable") <> 0 or txwo(file, "FeatureStatusTable") <> 0
+					seteinheit(Map,"Time",0)
+				ende
+				if txwo(file, "ChannelFeatureStatusTable") <> 0 
+					seteinheit(Map,"Parameters",0)
+				ende	
+
+				if txwo(file, "current_severity_table_status") <> 0
+					seteinheit(Map,"Parameters",0)
+				ende	
+				if txwo(file, "SuesTable") <> 0
+					seteinheit(Map,"Time",0)
+				ende
+
+				seteinheit(Map,"Channels",2)
+				seteinheit(Map,"Status",1)
+				
+				if txwo(file, "SuesStatusTable") <> 0
+					seteinheit(Map,"Time",0)
+					seteinheit(Map,"SUES Parameter List",2)
+					seteinheit(Map,"Status",1)
+				ende
+			end
+		ende
+	
+	
+		fileclose(_fileid)	
+	
+		t1 = ZeitSystem?()
+		;dt1 = t1-t0
+		;zeigen dt1
+	ende
+ende

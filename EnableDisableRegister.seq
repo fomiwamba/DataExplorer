@@ -1,0 +1,48 @@
+;sequenz EnableDisableRegister
+
+;Register = "DataExploration"
+Register = PA1
+
+sequenz search_item Asset_Props:Name Register
+if search_index <>0
+	{<Register>} = tzuew (Asset_Props:Val[search_index],"a")
+ende
+if {<Register>}
+	PnShowPage(Register,2)
+else
+	PnShowPage(Register,1)
+end
+
+if tverg(Register, "DataExploration") = 0
+	DataExploration = {<Register>}
+end
+if tverg(Register, "VibrationAnalysis") = 0
+	VibrationAnalysis = {<Register>}
+end
+if tverg(Register, "ElectricalAnalysis") = 0
+	ElectricalAnalysis = {<Register>}
+end
+if tverg(Register, "ChannelStatusTable") = 0
+	ChannelStatusTable = {<Register>}
+end
+if tverg(Register, "ParStatusTable") = 0
+	ParStatusTable = {<Register>}
+end
+if tverg(Register, "VISATable") = 0
+	VISATable = {<Register>}
+end
+if tverg(Register, "ESATable") = 0
+	ESATable = {<Register>}
+end
+if tverg(Register, "ConditionData") = 0
+	ConditionData = {<Register>}
+end
+if tverg(Register, "TrendData") = 0
+	TrendData = {<Register>}
+end
+if tverg(Register, "ProcessData") = 0
+	ProcessData = {<Register>}
+end
+if tverg(Register, "VMS_Freq_Data") = 0
+	VMS_Freq_Data = {<Register>}
+end

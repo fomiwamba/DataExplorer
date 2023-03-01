@@ -1,0 +1,24 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Ausgewählte Messungszeitpunkt
+; Output: Identifizierte Messung + Ergebnis der Messungsnalayse
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "view_measurement_from_marker started"
+; measpoint_date from ViewMeasurementPoint
+_paridx =PnTableGetSelectedRows("MeasurementOverview.MeasParameterListGitter")
+wenn _paridx > 0
+	_parname = MeasParListe[_paridx]
+	{<_parname>} = MeasPar:{<_Parname>}
+end
+
+if  IsXY({<_Parname>})
+	{<_Parname>} = kmpy(MeasPar:{<_Parname>})
+else
+	{<_Parname>} = xdel({<_Parname>},1)
+ende
+xaxis = 0
+line_width = 0.5
+sequenz FindFeatureNameAndUnit ; from xlsconfig.
+sequenz plot_2d_trend {<_Parname>} xaxis "ParameterPlot"
+;sequenz plot_2d_trend {<_signame>} 0 "TimeWaveForm"
+;cw_verz = "C:\BDA\DataExploration\"
+	

@@ -1,0 +1,40 @@
+sequenz imc_logging "show_sues_limits started"
+
+if SuesParLowerLimit <> SuesParUpperLimit and SuesParUpperLimit <> 0
+	SpectrumPlot = "VMS_Freq_Data.ParameterPlot"
+	SpecName = SpectrumPlot
+
+	Limitvec = leer
+	Limitvec = binde(Limitvec, SuesParLowerLimit)
+	Limitvec = binde(Limitvec, SuesParUpperLimit)
+
+	CwSelectMode("title")
+	_erg = CwSelectWindow(SpecName)
+	CwSelectByIndex("y-axis",1)
+	AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+
+	_ii = 1
+	solange _ii <= lang?(Limitvec)
+		;CwNewElement("marker")
+		_anz_markers = CwDisplayGet("marker.count")
+		CwNewElement("marker.hori.line")
+
+		;CwNewElement("marker.harmonic.harmonic")
+		CwSelectByIndex("marker", _anz_markers+1)
+		CwMarkerSet("y.type",1)
+		CwMarkerSet("y",Limitvec[_ii])
+		;	CwMarkerSet("x.type",2)
+		CwMarkerSet("x",95)
+		CwMarkerSet("arrow",0)
+	
+		;CwMarkerSet("dimline.distance",8)
+		CwMarkerSet("extension",0)
+		CwMarkerSet("font.size",6)
+		CwMarkerSet("text.orientation",90)
+		_fb = RGB( 255, 255, 0 ) ;Rot
+		CwMarkerSet("color.background",_fb)
+		_fb = RGB( 0, 0, 0) ;Blau
+		CwMarkerSet("color.text",_fb)
+		_ii = _ii +1
+	ende
+ende

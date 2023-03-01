@@ -1,0 +1,66 @@
+sequenz imc_logging "load_txt_or_csv_trend_file started"
+
+importsvorlage = "#ImportAscii1.dll|ascii_statusfile"
+wenn txwo(filename,"_StatusFile_") <> 0 
+	importsvorlage = "#ImportAscii1.dll|ascii_dirom_statusfile"
+elseif txwo(filename,"TrendData") <> 0 
+	importsvorlage = "#ImportAscii1.dll|ascii_dirom_statusfile"
+else
+	importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+ende
+
+_fileid = FileOpenFAS(filename, importsvorlage, 0); ascii_statusfile
+wenn _fileid > 0
+	_anzPar = FileObjNum?(_fileid)
+	_index = 1
+	SOLANGE _index <= _anzPar  
+		_typ = FileObjType?(_fileid,_index)
+		wenn _typ = 1
+			_Parname = FileObjName?(_fileid,_index)
+			{<_Parname>} = FileObjRead(_fileid,_index)
+			sequenz FindFeatureNameAndUnit
+;			_Parname_Unit = ""
+;			wenn varexist?("OP_Info:ParName")
+;				_qqqmax = TxArrayGetSize(OP_Info:ParName)
+;				_qqq = 1
+;				_search_index = 0
+;				SOLANGE _qqq <= _qqqmax 	
+;					_a1 = _Parname
+;					_a2 = OP_Info:ParName[_qqq]
+;			
+;					_erg = Tverg(_Parname, OP_Info:ParName[_qqq])
+;					wenn _erg =  0 
+;						_search_index = _qqq
+;						break
+;					sonst	
+;						_qqq = _qqq + 1
+;					ende
+;				ENDE
+;				if _search_index > 0
+;					_Parname_Unit = OP_Info:ParUnit[_search_index]
+;				ende
+;			seteinheit({<_Parname>} , _Parname_Unit,1)
+;			ende
+			
+			
+			
+			wenn IsXY({<_Parname>})
+				{<_Parname>} = sort({<_Parname>},7)
+				ProcessTrendData:{<_Parname>}={<_Parname>}
+				sequenz Insert_Item "ParameterList" _Parname
+			sonst
+				ProcessTrendData:{<_Parname>}={<_Parname>}
+				sequenz Insert_Item "ParameterList" _Parname
+			ende
+			wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+				DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+				ProcessTrendData:Date_Time=DateTimeVec
+				;sequenz Insert_Item "ParameterList" _Parname
+			ende
+		ende
+		_index = _index + 1
+	ende
+	_err = fileclose(_fileid)
+ende
+
+

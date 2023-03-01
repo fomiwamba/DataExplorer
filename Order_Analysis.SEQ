@@ -1,0 +1,206 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Sequenz zur Berechnung von Amplitude und Phase von Hoch- und Ausläufe
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "order_analysis started"
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+_vib = PA1
+_peak_raw = PA2
+_samples_per_rev = PA3;samples_per_rev[channelcount] 
+_pam = PA4;:pam[channelcount] 
+_windowfft = PA5;:windowfft[channelcount] ; 	-> Standard auf 2 <=> Hanning
+_overlap = PA6;:overlap[channelcount] ;		-> Standard auf 50%
+_pulse_per_rev = PA7;:pulse_per_rev[channelcount] 		;
+_env = PA8
+
+wenn _env = 0
+	_vib = _vib - mean(_vib);
+ende
+;_peak_1 = _peak_raw - _TrigLevel 
+_peak = STri(_peak_raw,TrigLevel,TrigLevel)
+_dp = diff(_peak)*xdel?(_peak)
+_Tx = posiex(-_dp,2); findet alle Zeiten, wo peak <= 0
+_anz_umdrehungen = lang?(_Tx) 
+
+;sequenz SignaleGleichSetzen _vib _peak
+;_vib = _sig1
+;_peak = _sig2
+
+;wenn varexist?("peak")
+OtrTachoMode(3, 0, _pulse_per_rev, 0)
+_speed0 = OtrTachoToSpeed(_peak)
+_rs = OtrResample(_vib,_peak,_samples_per_rev/2 ,1)
+_peak_rs = OtrResample(_peak,_peak,_samples_per_rev/2 ,1)
+_speed = OtrResample(_speed0,_peak,_samples_per_rev/2,1)
+
+_O1 = leer;
+_O2 = leer;
+_O3 = leer;
+_O4 = leer;
+_O5 = leer;
+
+_Ph1 = leer;
+_Ph2 = leer;
+_Ph3 = leer;
+_Ph4 = leer;
+_Ph5 = leer;
+
+
+_OAx_kask = leer;
+_OPx_kask = leer;
+_OSpeed_kask = leer;
+
+_nn_max = ganz(lang?(_rs)/_samples_per_rev/_pam)
+_nn = 1
+_Tgesamt = ganz(lang?(_rs))
+_T_fenster = _pam*_samples_per_rev
+wenn _T_fenster > _Tgesamt
+	_T_fenster = _Tgesamt
+ende
+_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+
+;_rs = OtrResample(_vibsignal,_pulssignal,_Omax ,1)
+;_Tgesamt = ganz(lang?(_rs))
+;_T_fenster = _pam*_SampPerRev
+;_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+wenn mean(_speed0) > 1
+	_N_f = _T_fenster
+	wenn _nn_mit_overlap <= 0
+		BoxNachricht("Configuration error","Please reduce the number of samples per revolution (NpR)","?1")
+		;DlgSelectItem("Omax",2)
+	sonst
+		solange _nn <= _nn_mit_overlap 
+			wenn 1
+				wenn 0 ;(mit overlap)
+					_Tbeginn = (_nn-1)*_T_fenster-(_nn-1)*_overlap/100*_T_fenster
+					_Tende = _nn*_T_fenster-(_nn-1)*_overlap/100*_T_fenster;Tbeginn + T_fenster
+					_T_fenster_verifikation = _Tende-_Tbeginn
+					_N_beginn = floor(((_nn-1)-(_nn-1)*_overlap/100)*_N_f)+1;
+					_N_end = floor((_nn-(_nn-1)*_overlap/100)*_N_f)+1
+					_rs_ = grenindex(_rs,_N_beginn,_N_end)
+					_peak_rs_ = grenindex(_peak_rs,_N_beginn,_N_end)
+					_om = mean(grenindex(_speed,_N_beginn,_N_end))
+				else
+					_rs_ = grenindex(_rs,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+					_peak_rs_ = grenindex(_peak_rs,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+					_om = mean(grenindex(_speed,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev))
+				ende
+			ende
+			;zeigen om
+			wenn 0
+				_specx = dftspectrum(_rs_,_windowfft)
+			else
+				fftoption _windowfft 0
+				_specx = fft(_rs_);,_windowfft)
+			end
+			
+			;zeigen specx
+			_OAx = kmp1(wurz(2)*_specx)
+			SetEinheit(_OAx,"Ordnung",0)
+			SetEinheit(_OAx,einheit?(_vib,1),1)
+			
+			wenn 0
+				_OPx = kmp2(_specx)
+			else
+				_windowlength_ = lang?(_rs_)
+				_OPx = kmp2(FrequencyResponse(_peak_rs_,_rs_,_windowlength_,_windowfft,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+				_OPx = PhaseMod( _OPx, "360" )
+				;_OPx = PhaseContinuous( _OPx )
+			end
+
+			SetEinheit(_OPx,"Ordnung",0)
+			SetEinheit(_OPx,"Grad",1)
+			
+			_OAx_kask = binde(_OAx_kask, _OAx)
+			_OPx_kask = binde(_OPx_kask, _OPx)
+			_OSpeed_kask = binde(_OSpeed_kask, _om)
+			_delme_amp = einheit?(_OAx,1)
+			seteinheit(_OAx_kask,_delme_amp,1)
+			_delme_ph = einheit?(_OPx,1)
+			seteinheit(_OPx_kask,_delme_ph,1)
+			
+			
+			
+			_O1 = binde(_O1,wert(_OAx,1))
+			_O2 = binde(_O2,wert(_OAx,2))
+			_O3 = binde(_O3,wert(_OAx,3))
+			_O4 = binde(_O4,wert(_OAx,4))
+			_O5 = binde(_O5,wert(_OAx,5))
+			
+			_Ph1 = binde(_Ph1,wert(_OPx,1))
+			_Ph2 = binde(_Ph2,wert(_OPx,2))
+			_Ph3 = binde(_Ph3,wert(_OPx,3))
+			_Ph4 = binde(_Ph4,wert(_OPx,4))
+			_Ph5 = binde(_Ph5,wert(_OPx,5))
+			
+			
+			seteinheit(_O1,_delme_amp,1)
+			seteinheit(_O2,_delme_amp,1)
+			seteinheit(_O3,_delme_amp,1)
+			seteinheit(_O4,_delme_amp,1)
+			seteinheit(_O5,_delme_amp,1)
+			
+			seteinheit(_Ph1,_delme_ph,1)
+			seteinheit(_Ph2,_delme_ph,1)
+			seteinheit(_Ph3,_delme_ph,1)
+			seteinheit(_Ph4,_delme_ph,1)
+			seteinheit(_Ph5,_delme_ph,1)
+			
+			
+			
+			sleep(0)
+			_nn = _nn + 1
+		ende
+		
+		n_ordnung = _nn
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Segmentierung der Feature zur Matrixbildung
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		
+		SetSegLang(_OAx_kask,lang?(_OAx))
+		SetSegLang(_OPx_kask,lang?(_OPx))
+		
+		
+		wenn 0
+			wenn _env = 0
+				;Gruppierung
+				Feature:OAx = _OAx_kask
+				Feature:OPx = _OPx_kask
+				Feature:OSpeed = _OSpeed_kask
+				_anz_seg = Lang?(Feature:OAx)/SegLang?(Feature:OAx)
+				Feature:OAx_averaged = MatrixSumLines(Feature:OAx,0)/_anz_seg
+				seteinheit(Feature:OAx_averaged,einheit?(Feature:OAx,1),1)
+				_anz_seg = Lang?(Feature:OPx)/SegLang?(Feature:OPx)
+				Feature:OPx_averaged = MatrixSumLines(Feature:OPx,0)/_anz_seg
+				Feature:BodeO1 = _O1
+				Feature:BodeO2 = _O2
+				Feature:BodeO3 = _O3
+				Feature:BodeO4 = _O4
+				Feature:BodeO5 = _O5
+				Feature:BodeP1 = _Ph1
+				Feature:BodeP2 = _Ph2
+				Feature:BodeP3 = _Ph3
+				Feature:BodeP4 = _Ph4
+				Feature:BodeP5 = _Ph5
+			sonst
+				Feature:OAx_env = _OAx_kask
+				Feature:OSpeed_env = _OSpeed_kask
+				Feature:OAx_averaged_env = MatrixSumLines(Feature:OAx_env,0)/SegLang?(Feature:OAx_env)
+				Feature:BodeO1_env = _O1
+				Feature:BodeO2_env = _O2
+				Feature:BodeO3_env = _O3
+				Feature:BodeO4_env = _O4
+				Feature:BodeO5_env = _O5
+			ende
+			; Löschung der Variablen
+			;entf _*
+		ende
+	ende
+ende
+
+

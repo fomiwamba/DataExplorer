@@ -1,0 +1,86 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Ausgewählter Parameter, ausgewählter Marker
+; Output: Ausgewählte Messungszeitpunkt
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "view_measurement_point started"
+
+_index = PnTableGetSelectedRows("VISATable.VISA_table")
+wenn _index > 0
+	Parname = ParameterStatusListe[_index]
+	
+	CwSelectMode("title")
+	CwSelectWindow("DataExploration.TrendPlot")
+	CwSelectByIndex("x-axis",1)
+	AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+	
+	_anz_markers = CwDisplayGet("marker.count")
+	if _anz_markers > 1; delete markers
+		_ii = 2
+		solange _ii <= _anz_markers
+			CwSelectByIndex("marker", _ii)
+			CwDeleteElement("marker")
+			_ii = _ii + 1
+		ende
+	ende
+	
+	CwSelectByIndex("marker",1)
+	measpoint = CwMarkerGet("x")
+	wenn measpoint > 0
+		_Paridx = GrKanalFinde(FeatData,ParName)
+		_ParSig = FeatData:[_Paridx]
+		if isxy(_parsig)
+			DateTimeVec = sort(Zeit?(_ParSig)+kmpx(_ParSig),1)
+		sonst
+			DateTimeVec = Zeit?(_ParSig)+rampe(0, xdel?(_ParSig), xdel?(_ParSig)*lang?(_Parsig))
+		ende
+		;DateTimeVec = sort(Zeit?({<ParName>})+kmpx({<ParName>}),1)
+		d0vec = leer
+		wenn AxisScale = 4
+			if measpoint < DateTimeVec[1]
+				measpoint = DateTimeVec[1]
+			end
+			if measpoint > DateTimeVec[lang?(_Parsig)]
+				measpoint = DateTimeVec[lang?(_Parsig)]-2
+			end
+			measpoint_date = measpoint
+			idx = posi(DateTimeVec,measpoint_date)
+		sonst
+			
+			if measpoint <= 0
+				measpoint = 1
+			end
+			if measpoint > lang?(_Parsig)
+				measpoint = lang?(_Parsig)-2	
+			end
+			measpoint_idx = round(measpoint,1)
+			;measpoint_date = Zeit?(_ParSig)+xdel?(_ParSig)*measpoint_idx ; 
+			measpoint_date = DateTimeVec[measpoint_idx]
+			idx = measpoint_idx 
+		end
+		
+		if idx <= 0
+			idx = 1
+		ende
+		if idx > lang?(DateTimeVec) -2
+			idx = lang?(DateTimeVec) -2
+		ende
+		d01 = DateTimeVec [Ganz(idx)]
+		d0vec = binde(d0vec,d01)
+		d02 = DateTimeVec [Ganz(idx)+1]
+		d0vec = binde(d0vec,d02)
+		d03 = DateTimeVec [Ganz(idx)+2]
+		d0vec = binde(d0vec,d03)
+		d0vec_diff = Ganz(abs(d0vec - measpoint_date))
+		d0vec_min = min(d0vec_diff)
+		idx_korr = posi(d0vec_diff, d0vec_min)
+		idx_ist = Ganz(idx) + idx_korr
+		measpoint_idx = idx_ist
+		PnSetText("MeasIndex",TForm(measpoint_idx,""));
+		measpoint_date = ZeitInText(DateTimeVec [Ganz(idx_ist)],3)
+		sequenz ViewMeasurementFromMarker
+	sonst
+		BoxNachricht("Info","Please select a Marker before starting ViewMeasurement","?1")
+	ende
+sonst
+	BoxNachricht("Info","Please select a Parameter and Marker before starting ViewMeasurement","?1")
+ende

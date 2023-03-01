@@ -1,0 +1,179 @@
+sequenz imc_logging "load_vms_frequency_data started"
+
+;sequenz Load_VMS_Frequency_Data
+
+if varexist?("Ch_Config") and GrChanNum?("VMS_Freq_Table") > 0; and txarraygetsize(VMS_Freq_Table:[1]) > 1
+
+	if varexist?("SuesParData")
+		entf SuesParData
+	end
+
+	sequenz ClearSelectedPlot "FrequencyParameters.FreqParameterPlot"
+	sequenz ClearSelectedPlot "FrequencyParameters.FreqSpectrumPlot"
+
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Load SuesStatisticsTable.csv
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	file = assetfolder + "\" + "Output\Features\" + "SuesStatisticsTable.csv"; -> max(Status) of Channel
+	if fsfileexists(file)
+		_fileid = FileOpenXLS(file,0)
+		wenn _fileid > 0
+			; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+			FileXLSSelectSheet(_fileid,1)
+			SuesParListe = TxArrayCreate(1)
+			SuesStatsListe = TxArrayCreate(1)
+			Fault_VibMode_data = TxArrayCreate(1)
+			SuesParData_ = GrNeu()
+			_ii = 1
+			SOLANGE _ii <=  2560
+				_PName = FileXLSCellRead(_fileid,1,_ii+1,0)
+				wenn tverg(_Pname,"") = 0
+					break
+				sonst
+					SuesParListe[_ii] = _PName
+					_ii = _ii + 1
+				ende
+			ENDE
+			_iimax = _ii -1 
+			_jj = 1
+			SOLANGE _jj <=  2560
+				_PName = FileXLSCellRead(_fileid,_jj,1,0)
+				wenn tverg(_Pname,"") = 0
+					break
+				sonst
+					SuesStatsListe[_jj] = _PName
+				
+					wenn tverg(_Pname,"Fault_VibMode") = 0
+						_kkk = 1
+						SOLANGE _kkk <= 2560;_cols
+							_partext = FileXLSCellRead(_fileid,_jj,_kkk+1,0) 
+							wenn tverg(_Partext,"") = 0
+								break
+							sonst
+								Fault_VibMode_data[_kkk] = _partext
+							end
+							_kkk = _kkk + 1
+						ende
+						SuesParData_:{<_PName>} = Fault_VibMode_data
+					else
+						if _jj > 1
+							SuesParData_:{<_PName>} = FileXLSColumnRead(_fileid,_jj,2,_iimax,0)
+						end
+						
+					ENDE
+					_jj = _jj + 1
+				ende
+			end
+			err = FileClose(_fileid)
+		ende
+	ende
+	entf file
+
+	SuesParData_Orig = SuesParData_
+	
+	; remove sues_parameter without refvalues
+	if 0
+		DelSuesParList = TxArrayCreate(0)
+		_count = 1
+		for _ii = 1 to txarraygetsize(SuesParListe)
+			_Parname = SuesParListe[_ii]
+			; find _parname in SuesParListe
+			sequenz search_item SuesParListe _parname
+			; find RefVal of current _parname
+			if search_index > 0
+				_par_refval = SuesParData_:RefVal[search_index]
+			else
+				_par_refval = 0
+			end
+			; if _par_refval = 0, nicht in die Liste eintragen
+			if _par_refval = 0
+				;GrChanDel(SuesParData,_ii)
+				DelSuesParList[_count] = _Parname
+				_count = _count +1
+			end
+		end
+
+		for _ii = 1 to txarraygetsize(DelSuesParList)
+			_Parname = DelSuesParList[_ii]
+			GrChanDel(SuesParData_,_Parname)
+		end
+	end
+	SuesParData = SuesParData_
+
+
+	OutputFolder = AssetFolder + "\Output";
+	FFTFolder = OutputFolder + "\Features\FFT\"; 
+
+	SuesFreqData = GrNeu()
+	_suchname = "SuesTable.csv"
+	_Pathname = OutputFolder + "\Features"
+	_FileListID=FsFileListNew(_PathName, _suchname,0,0,0)
+
+	;PnDeleteItem("VMS_Freq_Data.ParameterListe",0)
+
+	wenn _filelistid >= 1  
+		_FileCountMax=FsFileListGetCount(_FileListID)
+		wenn _FileCountMax > 0
+			_file = FsFileListGetName(_FileListID,1)
+			importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+			_fileid = FileOpenFAS(_file, importsvorlage, 0); ascii_statusfile
+			wenn _fileid > 0
+				_anzPar = FileObjNum?(_fileid)
+				_index = 1
+				SOLANGE _index <= _anzPar  
+					_typ = FileObjType?(_fileid,_index)
+					wenn _typ = 1
+						_Parname = FileObjName?(_fileid,_index)
+						if 0
+							; find _parname in SuesParListe
+							sequenz search_item SuesParListe _parname
+							; find RefVal of current _parname
+							if search_index > 0
+								_par_refval = SuesParData_Orig:RefVal[search_index]
+							else
+								_par_refval = 0
+							end
+						end
+						; if _par_refval = 0, nicht in die Liste eintragen
+						;if _par_refval <> 0
+						{<_Parname>} = FileObjRead(_fileid,_index)
+						wenn IsXY({<_Parname>})
+							{<_Parname>} = sort({<_Parname>},7)
+							SuesFreqData:{<_Parname>}={<_Parname>}
+						sonst
+							SuesFreqData:{<_Parname>}={<_Parname>}
+						ende
+						wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+							DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+							SuesFreqData:Date_Time=DateTimeVec
+						ende
+						;sequenz delete_item "ParameterListe" _Parname
+						if 0
+							if txwo(_parname,_parfiltername) > 0 and _parfiltername <>"" and _ParFilterStatus = 1
+								sequenz insert_item "FrequencyParameters.ParameterListe" _Parname
+							end
+							if _parfiltername ="" or _ParFilterStatus = 0
+								sequenz insert_item "FrequencyParameters.ParameterListe" _Parname
+							end
+						end
+					ende
+					_index = _index + 1
+				ende
+				fileclose(_fileid)
+			sonst
+				_err = FileErrCode?()
+				zeigen _err
+			ende
+		sonst
+			_err = fsgetlastError()
+			zeigen _err
+		ende
+	sonst
+		_erg = BoxMessage("Info","SuesTable File does not exist!","!1")
+		_err = fsgetlastError()
+		zeigen _err
+	ende
+end
+
+

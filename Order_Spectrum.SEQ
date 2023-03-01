@@ -1,0 +1,202 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Sequenz zur Berechnung von Amplitude und Phase von Hoch- und Ausläufe
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "order_analysis started"
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+_vibx = PA1
+_viby = PA2
+_peak_raw = PA3
+_samples_per_rev = PA4;samples_per_rev[channelcount] 
+_pam = PA5;:pam[channelcount] 
+;_windowfft = PA6;:windowfft[channelcount] ; 	-> Standard auf 2 <=> Hanning
+;_overlap = PA7;:overlap[channelcount] ;		-> Standard auf 50%
+;_pulse_per_rev = PA8;:pulse_per_rev[channelcount] 		;
+;_trig_level = PA9; Triglevel
+
+;PulsPerRev = Pngetvalue("VibrationAnalysis.PulsPerRev")
+;TrigLevel = Pngetvalue("VibrationAnalysis.TrigLevel")
+_pulse_per_rev = PnGetValue("PulsPerRev");PulsPerRev
+_trig_level = PnGetValue("TrigLevel");TrigLevel
+
+_overlap = 0;Pngetvalue("VibrationAnalysis.OverlapValue")
+_windowfft = 2;_window;Pngetvalue("VibrationAnalysis.Window")
+
+;_peak_1 = _peak_raw - _TrigLevel 
+_peak = STri(_peak_raw,_trig_level,_trig_level)
+_dp = diff(_peak)*xdel?(_peak)
+_Tx = posiex(-_dp,2); findet alle Zeiten, wo peak <= 0
+_anz_umdrehungen = lang?(_Tx) 
+
+;sequenz SignaleGleichSetzen _vib _peak
+;_vib = _sig1
+;_peak = _sig2
+
+;wenn varexist?("peak")
+OtrTachoMode(3, 0, _pulse_per_rev, 0)
+_speed0 = OtrTachoToSpeed(_peak)
+_rsx = OtrResample(_vibx,_peak,_samples_per_rev/2 ,1)
+_rsy = OtrResample(_viby,_peak,_samples_per_rev/2 ,1)
+_peak_rs = OtrResample(_peak,_peak,_samples_per_rev/2 ,1)
+_speed = OtrResample(_speed0,_peak,_samples_per_rev/2,1)
+
+OAx_kask = leer;
+OPx_kask = leer;
+OAy_kask = leer;
+OPy_kask = leer;
+OSpeed_kask = leer;
+
+_nn_max = ganz(lang?(_rsx)/_samples_per_rev/_pam)
+_nn = 1
+_Tgesamt = ganz(lang?(_rsx))
+_T_fenster = _pam*_samples_per_rev
+wenn _T_fenster > _Tgesamt
+	_T_fenster = _Tgesamt
+ende
+_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+
+;_rs = OtrResample(_vibsignal,_pulssignal,_Omax ,1)
+;_Tgesamt = ganz(lang?(_rs))
+;_T_fenster = _pam*_SampPerRev
+;_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+wenn mean(_speed0) > 1
+	_N_f = _T_fenster
+	wenn _nn_mit_overlap <= 0
+		BoxNachricht("Configuration error","Please reduce the number of samples per revolution (NpR)","?1")
+		;DlgSelectItem("Omax",2)
+	sonst
+		solange _nn <= _nn_mit_overlap 
+			ratio = floor(_nn/_nn_mit_overlap*100) 
+			seteinheit(ratio,"%",1)
+			zeigen ratio
+			wenn 1
+				wenn 0 ;(mit overlap)
+					_Tbeginn = (_nn-1)*_T_fenster-(_nn-1)*_overlap/100*_T_fenster
+					_Tende = _nn*_T_fenster-(_nn-1)*_overlap/100*_T_fenster;Tbeginn + T_fenster
+					_T_fenster_verifikation = _Tende-_Tbeginn
+					_N_beginn = floor(((_nn-1)-(_nn-1)*_overlap/100)*_N_f)+1;
+					_N_end = floor((_nn-(_nn-1)*_overlap/100)*_N_f)+1
+					_rsx_ = grenindex(_rsx,_N_beginn,_N_end)
+					_rsy_ = grenindex(_rsy,_N_beginn,_N_end)
+					_peak_rs_ = grenindex(_peak_rs,_N_beginn,_N_end)
+					_om = mean(grenindex(_speed,_N_beginn,_N_end))
+				else
+					_rsx_ = grenindex(_rsx,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+					_rsy_ = grenindex(_rsy,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+					_peak_rs_ = grenindex(_peak_rs,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+					_om = mean(grenindex(_speed,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev))
+				ende
+			ende
+			;zeigen om
+			wenn 0
+				_specx = dftspectrum(_rsx_,_windowfft)
+				_specy = dftspectrum(_rsy_,_windowfft)
+			else
+				fftoption _windowfft 0
+				_specx = fft(_rsx_);,_windowfft)
+				_specy = fft(_rsy_);,_windowfft)
+			end
+			
+			;zeigen specx
+			_OAx = kmp1(wurz(2)*_specx)
+			SetEinheit(_OAx,"Ordnung",0)
+			SetEinheit(_OAx,einheit?(_vibx,1),1)
+			_OAy = kmp1(wurz(2)*_specy)
+			SetEinheit(_OAy,"Ordnung",0)
+			SetEinheit(_OAy,einheit?(_viby,1),1)
+			
+			wenn 0; falsche, Phase driftet
+				_OPx = kmp2(_specx)
+				_OPy = kmp2(_specy)
+			else
+				_windowlength_ = lang?(_rsx_)
+				_OPx = kmp2(FrequencyResponse(_peak_rs_,_rsx_,_windowlength_,_windowfft,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+				_OPx = PhaseMod( _OPx, "360" )
+				_OPy = kmp2(FrequencyResponse(_peak_rs_,_rsy_,_windowlength_,_windowfft,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+				_OPy = PhaseMod( _OPy, "360" )
+			end
+
+			SetEinheit(_OPx,"Ordnung",0)
+			SetEinheit(_OPx,"Grad",1)
+			SetEinheit(_OPy,"Ordnung",0)
+			SetEinheit(_OPy,"Grad",1)
+			
+			OAx_kask = binde(OAx_kask, _OAx)
+			OPx_kask = binde(OPx_kask, _OPx)
+			OAy_kask = binde(OAy_kask, _OAx)
+			OPy_kask = binde(OPy_kask, _OPx)
+			OSpeed_kask = binde(OSpeed_kask, _om)
+			seteinheit(OSpeed_kask,"RPM",1)
+			_delme_amp = einheit?(_OAx,1)
+			seteinheit(OAx_kask,_delme_amp,1)
+			seteinheit(OAy_kask,_delme_amp,1)
+			_delme_ph = einheit?(_OPx,1)
+			seteinheit(OPx_kask,_delme_ph,1)
+			seteinheit(OPy_kask,_delme_ph,1)
+			
+			
+			for _order = 1 to 10
+				_ox_order = "Ox" + tform(_order,"")
+				_oy_order = "Oy" + tform(_order,"")
+				_phx_order = "Phx" + tform(_order,"")
+				_phy_order = "Phy" + tform(_order,"")
+				if _nn = 1
+					{<_ox_order>} = leer
+					{<_oy_order>} = leer
+					{<_phx_order>} = leer
+					{<_phy_order>} = leer
+				end
+				{<_ox_order>} = binde({<_ox_order>},wert(_OAx,_order))
+				{<_oy_order>} = binde({<_oy_order>},wert(_OAy,_order))
+				{<_phx_order>} = binde({<_phx_order>},wert(_OPx,_order))
+				{<_phy_order>} = binde({<_phy_order>},wert(_OPy,_order))
+				seteinheit({<_ox_order>},_delme_amp,1)			
+				seteinheit({<_phx_order>},_delme_ph,1)
+				seteinheit({<_oy_order>},_delme_amp,1)			
+				seteinheit({<_phy_order>},_delme_ph,1)
+			end
+			
+			del _delme*
+			;zeigen _nn
+			_nn = _nn + 1
+		ende		
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Segmentierung der Feature zur Matrixbildung
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		SetSegLang(OAx_kask,lang?(_OAx))
+		SetSegLang(OPx_kask,lang?(_OPx))
+		SetSegLang(OAy_kask,lang?(_OAx))
+		SetSegLang(OPy_kask,lang?(_OPx))
+		
+		del _*
+		
+	ende
+	CwSelectMode("variable")
+	;CwNewWindow(OSpeed_kask,"show")
+	;zeigen OSpeed_kask
+	err = CwLoadCCV(OSpeed_kask, "C:\BDA\ExpertAnalysis\OSpeed_kask.ccv")
+	;CwSelectWindow(OSpeed_kask)
+
+	;CwNewWindow(OAx_kask,"show")
+	err = CwLoadCCV(OAx_kask, "C:\BDA\ExpertAnalysis\OAx_kask.ccv")
+	;CwSelectWindow(OAx_kask)
+
+	;CwNewWindow(OAy_kask,"show")
+	err = CwLoadCCV(OAy_kask, "C:\BDA\ExpertAnalysis\OAy_kask.ccv")
+	;CwSelectWindow(OAy_kask)
+
+
+	if varexist?("ratio")
+		cwselectmode("variable")
+		cwselectwindow(ratio)
+		CwAction("win.close")
+	ende
+ende
+
+
+

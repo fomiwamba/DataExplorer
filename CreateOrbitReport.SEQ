@@ -1,0 +1,535 @@
+sequenz imc_logging "create_orbit_report started"
+; sequenz ShowParameterTableStatus
+; channel liste tabelle
+
+
+cadis_report_template_channel_page3 = cadis_report_folder + "cadis_report_channel_page3.drb"
+err = RgDocOpen( cadis_report_template_channel_page3, 0 )
+wenn err = 0
+	if varexist?("MeasData") and varexist?("currentsignal") 
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; channel page 3 update
+		
+		channelx = currentsignal
+		sigx = MeasData:{<channelx>}
+		channelx_all = sigx
+		;RgTextSet("channelname", ist_channel,0)
+		RgTextSet("channelname", channelx,0)
+		RgTextSet("channelunit", channelunit,0)
+		RgTextSet("measurementfile",file_ext,0)
+		
+		RgTextSet("channelx", channelx,0)
+		
+		if varexist?("asset_current_status_cols") and varexist?("asset_current_status_map0")  
+			for _kk = 1 to txarraygetsize(asset_current_status_cols)
+				if tverg(channelx, asset_current_status_cols[_kk]) = 0
+					_colidx = _kk;-1	
+					ist_channel_par_status = asset_current_status_map0:[_colidx]
+					_parstatus = max(ist_channel_par_status)
+					sequenz find_status_colour; -> _parstatus_color
+					RgObjSetColor("channelname",1,_parstatus_color,0,0)		
+					break
+				ende
+			ende
+		end
+		
+		channely = ""
+		sigy  = sigx
+		sequenz search_item Ch_Config:SigName channelx; search_index
+		wenn search_index > 0
+			_kk_config = search_index
+			ind_channely = Ch_Config:OrbitChannelY[_kk_config]
+			wenn ind_channely <> "None"
+				_kky = tzuew(tteil(ind_channely,3,5),"f")+1	
+				sequenz search_item Ch_Config:ChName ind_channely; search_index
+				Channely = Ch_Config:SigName[search_index]
+				_idx = grchanfind(MeasData, Channely)
+				if _idx > 0
+					sigy = MeasData:{<channely>}
+					sequenz SignaleGleichSetzen sigx sigy
+					sigx = _sig1
+					sigy = _sig2
+					channely_all = sigy
+				else
+					ind_channely = "None"
+				end
+			ende
+		ende
+		RgTextSet("channely", channely,0)
+		
+		channelp = ""
+		ind_tacho = Ch_Config:TachoChannel[_kk_config]
+		wenn ind_tacho <> "None"
+			_kkpuls = tzuew(tteil(ind_tacho,3,5),"f")+1	
+			sequenz search_item Ch_Config:ChName ind_tacho; search_index
+			channelp = Ch_Config:SigName[search_index]
+			_idx = grchanfind(MeasData, Channelp)
+			if _idx > 0
+				sigp = MeasData:{<channelp>}
+				sequenz SignaleGleichSetzen sigx sigp
+				sigx = _sig1
+				sigp = _sig2
+				channelp_all = sigp
+			else
+				ind_tacho = "None"
+			end
+		ende
+		RgTextSet("channelp", channelp,0)
+		
+		if ind_channely <> "None" and ind_tacho <> "None"
+			_windowfft = Ch_Config:windowfft[_kk_config]
+			wenn _windowfft = "Rechteck"
+				_index = 1;0
+			ende
+			wenn _windowfft = "Hanning"
+				_index = 2;2
+			ende
+			wenn _windowfft = "Flattop"
+				_index = 3;5
+			ende
+			;PnSelectItem("Window",_index)
+			_window = _index
+	
+			_overlap = tzuew(Ch_Config:overlap[_kk_config],"f")
+	
+			_PulsPerRev = tzuew(Ch_Config:PulsPerRev[_kk_config],"f")
+			_Triglevel = tzuew(Ch_Config:TrigLevel[_kk_config],"f")
+	
+			RotatingDirection = Ch_Config:RotatingDirection[_kk_config]
+	
+			RotatingOrder = Ch_Config:RotatingOrder[_kk_config]
+		
+		
+			
+			; signal kürzung
+			tsig_window = 0.5
+			tsig = xdel?(sigx)*lang?(sigx)
+			_Tbeginn = tsig/2 -tsig_window
+			_Tend = tsig/2 + tsig_window
+			sigx_ = gren(sigx,_Tbeginn,_Tend)
+			sigy_ = gren(sigy,_Tbeginn,_Tend)
+			sigp_ = gren(sigp,_Tbeginn,_Tend)
+		
+			; load channelx twf
+			twf_channelx = sigx_
+			twf_channely = sigy_
+			twf_channelp = sigp_
+			twf_channelxy = sigx_
+			TxErr$ = CwLoadCCV(channelx_all, "channelx_all.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","channelx_all","!1")
+			ende
+			err = RgCurveSet("twf_channelx_all",channelx_all,0)
+			wenn err <> 0
+				err_txt ="twf_channelx_all: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(channelx_all)
+			CwAction("win.close")
+			
+			TxErr$ = CwLoadCCV(channely_all, "channely_all.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","channely_all","!1")
+			ende
+			err = RgCurveSet("twf_channely_all",channely_all,0)
+			wenn err <> 0
+				err_txt ="twf_channely_all: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(channely_all)
+			CwAction("win.close")
+			
+			TxErr$ = CwLoadCCV(channelp_all, "channelp_all.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","channelp_all","!1")
+			ende
+			err = RgCurveSet("twf_channelp_all",channelp_all,0)
+			wenn err <> 0
+				err_txt ="twf_channelp_all: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(channelp_all)
+			CwAction("win.close")
+			
+			
+			
+			
+			TxErr$ = CwLoadCCV(twf_channelxy, "twf_channelxy.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","twf_channelxy","!1")
+			ende
+			err = RgCurveSet("twf_channelxy",twf_channelxy,0)
+			wenn err <> 0
+				err_txt ="twf_channelxy: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(twf_channelxy)
+			CwAction("win.close")
+	
+
+			; load fft_channel
+			fft_channelx = AmpSpectrumRMS_1(sigx,2^16,2, 0, 1)
+			fft_channely = AmpSpectrumRMS_1(sigy,2^16,2, 0, 1)
+			fft_channelxy = fft_channelx
+			TxErr$ = CwLoadCCV(fft_channelxy, "fft_channelxy.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","fft_channelxy","!1")
+			ende
+			err = RgCurveSet("fft_channelxy",fft_channelxy,0)
+			wenn err <> 0
+				err_txt ="fft_channelxy: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(fft_channelxy)
+			CwAction("win.close")
+		
+			;FFT und Orbit	
+			_Ax = fft_channelx
+			_Ay = fft_channely
+		
+			_tw = _Tend - _Tbeginn
+			_t = rampe(0,xdel?(sigx_),lang?(sigx_))
+			_t_orbit = _tw
+			_nsamples_orbit = floor(_t_orbit / xdel?(sigx_))
+		
+			Xcenter = mean(sigx_)
+			Ycenter = mean(sigy_)
+			seteinheit(Xcenter,einheit?(sigx,1),1)
+			seteinheit(Ycenter,einheit?(sigy,1),1)
+			Orbitcenter = kompl(Xcenter,Ycenter)
+			Orbit_unfiltered = xyvon(sigx_-mean(sigx_),sigy_-mean(sigy_))
+			Orbit_unfiltered_ =  xyvon(sigx_,sigy_)
+			
+			if 1
+				; Gesamt Orbit -> Sgmax, phigmax
+				_G_orbit = xyvon(sigx_,sigy_)
+				_S = wurz(quad(sigx_-mitte(sigx_))+quad(sigy_-mitte(sigy_))); Wellenausschlag
+				_phi = atan2(sigy_,sigx_); Winkel 
+				_phi_kleiner_0 = oben(-1*_phi,0)
+				_wert_phi_kleiner_0 = wert(_phi,_phi_kleiner_0)
+				_wert_phi_kleiner_0_neu = _wert_phi_kleiner_0 + 2*PI
+				_phi = Setze(_phi,_phi_kleiner_0,_wert_phi_kleiner_0_neu)
+				_S_max = max(_S); max. Wellenausschlag
+				_pos_max = Posi(_S,_S_max)
+				_phi_max = Wert(_phi,_pos_max); Winkel des max. Wellenausschlags
+				_Sgmax = _S_max
+				_phigmax = _phi_max*180/pi
+	
+	
+				; Mittelposition
+				_x0 = mitte(sigx_);
+				_y0 = mitte(sigy_);
+				_S0 = wurz(_x0^2+_y0^2);
+				_phi0 = atan2(_y0,_x0)*180/pi;
+				;				_phi0_kleiner_0 = oben(-1*_phi0,0)
+				;				_wert_phi0_kleiner_0 = wert(_phi0,_phi0_kleiner_0)
+				;				_wert_phi0_kleiner_0_neu = _wert_phi0_kleiner_0 + 2*PI
+				;				_phi0 = Setze(_phi0,_phi0_kleiner_0,_wert_phi0_kleiner_0_neu)
+				;				_phi0 = _phi0*180/pi;
+	
+				; Luftspalt = Lagerschaleradius - Sm;
+				_xm = _x0 + _Sgmax*cos(_phigmax*pi/180);
+				_ym = _y0 + _Sgmax*sin(_phigmax*pi/180);
+				_Sm = sqrt(_xm^2+_ym^2);
+				_phim = atan2(_ym,_xm);
+		
+				;				seteinheit(_x0,_delme_signalx,1)
+				;				seteinheit(_y0,_delme_signalx,1)
+				;				seteinheit(_S0,_delme_signalx,1)
+				;				seteinheit(_xm,_delme_signalx,1)
+				;				seteinheit(_ym,_delme_signalx,1)
+				;				seteinheit(_Sm,_delme_signalx,1)
+				;				seteinheit(_Sgmax,_delme_signalx,1)
+			ende
+	
+			wenn ind_tacho <>"None"
+				_peak_rec = stri(sigp_,_TrigLevel ,_TrigLevel )
+				if 1
+					_dp0 = diff(_peak_rec)*xdel?(_peak_rec)
+					_Tx1 = posiex(-_dp0,2) - _Tbeginn; findet alle Zeiten, wo peak <= 0
+					if leng?(_Tx1) > 1
+						_Tx0 = posiex(-_dp0,-2)- 5*xdel?(sigp_) - _Tbeginn; findet alle Zeiten, wo peak <= 0
+						_T0 = mean(diff(_Tx0))
+						_F0 = 1/_T0
+						_F0_mitte = _F0
+					else
+						_F0_mitte = 0
+					ende
+				else
+					OtrTachoMode(3, 0, _PulsPerRev, 0)
+					_drehzahl = OtrTachoToSpeed(_peak_rec)
+					SetEinheit(_drehzahl,"U/min",1)
+					_F0 = _drehzahl/60; Drehfrequenz in Hz
+					SetEinheit(_F0,"Hz",1)
+					_T0 = 1/_F0; Drehperiode in Sekunden
+					SetEinheit(_T0,"s",1)
+					_drehzahl_mitte = mitte(_drehzahl)
+					_F0_mitte = mitte(_F0)
+				ende
+
+	
+				wenn lang?(sigp_)>2 and _F0_mitte <> 0
+					_px = kmp2(FrequencyResponse(sigp,sigx,2^16,2,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+					_py = kmp2(FrequencyResponse(sigp,sigy,2^16,2,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+				sonst
+					_px = kmp2(fft(sigx_)) 
+					_py = kmp2(fft(sigy_)) 
+				ende
+
+				_px = PhaseMod( _px, "360" )
+				_py = PhaseMod( _py, "360" )
+	
+				; Parameterberechnung
+				_ordlinie = 1
+				_F0_ist = _ordlinie*_F0_mitte
+		
+				_deltaf = xdel?(_Ax); Frequenzlinienabstand
+				_deltaN = 3; Anzahl der Frequenzlinien
+		
+				_Fo = _F0_ist+_deltaN*_deltaf; Untere Grenzordnung
+				_Fu = _F0_ist-_deltaN*_deltaf; Obere Grenzordnung
+				_FNyquist =  lang?(_Ax)*_deltaf
+			
+				; prüfen ob x vor y -> T0x vs. T0y
+				;			sigx_f =FiltBP(sigx_,0,0,10,_F0-1,_F0+1)
+				;			sigx_f = gren(sigx_f,_Tend-1,_Tend)
+				;			sigy_f = FiltBP(sigy_,0,0,10,_F0-1,_F0+1)
+				;			sigy_f = gren(sigy_f,_Tend-1,_Tend)
+				
+				
+				wenn 1
+					_Acx = _Ax*sin(_px);
+					_Asx = _Ax*cos(_px)
+					_Acy = _Ay*sin(_py)
+					_Asy = _Ay*cos(_py)
+			
+					; wenn y vor x  -> Acx mit Acy und Asx mit Asy austauschen
+					; Gleich und Gegenlaufanteile
+					; fall = 2; (1, wenn x voreilend ist, 2 wenn y voreilend ist)
+					_Fall_xy = RotatingOrder 
+					wenn _Fall_xy = "X-Y";1 ; (x vor y -> x = Realachse, y = Imaginärachse)
+						_rf = 1/2*kompl(_Acx+_Asy,_Acy-_Asx);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+						_rb = 1/2*kompl(_Acx-_Asy,_Acy+_Asx);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+					sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+						_rf = 1/2*kompl(_Acy+_Asx,_Acx-_Asy);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+						_rb = 1/2*kompl(_Acy-_Asx,_Acx+_Asy);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+					end
+					_rf_polar = pol(_rf); Polardarstellung des Gleichlaufanteils
+					_rb_polar = pol(_rb); Polardarstellung des Gegenlaufanteils
+					_rf_a = Kmp1(_rf_polar); Amplitude Gleichlauf
+					_rb_a = Kmp1(_rb_polar); Amplitude Gegenlauf
+					_rf_p = Kmp2(_rf_polar); Phase Gleichlauf
+					_rb_p = Kmp2(_rb_polar); Phase Gegenlauf
+					_G = _rf_a + _rb_a;	Grosse Halbachse, entspricht Smax
+					_K = abs(_rf_a - _rb_a);	kleine Halbachse, entspricht Smin
+					_FRI = _K/_G;  Form, Indikator Index Orbit 
+					_phimax = 1/2*(_rf_p+_rb_p); Hauptachseneigung bzgl. Realteil-achse (X oder Y-Richtung)
+					;		_Orbitindikator = abs(pi*_G*_K); Orbitfläche
+					_df = xdel?(_rf_a); Frequenzlinineabstand
+					_ff = rampe(0,_df,lang?(_rf_a)); Positive Frequenzlinien
+					_fb = -1*rampe(0,_df,lang?(_rb_a)); Negative Frequenzlinien
+					_ASp_f = xy(_ff,_rf_a); Amplitudenwerte Positiver Frequenzlinien
+			
+					_ASp_b = xy(_fb,_rb_a); Amplitudenwerte Negativer Frequenzlinien
+					_Basp = binde(grenindex(_ASp_b,1,lang?(_ASp_b)-1),grenindex(_ASp_f,1,lang?(_ASp_f))); Zwei-Seitiges-Amplitudenspektrum
+			
+					_PSp_f = xy(_ff,_rf_p); Phasenwerte Positiver Frequenzlinien
+					_PSp_b = xy(_fb,_rb_p); Phasenwerte Negativer Frequenzlinien
+					_PSp_f = PhaseMod( _PSp_f, "360" )
+					_PSp_b = PhaseMod( _PSp_b, "360" )
+					_Bpsp = binde(grenindex(_PSp_b,1,lang?(_PSp_b)-1),grenindex(_PSp_f,1,lang?(_PSp_f))); Zwei-Seitiges-Phasenspektrum
+					;Basp_kask = binde(Basp_kask,_Basp)
+					;seteinheit(Basp_kask,einheit?(ChannelX,1),1)
+					;xeinheit Basp_kask "Hz"
+					;Basp_kask_i = Basp_kask
+					;SetSegLang(Basp_kask_i,lang?(_Basp))
+					_Basp_i = _Basp
+				ende	
+		
+			
+		
+				wenn _Fu > _FNyquist or _Fo > _FNyquist
+				sonst
+					_spect_x = gren(_Ax,_Fu,_Fo); Amplitudespektrum fuer X
+					_fxpos = posi(_spect_x,max(_spect_x))
+					_Ax_freq = wert(_Ax,_fxpos); 
+					_Px_freq = wert(_Px,_fxpos)
+			
+					_spect_y = gren(_Ay,_Fu,_Fo); Amplitudespektrum fuer X
+					_fypos = posi(_spect_y,max(_spect_y))
+					_Ay_freq = wert(_Ay,_fypos); 
+					_Py_freq = wert(_Py,_fypos)
+			
+					;Phasenkorrektur
+					if _Px_freq < 0
+						_Px_freq = _Px_freq + 360;
+					end
+					if _Py_freq < 0
+						_Py_freq = _Py_freq + 360;
+					end
+			
+					_Acx1 = _Ax_freq*sin(_Px_freq);
+					_Asx1 = _Ax_freq*cos(_Px_freq)
+					_Acy1 = _Ay_freq*sin(_Py_freq)
+					_Asy1 = _Ay_freq*cos(_Py_freq)
+			
+					; Gleich und Gegenlaufanteile
+					; fall = 2; (1, wenn x voreilend ist, 2 wenn y voreilend ist)
+					_Fall_xy = RotatingOrder 
+					wenn  _Fall_xy = "X-Y" ; (x vor y -> x = Realachse, y = Imaginärachse)
+						_rf1 = 1/2*kompl(_Acx1+_Asy1,_Acy1-_Asx1);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+						_rb1 = 1/2*kompl(_Acx1-_Asy1,_Acy1+_Asx1);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+					sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+						_rf1 = 1/2*kompl(_Acy1+_Asx1,_Acx1-_Asy1);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+						_rb1 = 1/2*kompl(_Acy1-_Asx1,_Acx1+_Asy1);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+					end
+					_rf_polar1 = pol(_rf1); Polardarstellung des Gleichlaufanteils
+					_rb_polar1 = pol(_rb1); Polardarstellung des Gegenlaufanteils
+					_rf_a1 = Kmp1(_rf_polar1); Amplitude Gleichlauf
+					_rb_a1 = Kmp1(_rb_polar1); Amplitude Gegenlauf
+					_rf_p1 = Kmp2(_rf_polar1); Phase Gleichlauf
+					_rb_p1 = Kmp2(_rb_polar1); Phase Gegenlauf
+					if _rf_p1 < 0
+						_rf_p1 = _rf_p1 + 360;
+					end
+					if _rb_p1 < 0
+						_rb_p1 = _rb_p1 + 360;
+					end
+					_G01 = _rf_a1 + _rb_a1;	Grosse Halbachse, entspricht Smax
+					_K01 = abs(_rf_a1 - _rb_a1);	kleine Halbachse, entspricht Smin
+					_FRI1 = _K01/_G01;  Form, Indikator Index Orbit 
+					_phimax1 = 1/2*(_rf_p1+_rb_p1); Hauptachseneigung bzgl. Realteil-achse (X oder Y-Richtung)
+					;		_phimax1 = 1/2*(_rb_p1-_rf_p1); Hauptachseneigung bzgl. Realteil-achse (X oder Y-Richtung) -> Muszynska
+					if _phimax1 < 0
+						_phimax1 = _phimax1 + 360;
+					end
+					_Orbitindikator1 = abs(pi*_G01*_K01); Orbitfläche
+										
+			
+					;Gleichungen prüfen
+					Orbit_Forward = xyvon(_rf_a1*sin(2*pi*_F0_ist*_t + _rf_p1),_rf_a1*cos(2*pi*_F0_ist*_t + _rf_p1))
+
+					Orbit_backward =xyvon(_rb_a1*sin(2*pi*_F0_ist*_t + _rb_p1),_rb_a1*cos(2*pi*_F0_ist*_t + _rb_p1))
+			
+					wenn  _Fall_xy = "X-Y";1 ; (x vor y -> x = Realachse, y = Imaginärachse)
+						Orbit_filtered =xyvon(_Ax_freq*sin(2*pi*_F0_ist*_t+_Px_freq*pi/180),_Ay_freq*sin(2*pi*_F0_ist*_t+_Py_freq*pi/180))
+						Orbit_filtered_ = xyvon(Xcenter + _Ax_freq*sin(2*pi*_F0_ist*_t+_Px_freq*pi/180),Ycenter + _Ay_freq*sin(2*pi*_F0_ist*_t+_Py_freq*pi/180))
+					sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+						Orbit_filtered =xyvon(_Ay_freq*sin(2*pi*_F0_ist*_t+_Py_freq*pi/180),_Ax_freq*sin(2*pi*_F0_ist*_t+_Px_freq*pi/180))
+						Orbit_filtered_ = xyvon(Ycenter + _Ay_freq*sin(2*pi*_F0_ist*_t+_Py_freq*pi/180),Xcenter +_Ax_freq*sin(2*pi*_F0_ist*_t+_Px_freq*pi/180))
+					end
+				
+				end
+			sonst
+				_F0_mitte = 0
+
+				_count = _count + 1
+				_Ax_freq = 0
+				_Px_freq = 0
+				_Ay_freq = 0
+				_Py_freq = 0
+				_Orbitindikator1 = 0
+				_G01 = 0
+				_K01 = 0
+				_phimax1 = 0
+				_rf_a1 = 0
+				_rb_a1 = 0
+				_rf_p1 = 0
+				_rb_p1 = 0
+		
+				;Gleichungen prüfen				
+				Orbit_Forward = xyvon(0,0)
+		
+				Orbit_backward =xyvon(0,0)		
+			
+				wenn  _Fall_xy = "X-Y";1 ; (x vor y -> x = Realachse, y = Imaginärachse)
+					Orbit_filtered =xyvon(0,0)
+				sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+					Orbit_filtered =xyvon(0,0)
+				end
+				Orbit_filtered_ = xyvon(0,0)
+			ende
+			A1X = _Ax_freq
+			P1X = _Px_freq 
+			A1Y = _Ay_freq
+			P1Y = _Py_freq 
+	
+			seteinheit(A1X,einheit?(sigx,1),1)
+			yeinheit P1X Grad
+			P0X = kompl(A1X,P1X)
+	
+			seteinheit(A1Y,einheit?(sigy,1),1)
+			yeinheit P1Y Grad
+			P0Y = kompl(A1Y,P1Y)
+	
+			orbit_vectors = P0X
+			TxErr$ = CwLoadCCV(orbit_vectors, "orbit_vectors.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","orbit_vectors","!1")
+			ende
+			err = RgCurveSet("orbit_vectors",orbit_vectors,0)
+			wenn err <> 0
+				err_txt ="orbit_vectors: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(orbit_vectors)
+			CwAction("win.close")
+		
+			;		orbit_dynamic = Orbit_filtered 
+			;		TxErr$ = CwLoadCCV(orbit_dynamic, "orbit_dynamic.ccv")
+			;		wenn tverg(TxErr$,"") <> 0
+			;			err = BoxNachricht("Info","orbit_dynamic","!1")
+			;		ende
+			;		err = RgCurveSet("orbit_dynamic",orbit_dynamic,0)
+			;		wenn err <> 0
+			;			err_txt ="orbit_dynamic: " + RgGetErrorText(err)
+			;			err = BoxNachricht("Info",err_txt,"!1")
+			;		ende
+			;		CwSelectWindow(orbit_dynamic)
+			;		CwAction("win.close")
+		
+			orbit_static = Orbit_unfiltered_
+			TxErr$ = CwLoadCCV(orbit_static, "orbit_static.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","orbit_static","!1")
+			ende
+			err = RgCurveSet("orbit_static",orbit_static,0)
+			wenn err <> 0
+				err_txt ="orbit_static: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(orbit_static)
+			CwAction("win.close")
+			
+			
+			full_spectrum = Orbit_unfiltered_
+			TxErr$ = CwLoadCCV(full_spectrum, "full_spectrum.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","full_spectrum","!1")
+			ende
+			err = RgCurveSet("full_spectrum",full_spectrum,0)
+			wenn err <> 0
+				err_txt ="full_spectrum: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(full_spectrum)
+			CwAction("win.close")
+			
+			
+			txt = "RotOrder: "+RotatingOrder +", RotDir: "+RotatingDirection +", F0: "+tform(_F0_mitte,"f1.3") 
+			txt = txt +", StaticPos: "+tform(_S0,"f1.3")+"@" +tform(_phigmax,"f1.3") +", Smax:"+tform(_Sgmax,"f1.3") +"@"+tform(_phigmax,"f1.3")
+			txt = txt +", ImbalanceX: "+tform(A1X,"f1.3")+"@"+tform(P1X,"f1.3")+", ImbalanceY: "+ tform(A1Y,"f1.3")+"@"+tform(P1Y,"f1.3")
+			txt = txt +", G: "+tform(_G01,"f1.3")+", K: "+ tform(_K01,"f1.3")+", Inclination: "+ tform(_phimax1,"f1.3")
+			RgTextSet("orbit_settings", txt,0)
+		
+			report_name = "sues_" +currentsignal + "_orbit"
+			sequenz export_report report_name
+			;err = RgDocSave(cadis_report_template_channel_page3,0)
+			
+			
+			; close report
+			err =  RgDocClose( 0 )
+		end
+	ende
+end
+

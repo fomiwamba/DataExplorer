@@ -1,0 +1,9 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: FeatureFile, AnalyticsFunction, Visualisierungsfunction, PredictionModel
+; Task: Triggerung eine Python Function
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sequenz imc_logging "start_visualanalytics.bat started"
+
+;Applikation Vollbild C:\python37\python.exe C:\BDA\AI\CADIS_VisualAnalytics.py
+ret = Execute( "C:\BDA\AI\Start_VisualAnalytics.bat","" , "", 3,0)

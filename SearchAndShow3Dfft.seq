@@ -1,0 +1,23 @@
+sequenz imc_logging "search_and_show_3d_fft started"
+
+;	currentchannel = _pname
+_text = "Display 3D FFT of " + _pname + "?"
+_erg = BoxNachricht("Info",_text,"?4")
+wenn _erg = 1
+	_file_search = _pname + "_FFT_Ax_Trend.csv"
+	dlgsettext("FFT_Trend_Name",_file_search)
+	_pathname = FFTFile
+	fft_file = _pathname + _file_search
+;	erg = FsFileExists(fft_file)
+;	wenn erg >= 1
+		FftFileIst = fft_file
+		sequenz Read_Python_3dfft; -> Ax_Trend
+		Ax_trend_plot = Ax_Trend
+		;sequenz plot_3d_trend Ax_trend 1 "CascadePlot"
+		sequenz FFT3D_Plot
+;	sonst
+;		Ax_trend_plot = leer
+;		_text = _file_search + " does not exist!"
+;		_erg = BoxNachricht("Info",_text,"!1")
+;	ende
+ende

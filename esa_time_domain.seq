@@ -1,0 +1,89 @@
+sequenz imc_logging "esa_time_domain started"
+; Inputs: U_sig, I_sig, freqline_Hz_np, RunningSpeed, Polpaar, U_V_np, I_A_np
+	; Outputs: eff, peak, cf, impedance, cosphi, vdf, thdf, variation, pactive, papparent, preactive, demandpower, load, efficiency, outputpower, outputtorque
+	
+	_ii = 1
+	SOLANGE _ii <= 3 
+		; Peakwerte
+		U_peak = binde(U_peak,max(U_sig:[_ii]-mean(U_sig:[_ii])))
+		I_peak = binde(I_peak,max(I_sig:[_ii]-mean(I_sig:[_ii])))
+	
+		; Effektivwerte
+		U_eff = binde(U_eff,Eff(U_sig:[_ii]))
+		I_eff = binde(I_eff,Eff(I_sig:[_ii]))
+	
+		; Crestwerte; Crest Factor, Crest factor = peak value / RMS value
+		U_Crest = binde(U_Crest,U_peak[_ii]/U_eff[_ii])
+		I_Crest = binde(I_Crest,I_peak[_ii]/I_eff[_ii])
+	
+		;Impedance = Urms/Irms
+		Z = binde(Z,U_eff[_ii]/I_eff[_ii])
+	
+		;7.8.1.21.Voltage deviation factor (VDF)
+		;• For voltage crest factor = 1.414, VDF = 100% * { [voltage crest factor] / 1.414}
+		; • For voltage crest factor > 1.414, VDF = 100% * {1.414 / [voltage crest factor]}
+		wenn U_Crest[_ii] <= 1.414
+			VDF = binde(VDF, 100 * U_Crest[_ii]/1.414)
+		sonst
+			VDF = binde(VDF, 100 * 1.414/U_Crest[_ii])
+		ende
+		;	7.8.1.22.THDF
+		;THDF (transformer harmonic derating factor):
+		;• For current crest factor = 1.414, VDF = 100% * { [current crest factor] / 1.414}
+		;• For current crest factor > 1.414, VDF = 100% * {1.414 / [current crest factor]}
+		wenn I_Crest[_ii] <= 1.414
+			THDF = binde(THDF, 100 * I_Crest[_ii]/1.414)
+		sonst
+			THDF = binde(THDF, 100 * 1.414/I_Crest[_ii])
+		ende
+	
+		; Abweichung, Variation -> VoltageVariation from nameplate
+		;100% * [Absolute value (Nameplate voltage – Voltage average) / Nameplate voltage]
+		U_Variation = binde(U_Variation,abs(U_V_np - U_eff[_ii])/U_V_np*100)
+		I_Variation = binde(I_Variation,abs(I_A_np - I_eff[_ii])/I_A_np*100)
+	
+		; Active Power, True Power = 1/sqrt(3)*1/T*Int(U_t*I_t) -> wirkleistung Pstr [W]
+		Pactive = binde(Pactive,abs(1/sqrt(3)*mean(U_sig:[_ii]*I_sig:[_ii])))
+		
+	
+		; Apparent Power = 1/sqrt(3)*Urms*Irms -> Scheinleistung Sstr [VA]
+		Papparent = binde(Papparent,abs(1/sqrt(3)*U_eff[_ii]*I_eff[_ii]))
+ 
+		; Reactive Power [VAR]
+		Preactive = binde(Preactive,abs(sqrt(Papparent[_ii]^2-Pactive[_ii]^2)))
+	
+		; Power Factor -> for each phase -> Leistungsfaktor Pstr/Str
+		Cosphi = binde(Cosphi, Pactive[_ii]/Papparent[_ii])
+		;Cosphi = binde(Cosphi, (1/sqrt(3)*(mean(U_sig:[_ii]*I_sig:[_ii])))/(1/sqrt(3)*U_eff[_ii]*I_eff[_ii])
+	
+		_ii = _ii + 1
+	ENDE
+	
+	
+		
+	;Demand/True Power -> Gesamtwirkleistung = P = 3*Pstr = sqrt(3) * Urms * Irms * Cosphi = Pstr1 + Pstr2 + Pstr3  -> P[W]
+	;Pact_all = sum(Pact)			; 	Pact[1]+Pact[2]+Pact[3]
+	;Pact_all = = sqrt(3) * U_avg * I_avg * Cosphi_avg  ; nach ESA (7.8.1.13)
+	; Apparent Power -> S [VA] = sqrt(P^2+Q^2)
+	;Papp_all = sum(Papp); Papp[1]+Papp[2]+Papp[3]
+	; Reactive Power -> Q[VAR]
+	;Cosphi_all =avg(Cosphi);  Pact_all/Papp_all or 1/3*(Cosphi[1] +Cosphi[2] +Cosphi[3])
+
+	PhaseData:U_eff = U_eff
+	PhaseData:U_peak = U_peak
+	PhaseData:U_crest = U_crest
+	PhaseData:U_Variation = U_Variation
+	PhaseData:U_VDF = VDF
+	
+	PhaseData:I_eff = I_eff
+	PhaseData:I_peak = I_peak
+	PhaseData:I_crest = I_crest
+	PhaseData:I_Variation = I_Variation
+	PhaseData:I_THDF = THDF
+	
+	PhaseData:PowerFactor = CosPhi
+	PhaseData:Impedance = Z
+	PhaseData:Real_Power_W = Pactive
+	PhaseData:Apparent_Power_VA = Papparent
+	PhaseData:Reactive_Power_VARS = Preactive
+	

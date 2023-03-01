@@ -1,0 +1,100 @@
+; open report_template
+;cadis_report_summary= cadis_report_folder + "cadis_report_summary.drb"
+cadis_report_summary= cadis_report_folder + "cadis_report_operatingparameters.drb"
+err = RgDocOpen( cadis_report_summary, 0 )
+wenn err = 0	
+	OPData = Grneu()
+
+	op_ok = 0
+	_anzPar = GrChanNum?(FeatDataAll)
+	_index = 1
+	speed_count = 0
+	SOLANGE _index <= _anzPar  
+		; load parameters
+		_Parname = GrChanName?(FeatDataAll,_index)
+
+		; load Op_data
+		_kkmax = TxArrayGetSize(OP_Info:ParCode)
+		for _kk = 1 to _kkmax
+			op_par_verg = _parname
+			op_par = OP_Info:ParCode[_kk]
+			op_unit = OP_Info:ParUnit[_kk]
+			if txwo(op_par,_parname ) <> 0
+				op_ok = 1
+				{<_Parname>} = FeatDataAll:[_index]
+				seteinheit({<_Parname>}  , op_unit,1)
+				wenn IsXY({<_Parname>} )
+					{<_Parname>} = sort({<_Parname>},7)
+					OPData:{<_Parname>} ={<_Parname>} 
+				sonst
+					OPData:{<_Parname>} ={<_Parname>} 
+				ende
+			ende
+		ende
+						
+
+		_index = _index + 1
+	ende
+	if varexist?("OPData")
+		if GrChanNum?(OPData)>0 ; GrKanalZahl?(channel_timeseries_parameters) > 0
+			; channel liste tabelle
+			anz_op = GrChanNum?(OPData)
+			table_name= "op_liste"
+			table_cols = RgTableColumns?(table_name)
+			table_rows = RgTableRows?(table_name)
+			for _ii = 1 to table_rows
+				for _jj = 1 to table_cols
+					RgTableSetCell(table_name,_jj,_ii,"",0)
+					_parstatus_color = RGB(255, 255, 255)
+					RgObjSetColor(table_name,1,_parstatus_color,_jj,_ii)		
+				ende
+			ende
+	
+	
+			OPData0 = OPData
+			entf OPData
+			OPData = GrNeu()
+			op_parameter = leer
+	
+			for _ii =1 to anz_op +1
+				if _ii = 1
+					RgTableSetCell(table_name,1,_ii,"Id",0)
+					RgTableSetCell(table_name,2,_ii,"OPName",0)
+				else
+					opname = GrChanName?(OPData0,_ii-1)
+					RgTableSetCell(table_name,1,_ii,_ii-1,0)
+					RgTableSetCell(table_name,2,_ii,opname,0)
+				
+					opname_ = "OP_"+tform(_ii-1,"f2.0")
+					_idx = _ii-1
+					opval_ = OPData0:[_idx]
+					if isxy( opval_)
+						opval_= kmpy(opval_)
+					else
+						x_vec = ramp(0,1,leng?(OPData0:[1]))
+						opval_ = opval_;xy(x_vec, {<_parname_speed>} )
+					ende
+					OPData:{<opname_>} = opval_
+				ende
+			ende
+			
+			op_parameter = OPData
+			TxErr$ = CwLoadCCV(op_parameter, "op_parameter.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","op_parameter","!1")
+			ende
+			err =RgCurveSet("op_parameter",op_parameter,0)
+			wenn err <> 0
+				err_txt ="op_parameter: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(op_parameter)
+			CwAction("win.close")
+		ende
+	ende
+	
+	sequenz export_report "operating_parameters"
+	; close report
+	err =  RgDocClose( 0 )
+		
+ende

@@ -1,0 +1,23 @@
+sequenz imc_logging "load_asset_meas_file_channel started"
+
+_erg = fsfileExists("C:\BDA\VibrationAnalysis\AssetMeasFileChannel.txt")
+if _erg = 1
+	idDatei= FileOpenASCII( "C:\BDA\VibrationAnalysis\AssetMeasFileChannel.txt",0 )
+	TxZeile = ""
+	ok = 0
+	count = 0
+	solange ok = 0
+		ok = FileLineRead( idDatei, TxZeile, 0 )
+		if ok = 0 
+			if count = 0
+				AssetFolder = TxZeile
+			elseif count = 1
+				$filename = TxZeile
+			elseif count = 2
+				ChannelName = TxZeile
+			ende
+		ende
+		count = count + 1
+	ende
+	FileClose(idDatei)
+ende

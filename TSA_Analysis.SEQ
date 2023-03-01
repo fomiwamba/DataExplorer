@@ -1,0 +1,953 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Sequenz zur Berechnung von Amplitude und Phase von Hoch- und Ausläufe
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "order_analysis started"
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+entf _vi
+entf _peak_raw
+entf vib_event
+entf peak_event
+entf Ax_event
+entf histo_event
+entf stft_spectrum
+entf avg_spectrum
+entf stft_env_spectrum
+entf avg_env_spectrum
+entf stft_ospectrum
+entf avg_ospectrum
+entf OAx_kask
+entf OAx_avg
+
+
+
+
+if 1
+	_vib = PA1
+	_peak_raw = PA2
+	_samples_per_rev = PA3;samples_per_rev[channelcount] 
+	_pam = PA4;:pam[channelcount] 
+	_windowfft = PA5;:windowfft[channelcount] ; 	-> Standard auf 2 <=> Hanning
+	_overlap = PA6;:overlap[channelcount] ;		-> Standard auf 50%
+	TrigLevel = PA7
+	PulsPerRev = PA8;:pulse_per_rev[channelcount] 		;
+	integrate_vib = PA9
+	_env = PA10
+	; sigx peak samples_per_rev pam windowfft overlap TrigLevel PulsPerRev integrate_vib envelope 
+else
+	integration = 1
+	_pam = 10
+	_windowfft = 1
+	_overlap = 0
+	_pulse_per_rev = 1
+	_env = 0
+	TrigLevel = 10
+	PulsPerRev = _pulse_per_rev
+	windowlength = 2^15; config
+	if 0
+		assetfolder = "D:\Projekte\Paimboeuf_data\"
+		file = "AMU_192.168.0.1_A_OC1_EventFile_20230221_023406.dat"
+		file = "AMU_192.168.0.1_A_OC1_EventFile_20230221_215928.dat"
+		;file = "AMU_192.168.0.1_C_OC1_EventFile_20230130_222221.dat"
+		;file = "AMU_192.168.0.1_A_OC0_EventFile_20230216_172706.dat"
+		;file = "AMU_192.168.0.1_O_OC1_EventFile_20230205_161935.dat"
+		;file = "AMU_192.168.0.1_A_OC1_EventFile_20230207_132948.dat"
+	
+		filename = assetfolder + "Output\TWF\" + file
+	end
+end
+
+twindow = PnGetValue("VibrationAnalysis.Twindow")
+windowlength = twindow / xdel?(_vib)
+Tmin =  Pngetvalue("VibrationAnalysis.Tmin");
+Tmax = Pngetvalue("VibrationAnalysis.Tmax")
+_vib = gren(_vib, Tmin, Tmax)
+_peak_raw = gren (_peak_raw, Tmin, Tmax)
+_vib = xoff(_vib, 0)
+_peak_raw = xoff(_peak_raw, 0)
+
+; Rolling Bearing Orders, Frequencies = Rolling Bearing Orders * F0 [Hz]
+if 1
+	;RB_24030CCW33:inner_ring = 1; inner ring speed frequency 
+	;RB_24030CCW33:outer_ring = 0; outer ring speed frequency
+	RB_24030CCW33:cage = 0.452; Rolling element set & cage
+	RB_24030CCW33:rolling_element = 5.038; Rolling element about its axis
+	RB_24030CCW33:point_inner_ring = 14.253; Point on inner ring
+	RB_24030CCW33:point_outer_ring = 11.747; Point on outer ring
+	RB_24030CCW33:point_rolling_element = 10.076; Rolling element
+
+	;RB_22228CCKW33:inner_ring = 1
+	;RB_22228CCKW33:outer_ring = 0
+	RB_22228CCKW33:cage = 0.432
+	RB_22228CCKW33:rolling_element = 3.566; Rolling element about its axis
+	RB_22228CCKW33:point_inner_ring = 10.789
+	RB_22228CCKW33:point_outer_ring = 8.211
+	RB_22228CCKW33:point_rolling_element = 7.132
+	
+	; https://cooperbearings.com/downloads/UK_vibration_data.pdf --> Type: 02B500
+	;RB_Cooper_02B500M:inner_ring = 1
+	;RB_Cooper_02B500M:outer_ring = 0
+	RB_Cooper_02B500M:cage = 0.455; Cage --> ‘Cage’ – the frequency at which a point on the cage enters and leaves the loaded zone of the bearing.
+	RB_Cooper_02B500M:rolling_element = 5.469 ; Roller --> ‘Roller’ – the frequency at which a point on a given roller passes into contact with either the inner or outer race.
+	RB_Cooper_02B500M:point_inner_ring = 15.269; Inner --> ‘Inner’ – the frequency at which a point on the inner race comes into contact with successive rollers
+	RB_Cooper_02B500M:point_outer_ring = 12.731; Outer --> ‘Outer’ – the frequency at which a point on the outer race comes into contact with successive rollers.
+	RB_Cooper_02B500M:point_rolling_element = 2*RB_Cooper_02B500M:rolling_element 
+	
+	RB_frequencies = grneu()
+	gname = "RB_24030CCW33"
+	for _mm = 1 to GrChanNum?({<gname>})
+		parname = gname + "_" + GrChanName?({<gname>},_mm)
+		RB_frequencies:{<parname>} = {<gname>}:[_mm]
+	end
+	gname = "RB_22228CCKW33"
+	for _mm = 1 to GrChanNum?({<gname>})
+		parname = gname + "_" + GrChanName?({<gname>},_mm)
+		RB_frequencies:{<parname>} = {<gname>}:[_mm]
+	end
+	gname = "RB_Cooper_02B500M"
+	for _mm = 1 to GrChanNum?({<gname>})
+		parname = gname + "_" + GrChanName?({<gname>},_mm)
+		RB_frequencies:{<parname>} = {<gname>}:[_mm]
+	end
+	
+end
+
+
+;_kk_max = GrChanNum?(Data)
+;for _kk = 2 to GrChanNum?(Data)
+;	channel_ratio = floor(_kk/_kk_max*100) 
+;	seteinheit(channel_ratio,"%",1)
+;	zeigen channel_ratio
+;	_vib = Data:[_kk]
+;	chann_name = GrChanName?(Data,_kk)
+;	_peak_raw = Data:Ch000
+	
+	
+;_samples_per_rev = 1024 ; > 60 * Fs (S/sec) / speed (rpm) = 2 * OrdnungMax with  OrdnungMax = 30 / ( Abtastzeit_Schwingung * max ( Drehzahl ) )	wobei Abtastzeit_Schwingung die Abtastzeit des Signals Schwingung ist und max ( Drehzahl ) der maximal auftretende Wert der Drehzahl.
+	
+first_rev = 1
+if integrate_vib
+	dt_vib = xdel?(_vib)
+	n_vib = lang?(_vib)
+	t_vib = n_vib * dt_vib
+	_vib_orig = binde(_vib,_vib)
+	_vib0 = FiltHP(_vib_orig,0,0,10,1)
+	_vib = int(_vib0)
+	_vib = gren(_vib, t_vib +dt_vib , 2*t_vib)
+	_vib = xoff(_vib, 0)
+	_peak_raw = xoff(_peak_raw, 0)
+	first_rev = 100
+end
+
+wenn _env = 0
+	_vib = _vib - mean(_vib);
+ende
+;_peak_1 = _peak_raw - _TrigLevel 
+_peak = STri(_peak_raw,TrigLevel,TrigLevel)
+_dp = diff(_peak)*xdel?(_peak)
+_Tx = posiex(_dp,2); findet alle Zeiten, wo peak <= 0
+_Tx_All = _Tx
+_anz_umdrehungen = lang?(_Tx) 
+F0_vec = 1/(diff(_Tx_All))
+F0 = 1/(mean(diff(_Tx_All)))
+	
+RB_frequencies_f0 = RB_frequencies * F0
+
+dt = xdel?(_vib)
+_peak = gren(_peak, _Tx[1]+dt, _Tx[_anz_umdrehungen]+dt)
+_vib = gren(_vib, _Tx[1]+dt, _Tx[_anz_umdrehungen]+dt)
+	
+;	if integration = 1
+;		_Tx_All = grenindex(_Tx_All,first_rev+1, _anz_umdrehungen+1)
+;		_anz_umdrehungen = _anz_umdrehungen - first_rev
+;	end
+	
+; spectral analysis
+if 1
+	stft_spectrum = AmpSpectrumRMS(_vib,windowlength,2,0,1,1)
+	avg_spectrum = AmpSpectrumRMS_1(_vib,windowlength,2,0,1)
+end
+; envelope curve
+if _env = 1
+	_BPFu = 1;	-> Bandpass-Unterfrequenz -->1
+	_BPFo = 2000;	-> Bandpass-Oberfrequenz-->2Khz
+	_TPF = 200; 	-> Tiefpassfrequenz-->200Hz
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Variante 2 <=> Gleichrichtung
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;Feature:env_sig = FiltTP(abs(FiltBP(_sig,0,0,8,_BPFu,_BPFo)),0,0,8,_TPF)
+	_sig1 = FiltBP(_vib,0,0,10,_BPFu,_BPFo)
+	_sig2 = abs(_sig1)
+	_sig3 = FiltTP(_sig2,0,0,10,_TPF)
+	env_sig = _sig3
+	stft_env_spectrum = AmpSpectrumRMS(env_sig,windowlength,2,0,1,1)
+	avg_env_spectrum = AmpSpectrumRMS_1(env_sig,windowlength,2,0,1)
+end
+		
+; rolling bearing frequencies analysis
+if show_brg_freqs
+	CwSelectMode("newest")
+	if _env
+		zeigen avg_env_spectrum
+		_erg = CwSelectWindow("avg_env_spectrum")
+	else
+		zeigen avg_spectrum
+		_erg = CwSelectWindow("avg_spectrum")
+	end		
+	CwSelectByIndex("x-axis",1)
+	AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+
+	_ii = 1
+	solange _ii <= GrChanNum?(RB_frequencies_f0)
+		Freqvec = RB_frequencies_f0:[_ii]
+		FreqName = GrChanName?(RB_frequencies_f0,_ii) + "=" + tform(Freqvec,"f1.4") 
+		_anz_markers = CwDisplayGet("marker.count")
+		CwNewElement("marker.vert.line.user")
+		CwSelectByIndex("marker", _anz_markers+1)
+		CwMarkerSet("text", FreqName)
+		CwMarkerSet("x.type",1)
+		CwMarkerSet("x",Freqvec)
+		CwMarkerSet("y.type",2)
+		CwMarkerSet("y",50)
+		CwMarkerSet("arrow",0)
+	
+		;CwMarkerSet("dimline.distance",8)
+		CwMarkerSet("extension",0)
+		CwMarkerSet("linewidth",0.5)
+		CwMarkerSet("font.size",10)
+		CwMarkerSet("text.orientation",90)
+		fb = RGB( 255, 255, 0 ) ;Rot
+		CwMarkerSet("color.background",fb)
+		fb = RGB( 0, 0, 0) ;Blau
+		CwMarkerSet("color.text",fb)
+		_ii = _ii +1
+	ende
+	if 1; show harmonics
+		_ii = 1
+		Harmonics_  = leer
+		solange _ii <= 50
+			Freqvec = _ii * F0
+			Harmonics_ = binde(Harmonics_, Freqvec)
+			FreqName = tform(_ii,"f1.0") + "X"
+			_anz_markers = CwDisplayGet("marker.count")
+			CwNewElement("marker.vert.line.user")
+			CwSelectByIndex("marker", _anz_markers+1)
+			CwMarkerSet("text", FreqName)
+			CwMarkerSet("x.type",1)
+			CwMarkerSet("x",Freqvec)
+			CwMarkerSet("y.type",2)
+			CwMarkerSet("y",90)
+			CwMarkerSet("arrow",0)
+	
+			;CwMarkerSet("dimline.distance",8)
+			CwMarkerSet("extension",0)
+			CwMarkerSet("font.size",10)
+			CwMarkerSet("linewidth",0.2)
+			CwMarkerSet("text.orientation",90)
+			fb = RGB( 255, 255, 0 ) ;Rot
+			CwMarkerSet("color.background",fb)
+			fb = RGB( 0, 0, 0) ;Blau
+			CwMarkerSet("color.text",fb)
+			_ii = _ii +1
+		ende
+	end
+end
+	
+DateTime_Wert = Time?(_vib)
+
+_drehzahl_kask = leer; Drehzahl 
+_x_mv_kask = leer; Mittelwert
+_x_eff_a_kask = leer; Effektivwert Beschleunigung
+_x_eff_v_kask = leer; Effektivwert Geschwindigkeit
+_x_max_kask = leer; Maximumwert
+_x_min_kask = leer; Minimumwert
+_x_peak_kask = leer; Betragspitzenwert
+_x_peak2peak_kask = leer; Betragspitzenwert
+_x_crest_kask = leer; Crestfaktor
+_x_std_kask = leer; Standardabweichung
+_x_kurtosis_kask = leer; Kurtosis
+_x_histo_sig = leer;
+_Tmittel_kask = leer;
+_x_eff_kask = leer
+_x_eff_a_kask = leer;
+_x_eff_a_lf_kask = leer;
+_x_eff_a_iso_kask = leer;
+_x_eff_a_hf_kask = leer;
+_x_eff_v_kask = leer;
+_x_eff_v_lf_kask = leer;
+_x_eff_v_iso_kask = leer;
+_x_eff_v_hf_kask = leer;
+_x_histo_area_kask = leer;
+_x_average_rec_kask = leer; = sum(abs(_x_g))/lang?(_x_g); average rectified
+_x_skewness_kask = leer; = 1/lang?(_x_g)*summe(_x_ac^3)/_x_std^3; skewness
+_x_clf_kask = leer; = max(abs(_x_g))/_x_average_rec^2; clearance
+_x_if_kask = leer; = max(abs(_x_g))/_x_average_rec^2; Impulse factor
+_x_ff_kask = leer; = _x_eff_a/_x_average_rec; Impulse factor
+
+_x_iqr = leer; Interquartile oder quartilabstand
+_x_median = leer; Median -> x050 or q2
+_x_025 = leer; LowerQuartile -> Boxplot Quartil -> q1
+_x_075 = leer; UpperQuartile -> Boxplot Quartil -> q3
+_x_lower = leer;
+_x_upper = leer;
+_x_range = leer;
+_x_outliers = leer
+_x_nconst = leer
+_vib_kask = leer; Amplitudenspektrum von Signalx
+_peak_kask = leer; Phasenspektrum von Signalx
+_Ax_kask = leer
+
+_signalx = _vib
+_unit_signalx = einheit?(_signalx,1)
+;_unit_int_signalx = einheit?(_int_signalx,1)
+
+for _ii = 1 to _anz_umdrehungen-1
+	_nn = _ii
+	dt = 0
+	_x_g = gren(_vib,  _Tx_All[_ii]+dt, _Tx_All[_ii+1]+dt)
+	_peak_g = gren(_peak,  _Tx_All[_ii]+dt, _Tx_All[_ii+1]+dt)
+	_Tmittel = (_Tx_All[_ii+1]+dt+_Tx_All[_ii]+dt)/2
+	_Tmittel_kask = binde(_Tmittel_kask,_Tmittel)
+	
+	;seteinheit(_x_g,_unit_signalx,1)
+	_vib_kask = binde(_vib_kask,_x_g)
+	_peak_kask = binde(_peak_kask,_peak_g)
+	
+	_x_g = xoff(_x_g,0)
+	_peak_g = xoff(_peak_g,0)
+	sequenz Create_EventData_STFT "vib_event" _x_g _unit_signalx
+	seteinheit (vib_event,_unit_signalx,1)
+	seteinheit (vib_event,"s",0)
+	sequenz Create_EventData_STFT "peak_event" _peak_g "V"
+	seteinheit (peak_event,"V",1)
+	seteinheit (peak_event,"s",0)
+		
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;2) Drehzahl und Drehfrequenzbestimmung -> F0, Drehzahl
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	wenn lang?(_peak)>2
+		sequenz Pulse2Speed _peak_g TrigLevel PulsPerRev 2
+		_drehzahl_kask = binde(_drehzahl_kask,_drehzahl_mitte)
+	ende
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; BoxPlot
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	_x = sort(_x_g,1)
+	n = lang?(_x)
+	a1 = n*0.25
+	a2 = n*0.75
+	a3 = n*0.5
+	b1 = mod(n,4)
+	b2 = mod(n,4)
+	b3 = mod(n,2)
+	
+	wenn b1 = 0
+		_x025 = 0.5*(_x[a1]+_x[a1+1]); wenn a 
+	sonst
+		_x025 = 0.5*_x[a1+1]
+	end
+	wenn b2 = 0
+		_x075 = 0.5*(_x[a2]+_x[a2+1]); wenn a 
+	sonst
+		_x075 = 0.5*_x[a2+1]
+	end
+	wenn b3 = 0
+		_x050 = 0.5*(_x[a3]+_x[a3+1]); wenn a 
+	sonst
+		_x050 = 0.5*_x[a3+1]
+	end
+	_x_iqr = binde(_x_iqr, _x075-_x025); Interquartile oder quartilabstand
+	_x_median = binde(_x_median, _x050); Median -> x050 or q2
+	_x_025 = binde(_x_025, _x025); LowerQuartile -> Boxplot Quartil -> q1
+	_x_075 = binde(_x_075, _x075); UpperQuartile -> Boxplot Quartil -> q3
+	_x_range = binde(_x_range, max(_x)-min(_x))
+	_x_mean = mean(_x)
+	_x_std = streu(_x)
+	;x_skew = binde(x_skew, 1/n*summe(((x-mean(x))/Streu(x-mean(x)))^3));
+	;x_kurt = binde(x_kurt, 1/n*summe(((x-mean(x))/Streu(x-mean(x)))^4));
+	delta = 1.5*(_x075-_x025); w = maximum whisker length
+		
+	wenn 1; k = 1.5 für outlier, k = 3 für extreme
+		_x_lower = binde(_x_lower,_x025 - 1.5*delta)
+		_x_upper = binde(_x_upper,_x075 + 1.5*delta)
+	sonst
+		x_lower = x_min
+		x_upper = x_max
+	ende
+	x_lowup = _x_upper - _x_lower
+		
+	if 0
+		a1 = oben(_x_g-_x075 - 1.5*delta,0)
+		a2 = oben(_x025 - 1.5*delta - _x_g, 0)
+		_outliers = lang?(a1) + lang?(a2)
+	else
+		_aa = abs(_x_g-_x_mean) - 3*_x_std
+		a1 = oben(_aa,0)
+		_outliers = lang?(a1)
+	ende
+	_x_outliers = binde(_x_outliers,_outliers )
+	_x3stdm = - 3*_x_std
+	_x3stdp = 3*_x_std
+	
+	;	    for y in data_1:
+	;        """
+	;        •	Ausreisser: 		a) > y > mean + 3*std or y < mean - 3*std		b) > y > q75 + 1.5*iqr or y < q25 - 1.5*iqr
+	;        •	Extremwert: 		a) > y > mean +5*std or y < mean - 5*std		b) > y > q75 + 3*iqr or y < q25 3 * iqr 
+	;
+	;        """
+	;        # z_score = (y - mean_1) / std_1
+	;        # if np.abs (z_score) > threshold:
+	;        if y > df_q75 + 1.5 * iqr or y < df_q25 - 1.5 * iqr:
+	;            outliers.append (y)
+	;    outliers_size = len(outliers)
+	
+	seteinheit(_x_iqr,einheit?(_signalx,1),1)
+	seteinheit(_x_median,einheit?(_signalx,1),1)
+	seteinheit(_x_lower,einheit?(_signalx,1),1)
+	seteinheit(_x_upper,einheit?(_signalx,1),1)
+	seteinheit(x_lowup,einheit?(_signalx,1),1)
+	seteinheit(_x_025,einheit?(_signalx,1),1)
+	seteinheit(_x_075,einheit?(_signalx,1),1)
+	seteinheit(_x_range,einheit?(_signalx,1),1)
+	seteinheit(_x_outliers,"",1)
+		
+	nbins = 100
+	_x_histo_sig_g = histo(_x_g, (max(_x_g)-min(_x_g))/nbins, nbins)
+	_x_histo_int = int(_x_histo_sig_g)
+	;_x_histo_area = wert(_x_histo_int,lang?(_x_histo_int))-wert(_x_histo_int,1)		
+	_x_histo_area = _x_histo_int[lang?(_x_histo_int)] - _x_histo_int[1]		
+	_x_histo_area_kask = binde(_x_histo_area_kask,_x_histo_area)
+	;_x_histo_sig = binde(_x_histo_sig, _x_histo_sig_g)
+	unit = ""
+	sequenz Create_EventData_STFT "histo_event" _x_histo_sig_g unit
+	seteinheit (histo_event,einheit?(_signalx,1),0)
+
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;3) Statistische Parameteranalyse -> RMS, MIN, MAX, MITTEL, CREST, KURTOSIS, STD
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	_x_mv = mitte(_x_g); Mean values
+	_x_max = max(_x_g); MAX values
+	_x_min = min(_x_g); MIN values
+	_x_peak = max(abs(_x_g)); Peak values
+	_x_peak2peak = _x_max - _x_min; 
+	_x_eff = eff(_x_g-_x_mv); RMS values
+	_x_crest = (_x_max - _x_min)/(2*_x_eff); Crest-faktor _x_peak/_x_eff_a; 
+	_x_std = streu(_x_g-_x_mv); Variance values
+	_x_ac = _x_g - _x_mv; Kurtosis
+	_x_kurtosis = 1/lang?(_x_g)*summe(((_x_ac)/Streu(_x_ac))^4); Kurtosis
+	_x_skewness = 1/lang?(_x_g)*summe(((_x_ac)/Streu(_x_ac))^3); skewness;
+	
+	_x_mv_kask = binde(_x_mv_kask,_x_mv)
+	_x_max_kask = binde(_x_max_kask,_x_max)
+	_x_min_kask = binde(_x_min_kask,_x_min)
+	_x_peak_kask = binde(_x_peak_kask,_x_peak)
+	_x_peak2peak_kask = binde(_x_peak2peak_kask,_x_peak2peak)
+	_x_eff_kask = binde(_x_eff_kask,_x_eff)
+	_x_crest_kask = binde(_x_crest_kask,_x_crest)
+	_x_std_kask = binde(_x_std_kask,_x_std)
+	_x_kurtosis_kask = binde(_x_kurtosis_kask,_x_kurtosis)
+	_x_skewness_kask = binde(_x_skewness_kask,_x_skewness); skewness
+
+	seteinheit(_x_mv_kask,_unit_signalx,1)
+	seteinheit(_x_max_kask,_unit_signalx,1)
+	seteinheit(_x_min_kask,_unit_signalx,1)
+	seteinheit(_x_peak_kask,_unit_signalx,1)
+	seteinheit(_x_peak2peak_kask,_unit_signalx,1)
+	seteinheit(_x_eff_kask,_unit_signalx,1)
+	seteinheit(_x_std_kask,_unit_signalx,1)
+	seteinheit(_x_crest_kask,"",1)
+	seteinheit(_x_kurtosis_kask,"",1)
+	seteinheit(_x_skewness_kask,"",1)
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;Magnitude Spectrum
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	dft_spec = 0
+	if dft_spec
+		_Ax_ = dftspectrum(_x_g-mitte(_x_g),_windowfft); langsamer aber genauere Auflösung
+		_Ax = _Ax_.b; kmp1(_Ax_)
+	else
+		if 1
+			fftoption _windowfft 0
+			_Ax_ = fft(_x_g-mitte(_x_g)); viel schneller
+			_Ax = _Ax_.b; kmp1(_Ax_)
+		else; build averaged spectrum
+			_overlap_ = 90
+			if 1
+				_nred = _windowlength_*xdel?(_x_g)/10; 
+				if _nred < 1
+					_nred_ = 1
+				end
+				if _nred >= 1
+					_nred_ = 2
+				end
+				if _nred > 2 
+					_nred_ = 2
+				end
+				if _nred > 4
+					_nred_ = 4
+				end
+				if _nred > 8
+					_nred_ = 8
+				end
+				if _nred > 16
+					_nred_ = 16
+				end
+				_nlen = _windowlength_/_nred_; = 4*4096; = _nlen = 10/xdel?(_x_g)
+			else
+				_nmin = 5/xdel?(_x_g)
+				for i = 12 to 20
+					_nlen = 2^i
+					if _nlen > _nmin
+						break
+					ende
+				ende
+			end
+			_Ax =AmpSpectrumRMS_1(_x_g,_nlen,_windowfft,_overlap_,1)
+		end
+	ende
+	
+	seteinheit(_Ax,_unit_signalx,1)
+	seteinheit(_Ax,"Hz",0)
+	_Ax_kask = binde(_Ax_kask,_Ax)
+	;seteinheit(_Ax_kask,_unit_signalx,1)
+	
+	unit = einheit? (_Ax, 1)
+	sequenz Create_EventData_STFT "Ax_event" _Ax unit
+end
+
+SetSegLang(_vib_kask,lang?(_x_g))
+SetSegLang(_peak_kask,lang?(_peak_g))
+
+
+;	SetSegLang(_x_histo_sig,lang?(_x_histo_sig_g))
+;	Feature:histogram_seg = _x_histo_sig
+;	_anz_seg = Lang?(Feature:histogram_seg)/SegLang?(Feature:histogram_seg)
+;	Feature:histogram = MatrixSumLines(Feature:histogram_seg,0)/_anz_seg;_x_histo_sig
+	
+;Feature:histo_event = histo_event
+
+;	Ch_Config:Zeitfensterbreite_zk = _T_fenster
+;	Ch_Config:overlap_zk = _overlap
+;	Ch_Config:Gesamtfenster_zk = _Tgesamt
+
+;Feature:x_iqr = _x_iqr; Interquantile = x_075 - x_025
+;Feature:x_median = _x_median; median or 50% quantile
+;Feature:x_025 = _x_025; 25% quantile
+;Feature:x_075 = _x_075; 75% quantile
+;Feature:x_lower = _x_lower; Unterer Whisker -> x_025 - 1.5*iqr
+;Feature:x_upper = _x_upper; Oberer Whisker -> x_075 +1.5 * iqr
+;Feature:x_lowup = x_lowup
+;Feature:x_range = _x_range; range = max-min
+Feature:outliers = _x_outliers; # of outliers 
+;Feature:x_nconsts = _x_nconst; # of constant sectors with 2 position = equal
+;Feature:x_average_rec =	_x_average_rec_kask ; average rectified
+Feature:histo_area = _x_histo_area_kask
+
+Feature:Time = _Tmittel_kask + DateTime_Wert 
+;Feature:x_eff = _x_eff_kask
+Feature:mv = _x_mv_kask
+Feature:max = _x_max_kask
+Feature:min = _x_min_kask
+Feature:peak = _x_peak_kask
+Feature:peak2peak = _x_peak2peak_kask
+Feature:crest = _x_crest_kask
+Feature:std = _x_std_kask
+Feature:kurtosis = _x_kurtosis_kask
+;Feature:x_skewness =_x_skewness_kask ; skewness
+SetEinheit(Feature,"Revolutions",0)
+
+
+;wenn varexist?("peak")
+OtrTachoMode(3, 0, PulsPerRev , 0)
+_speed0 = OtrTachoToSpeed(_peak)
+
+_rs = OtrResample(_vib,_peak,_samples_per_rev/2 ,1)
+_peak_rs = OtrResample(_peak,_peak,_samples_per_rev/2 ,1)
+_speed = OtrResample(_speed0,_peak,_samples_per_rev/2,1)
+	
+_windowlength_ = _pam * _samples_per_rev
+OAx_kask = AmpSpectrumRMS(_rs,_windowlength_,_windowfft,0,1,1)
+SetEinheit(OAx_kask,"Ordnung",0)
+SetEinheit(OAx_kask,einheit?(_vib,1),1)
+	
+OAx_avg = AmpSpectrumRMS_1(_rs,_windowlength_,_windowfft,0,1)
+SetEinheit(OAx_avg,"Ordnung",0)
+SetEinheit(OAx_avg,einheit?(_vib,1),1)
+	
+	
+if 1
+	group_name = chann_name; + "_functions"
+	{<group_name>} = Grneu()
+	{<group_name>}:vib = _vib
+	{<group_name>}:tacho = _peak
+	{<group_name>}:vib_event = vib_event
+
+	{<group_name>}:peak_event = peak_event
+
+	{<group_name>}:Ax_event = Ax_event
+	
+	{<group_name>}:histo_event = histo_event
+
+	{<group_name>}:stft_spectrum = stft_spectrum
+	{<group_name>}:avg_spectrum = avg_spectrum
+	if _env = 1
+		{<group_name>}:stft_env_spectrum = stft_env_spectrum
+		{<group_name>}:avg_env_spectrum = avg_env_spectrum
+	end
+	{<group_name>}:stft_ospectrum = OAx_kask
+	{<group_name>}:avg_ospectrum = OAx_avg
+	for _mm = 1 to GrChanNum?(Feature)
+		parname = GrChanName?(Feature,_mm)
+		{<group_name>}:{<parname>} = Feature:[_mm]
+	end
+	gname = "RB_frequencies_f0"
+	for _mm = 1 to GrChanNum?({<gname>})
+		parname = gname + "_" + GrChanName?({<gname>},_mm)
+		{<group_name>}:{<parname>} = {<gname>}:[_mm]
+	end
+	
+	{<group_name>}:RotatingFrequencyAvg = F0
+	{<group_name>}:RotatingFrequency = F0_vec
+		
+	if (max(F0_vec) - min(F0_vec)) < 0.1
+		sequenz Build_EventData_Avg "vib_event"; "s" "g"
+		vib_event_avg = event_avg
+		{<group_name>}:vib_event_avg = vib_event_avg
+		sequenz Build_EventData_Avg "peak_event"; "s" "g"
+		peak_event_avg = event_avg
+		{<group_name>}:peak_event_avg = peak_event_avg
+		sequenz Build_EventData_Avg "Ax_event"; "s" "g"
+		Ax_event_avg = event_avg
+		{<group_name>}:Ax_event_avg = Ax_event_avg
+		sequenz Build_EventData_Avg "histo_event"; "s" "g"
+		histo_event_avg = event_avg
+		{<group_name>}:histo_event_avg = histo_event_avg
+	end
+	
+	sicherungsfile_dat = assetfolder + "\Output\TSA\"+group_name + "_TSA_"+ file_id + ".dat"
+	sicherungsfolder = fssplitPath(sicherungsfile_dat,8) 
+	_status = FsCreateDirectory(sicherungsfolder)
+	wenn _status <>0
+		_err = FsGetLastError()
+		zeigen _err
+	ende
+	Filesave (sicherungsfile_dat, "", 1, {<group_name>})
+	filename = assetfolder + "\Output\TWF\" + file
+end
+;end
+
+
+;cwselectmode("variable")
+;cwselectwindow(channel_ratio)
+;CwAction("win.close")
+
+if 1
+	ok = dialog("C:\BDA\DataExplorer\TimeSynchronousAnalysisResults.dlg","",0)
+else
+	CwLoadCCV("_vib","C:\BDA\ExpertAnalysis\tsa_vib_peak.ccv")
+	CwLoadCCV("avg_spectrum","C:\BDA\ExpertAnalysis\tsa_avg_spectrum.ccv")
+	CwLoadCCV("vib_event","C:\BDA\ExpertAnalysis\tsa_vib_event.ccv")
+	CwLoadCCV("Ax_event","C:\BDA\ExpertAnalysis\tsa_Ax_event.ccv")
+	;CwLoadCCV("peak_event","C:\BDA\ExpertAnalysis\tsa_peak_event.ccv")
+	CwLoadCCV("OAx_kask","C:\BDA\ExpertAnalysis\tsa_orderspectrum.ccv")
+	CwLoadCCV("histo_event","C:\BDA\ExpertAnalysis\tsa_histo_event.ccv")
+	feature = Feature
+	CwLoadCCV("features","C:\BDA\ExpertAnalysis\tsa_features.ccv")
+end
+
+if 0 ; Order Analysis
+	_rs_gren = gren(_rs,0,1)
+	n_rs_gren = lang?(_rs_gren)
+
+	_rs_seg = _rs
+	_peak_rs_seg = _peak_rs
+	setseglen(_rs_seg,n_rs_gren)
+	setseglen(_peak_rs_seg,n_rs_gren)
+
+	rms_ = mvrms(_rs,1,1)
+
+	T0 = mean(diff(_Tx))
+	n = T0 * 1/dt
+	_vib0 =_vib
+	setseglen(_vib0,n)
+
+	_O1 = leer;
+	_O2 = leer;
+	_O3 = leer;
+	_O4 = leer;
+	_O5 = leer;
+
+	_Ph1 = leer;
+	_Ph2 = leer;
+	_Ph3 = leer;
+	_Ph4 = leer;
+	_Ph5 = leer;
+
+
+	_OAx_kask = leer;
+	_OPx_kask = leer;
+	_OSpeed_kask = leer;
+
+	_nn_max = ganz(lang?(_rs)/_samples_per_rev/_pam)
+	_nn = 1
+	_Tgesamt = ganz(lang?(_rs))
+	_T_fenster = _pam*_samples_per_rev
+	wenn _T_fenster > _Tgesamt
+		_T_fenster = _Tgesamt
+	ende
+	_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+
+	;_rs = OtrResample(_vibsignal,_pulssignal,_Omax ,1)
+	;_Tgesamt = ganz(lang?(_rs))
+	;_T_fenster = _pam*_SampPerRev
+	;_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+	wenn mean(_speed0) > 1
+		_N_f = _T_fenster
+		wenn _nn_mit_overlap <= 0
+			BoxNachricht("Configuration error","Please reduce the number of samples per revolution (NpR)","?1")
+			;DlgSelectItem("Omax",2)
+		sonst
+			solange _nn <= _nn_mit_overlap 
+				wenn 1
+					wenn 0 ;(mit overlap)
+						_Tbeginn = (_nn-1)*_T_fenster-(_nn-1)*_overlap/100*_T_fenster
+						_Tende = _nn*_T_fenster-(_nn-1)*_overlap/100*_T_fenster;Tbeginn + T_fenster
+						_T_fenster_verifikation = _Tende-_Tbeginn
+						_N_beginn = floor(((_nn-1)-(_nn-1)*_overlap/100)*_N_f)+1;
+						_N_end = floor((_nn-(_nn-1)*_overlap/100)*_N_f)+1
+						_rs_ = grenindex(_rs,_N_beginn,_N_end)
+						_peak_rs_ = grenindex(_peak_rs,_N_beginn,_N_end)
+						_om = mean(grenindex(_speed,_N_beginn,_N_end))
+					else
+						_rs_ = grenindex(_rs,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+						_peak_rs_ = grenindex(_peak_rs,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev)
+						_om = mean(grenindex(_speed,(_nn-1)*_pam*_samples_per_rev+1,_nn*_pam*_samples_per_rev))
+					ende
+				ende
+				;zeigen om
+				wenn 0
+					_specx = dftspectrum(_rs_,_windowfft)
+				else
+					fftoption _windowfft 0
+					_specx = fft(_rs_);,_windowfft)
+				end
+			
+				;zeigen specx
+				_OAx = kmp1(wurz(2)*_specx)
+				SetEinheit(_OAx,"Ordnung",0)
+				SetEinheit(_OAx,einheit?(_vib,1),1)
+			
+				wenn 0
+					_OPx = kmp2(_specx)
+				else
+					_windowlength_ = lang?(_rs_)
+					_OPx = kmp2(FrequencyResponse(_peak_rs_,_rs_,_windowlength_,_windowfft,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+					_OPx = PhaseMod( _OPx, "360" )
+					;_OPx = PhaseContinuous( _OPx )
+				end
+
+				SetEinheit(_OPx,"Ordnung",0)
+				SetEinheit(_OPx,"Grad",1)
+			
+				_OAx_kask = binde(_OAx_kask, _OAx)
+				_OPx_kask = binde(_OPx_kask, _OPx)
+				_OSpeed_kask = binde(_OSpeed_kask, _om)
+				_delme_amp = einheit?(_OAx,1)
+				seteinheit(_OAx_kask,_delme_amp,1)
+				_delme_ph = einheit?(_OPx,1)
+				seteinheit(_OPx_kask,_delme_ph,1)
+			
+			
+			
+				_O1 = binde(_O1,wert(_OAx,1))
+				_O2 = binde(_O2,wert(_OAx,2))
+				_O3 = binde(_O3,wert(_OAx,3))
+				_O4 = binde(_O4,wert(_OAx,4))
+				_O5 = binde(_O5,wert(_OAx,5))
+			
+				_Ph1 = binde(_Ph1,wert(_OPx,1))
+				_Ph2 = binde(_Ph2,wert(_OPx,2))
+				_Ph3 = binde(_Ph3,wert(_OPx,3))
+				_Ph4 = binde(_Ph4,wert(_OPx,4))
+				_Ph5 = binde(_Ph5,wert(_OPx,5))
+			
+			
+				seteinheit(_O1,_delme_amp,1)
+				seteinheit(_O2,_delme_amp,1)
+				seteinheit(_O3,_delme_amp,1)
+				seteinheit(_O4,_delme_amp,1)
+				seteinheit(_O5,_delme_amp,1)
+			
+				seteinheit(_Ph1,_delme_ph,1)
+				seteinheit(_Ph2,_delme_ph,1)
+				seteinheit(_Ph3,_delme_ph,1)
+				seteinheit(_Ph4,_delme_ph,1)
+				seteinheit(_Ph5,_delme_ph,1)
+			
+			
+			
+				sleep(0)
+				_nn = _nn + 1
+			ende
+		
+			n_ordnung = _nn
+		
+			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			; Segmentierung der Feature zur Matrixbildung
+			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		
+			SetSegLang(_OAx_kask,lang?(_OAx))
+			SetSegLang(_OPx_kask,lang?(_OPx))
+		
+		
+			wenn 0
+				wenn _env = 0
+					;Gruppierung
+					Feature:OAx = _OAx_kask
+					Feature:OPx = _OPx_kask
+					Feature:OSpeed = _OSpeed_kask
+					_anz_seg = Lang?(Feature:OAx)/SegLang?(Feature:OAx)
+					Feature:OAx_averaged = MatrixSumLines(Feature:OAx,0)/_anz_seg
+					seteinheit(Feature:OAx_averaged,einheit?(Feature:OAx,1),1)
+					_anz_seg = Lang?(Feature:OPx)/SegLang?(Feature:OPx)
+					Feature:OPx_averaged = MatrixSumLines(Feature:OPx,0)/_anz_seg
+					Feature:BodeO1 = _O1
+					Feature:BodeO2 = _O2
+					Feature:BodeO3 = _O3
+					Feature:BodeO4 = _O4
+					Feature:BodeO5 = _O5
+					Feature:BodeP1 = _Ph1
+					Feature:BodeP2 = _Ph2
+					Feature:BodeP3 = _Ph3
+					Feature:BodeP4 = _Ph4
+					Feature:BodeP5 = _Ph5
+				sonst
+					Feature:OAx_env = _OAx_kask
+					Feature:OSpeed_env = _OSpeed_kask
+					Feature:OAx_averaged_env = MatrixSumLines(Feature:OAx_env,0)/SegLang?(Feature:OAx_env)
+					Feature:BodeO1_env = _O1
+					Feature:BodeO2_env = _O2
+					Feature:BodeO3_env = _O3
+					Feature:BodeO4_env = _O4
+					Feature:BodeO5_env = _O5
+				ende
+				; Löschung der Variablen
+				;entf _*
+			ende
+		ende
+	ende
+end
+
+
+if 0
+	NRev = "-"
+	if tverg (NRev,"-") = 0
+		NRev = _anz_umdrehungen
+	sonst
+		NRev = tzuew(NRev,"e")
+	ende
+	Npoints = NRev
+
+	idx = DlgGetSelectedItem("CirclePlotRadius");2048;PA3;samples_per_rev[channelcount] 
+	radius_ratio = DlgGetItemText("CirclePlotRadius",idx)
+	
+	
+	NRev = _anz_umdrehungen
+	sigmax = max(_vib)
+	C = 1
+	radius_ratio = 0.5
+	R = C*sigmax * radius_ratio
+	;radius_ratio = 1/C*tzuew(radius_ratio,"e");R/(C*xmax) with C = 1, xmax = max(vib)
+
+	T_min = 0
+	T_max = xdel?(_vib)*lang?(_vib)
+
+	OtrTachoMode(3, 0, _pulse_per_rev, 0)
+	_peak0 = gren(_peak,T_min, T_max)
+	_vib0 = gren(_vib,T_min, T_max)
+	_speed0 = OtrTachoToSpeed(_peak0)
+	_rs = OtrResample(_vib0,_peak,_samples_per_rev/2 ,1)
+	_speed = OtrResample(_speed0,_peak0,_samples_per_rev/2,1)
+	_phi0 = int(2*pi*_speed0/60)
+	_phi = OtrResample(_phi0,_peak0,_samples_per_rev/2,1)
+	_dphi = mod(_phi, 2*pi)
+	seteinheit(_dphi,"Rad",1)
+
+	T_max = T_min + 60/mean(_speed0)*NRev
+
+	; ACOEM Method
+	_vib1 = gren(_vib,T_min,T_max)
+	Frot = mean(_speed0/60)
+	Fech = 1/xdel?(_vib1)
+	isamp = rampe(0,1,lang?(_vib1))
+	a = mod(360*Frot/Fech*isamp,360) *2*pi/360; N_samp_per_rev = Trot/dt = Fech/Frot
+	seteinheit (a,"Rad",1)
+
+	;R = 1
+	x_max = max (_vib1)
+	;C*xmax/R = 0.5 = radius_ratio
+	R = C*x_max * radius_ratio
+	Betr = R+C*_vib1
+	PolarVib = kompl(Betr,a)
+	nn_length = lang?(PolarVib)
+	PolarVib0 = kompl(Betr[1],a[1])
+	PolarVibEnd = kompl(Betr[nn_length],a[nn_length])
+	CwLoadCCV("PolarVib","C:\BDA\ExpertAnalysis\PolarVib.ccv")
+	aa1 = R+C*x_max
+	aa2 = R-C*x_max
+	aa3 = aa1 - aa2
+	;dlgsetvalue("MaxCircle",aa1)
+	;dlgsetvalue("MinCircle",aa2)
+
+	;_vib2 = OtrTrackingBandPassZ(_vib,_speed0,1,0.05,12)
+
+	_rsall = grenindex(_rs,1,Npoints*_samples_per_rev) 
+	_rsall = _rsall - mean(_rsall)
+	radius = C*max(_rsall) * radius_ratio
+	_rs = radius + C*_rsall
+
+	;
+	;_dphi = gren(_dphi,0,Npoints)
+	;_rs = gren(_rs,0,Npoints)
+	;
+	_dphi = grenindex(_dphi,1,Npoints*_samples_per_rev)
+
+
+	Z = kompl(_rs,_dphi)
+	Zkart = Kart(Z)
+	Zstart = kompl(_rs[1],_dphi[1])
+	Zend = kompl(_rs[lang?(Z)],_dphi[lang?(Z)])
+
+	_rs0 = 0*_rs + radius
+	Z0 = kompl(_rs0,_dphi)
+	Zkart0 = Kart(Z0)
+
+	Z1 = kompl(_rsall ,_dphi);_rsall
+	Zkart1 = Kart(Z1+Z0)
+
+	tsa_rs = _rs
+	n_rev = lang?(tsa_rs)/_samples_per_rev
+	setseglang(tsa_rs,_samples_per_rev)
+	tsa_rs_mean = MatrixSumLines(tsa_rs,0)/n_rev
+
+	tsa_dphi= _dphi
+	setseglang(tsa_dphi,_samples_per_rev)
+
+	CwLoadCCV("SigVsTime","C:\BDA\SignalAnalysis\vib.ccv")
+	CwLoadCCV("SigVsRev","C:\BDA\SignalAnalysis\rs.ccv")
+	CwLoadCCV("TSA_Sig","C:\BDA\SignalAnalysis\tsa_rs.ccv")
+	CwLoadCCV("CirclePlotSig","C:\BDA\SignalAnalysis\zkart.ccv")
+	CwLoadCCV("OAx_kask","C:\BDA\SignalAnalysis\OAx_kask.ccv")
+	CwLoadCCV("OAx","C:\BDA\SignalAnalysis\OAx.ccv")
+end
+
+

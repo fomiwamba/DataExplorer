@@ -1,0 +1,87 @@
+sequenz imc_logging "filter_file_from_to started"
+
+ConditionFileFolder = AssetFolder + "\Output\TWF"; 
+
+TrendFileFolder = AssetFolder + "\Output\Trend"
+
+ProcessFileFolder = AssetFolder + "\Output\Process"
+
+
+page_ist  = PnGetActivePage()
+;page_max = PnGetPageCount()
+;_file_ext = ""
+;if page_ist <= page_max and page_ist = 8; ConditionData
+;	_datumFrom = PnGetValue("ConditionData.Datefrom")
+;	_datumTo = PnGetValue("ConditionData.Dateto")
+;	sicherungsfolder = ConditionFileFolder
+;	PnSetActivePage(page_ist)
+;	sequenz LoadFolderFileList
+;	ConditionFileList = FolderFileList
+;	ConditionFileExt = _file_ext
+;end
+
+if page_ist = 9; TrendData
+	_datumFrom = PnGetValue("ViewTrendData.Datefrom")
+	_datumTo = PnGetValue("ViewTrendData.Dateto")
+	sicherungsfolder = TrendFileFolder
+	appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
+	_erg0 = FsFileExists(appendfile)
+	if _erg0 = 1
+		_erg = FsDeleteFile(appendfile)
+	end
+	PnSetActivePage(page_ist)
+	sequenz LoadFolderFileList
+	TrendFileList = FolderFileList
+	TrendFileExt = _file_ext
+	FileListFromTo = TrendFileList
+end
+
+
+if page_ist = 10; ProcessData
+	_datumFrom = PnGetValue("ViewProcessData.Datefrom")
+	_datumTo = PnGetValue("ViewProcessData.Dateto")
+	sicherungsfolder = ProcessFileFolder
+	appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
+	_erg0 = FsFileExists(appendfile)
+	if _erg0 = 1
+		_erg = FsDeleteFile(appendfile)
+	end
+	PnSetActivePage(page_ist)
+	sequenz LoadFolderFileList
+	ProcessFileList = FolderFileList
+	ProcessFileExt = _file_ext
+	FileListFromTo = ProcessFileList
+end
+
+if page_ist = 10 or page_ist = 9
+	cntfile = TxArrayGetSize(FileListFromTo)
+	if cntfile > 0
+		inputfile = "C:\BDA\ExpertAnalysis\PythonInput.txt"
+
+		_mm = 1
+		_fh = FileOpenASCII(inputfile,1)
+		SOLANGE _mm <= cntfile
+			_err = FileLineWrite(_fh,FileListFromTo[_mm],0)
+			_mm = _mm + 1
+		ende
+		_err = FileClose(_fh)
+		
+		
+		;Applikation Vollbild C:\python37\python.exe C:\BDA\ExpertAnalysis\AppendFilesFromTo.py
+		ret = Execute( "C:\python37\python.exe","C:\BDA\ExpertAnalysis\AppendFilesFromTo.py","" ,0, -1)
+
+		appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
+		_erg0 = FsFileExists(appendfile)
+		if _erg0 = 1
+			filename = appendfile
+			filename_short = fsSplitPath(appendfile, 4) 
+			sequenz Insert_Item "FileList" filename_short
+			sequenz LoadTxtOrCsvTrendFile
+		ende
+	ende
+end
+
+entf _*
+
+
+

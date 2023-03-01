@@ -1,0 +1,45 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Funktion zur Extraktion der Breitbandsenergiewert eines Spektrums
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "frequency_schnitt_fft_revB started"
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+_Ax_trend = PA1
+_Fu = PA2; 		Minimum Frequenz
+_Fo = PA3; 		Max. Frequenz
+_Freqname = PA4
+;_rms_v = PA5; Aktivierung der Frequenzintegration zur RMS-Wertbildung
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Vorbereitung
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+NLinien = SegLang?(_Ax_trend)
+_deltaf = xdel?(_Ax_trend)
+;{<_Freqname>} = leer;Amplitudenvektor
+wfft = 2
+_spalte_counter = 1
+_spect_x = _Ax_trend;_Ax_trend[_spalte_counter];
+_spect_x = gren(_spect_x,_Fu,_Fo); Amplitudespektrum fuer X
+wenn lang?(_spect_x) = 0
+	_e_freq_a = 0
+sonst
+	wenn wfft = 1
+		ENBW_rechteck = 1.0
+	ende
+	wenn wfft = 2
+		ENBW_hanning = 1.5			
+	ende
+	wenn wfft = 3
+		ENBW_flattop = 2.96
+	ende
+	;		ENBW_hamming = 1.37
+	;		ENBW_blackmanharis = 1.71
+	;		a = 1/wurz(2)*wurz(1/ENBW_hanning*sum((_spect_x)^2)); laut Metravib -> ;Monitoring of machines, Chapter 4	
+	_e_freq_a = 1/wurz(2)*wurz(1/ENBW_hanning*sum((_spect_x)^2)); laut Metravib -> ;Monitoring of machines, Chapter 4 bei Hanning fenster; 
+	;		_e_freq_a = sum(_spect_x);
+ende
+{<_Freqname>} = binde({<_Freqname>},_e_freq_a);wert(_spect_x,position); Kreuzspektrum für X
+_unit_sig = einheit?(_Ax_trend,1)
+seteinheit ({<_Freqname>},_unit_sig,1)
+entf _RMS_freq_a

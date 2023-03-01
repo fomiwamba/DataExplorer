@@ -1,0 +1,59 @@
+
+if 1
+	_pname = PA1; ; event name
+;	x_unit = PA2; x-einheit
+;	y_unit = PA3;_y-einheit
+else
+	_pname = "histo_event"
+	x_unit = "s"
+	y_unit = "g"
+end
+
+
+sequenz imc_logging "create_event_data_stft started"
+
+
+event_len = leer
+event_anzahl = EventNum?({<_pname>})
+for _mm = 1 to event_anzahl
+	event_length = EventProp?({<_pname>},_mm,3)
+	event_len = binde(event_len, event_length)
+end
+event_len_max = max(event_len)
+
+event_all = leer
+for _mm = 1 to event_anzahl
+	event_mm = EventGet({<_pname>},_mm,0)
+	event_length = EventProp?({<_pname>},_mm,3)
+	if event_length < event_len_max and tverg(_pname,"histo_event") <>0 
+		for _qq = event_length+1 to event_len_max
+			event_mm = binde(event_mm, 0)
+		end
+	end
+	event_name = "event_" + tform(_mm,"f1.0")
+	event_all = binde(event_all, event_mm)
+end
+
+setseglen(event_all, event_len_max)
+Rowsum = MatrixSumLines(event_all,0)
+
+event_avg = Rowsum/event_anzahl
+
+;del event_all
+
+;seteinheit (event_avg,x_unit,0)
+;seteinheit(event_avg,y_unit,1)
+
+if 0			
+	wenn _nn = 1				
+		{<_pname>} = EventNew(_pvalue,0)
+	ende
+	wenn _nn > 1
+		EventAppend({<_pname>},_pvalue,0)
+	ende					
+	_eventnr = EventNum?({<_pname>})
+									
+	EventProp({<_pname>},_eventnr,0,Ttrig)
+end
+;entf _Parname
+;entf {<_Parname>}

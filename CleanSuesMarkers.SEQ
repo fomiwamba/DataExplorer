@@ -1,0 +1,36 @@
+sequenz imc_logging "clean_sues_markers started"
+
+SpectrumPlot = "VMS_Freq_Data.ParameterPlot"
+SpecName = SpectrumPlot
+CwSelectMode("auto")
+_erg = CwSelectWindow(SpecName)
+CwSelectByIndex("y-axis",1)
+AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+	
+if 1; delete markers
+	_anz_markers = CwDisplayGet("marker.count")
+	_ii = 1
+	solange _ii <= _anz_markers
+		CwSelectByIndex("marker", 1)
+		CwDeleteElement("marker")
+		_ii = _ii + 1
+	ende
+ende
+
+SpecName = "VMS_Freq_Data.SpectrumPlot"
+CwSelectMode("auto")
+_erg = CwSelectWindow(SpecName)
+CwSelectByIndex("x-axis",1)
+AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+	
+if 1; delete markers
+	_anz_markers = CwDisplayGet("marker.count")
+	_ii = 1
+	solange _ii <= _anz_markers
+		CwSelectByIndex("marker", 1)
+		CwDeleteElement("marker")
+		_ii = _ii + 1
+	ende
+	;CwAction("delete.markers")
+ende
+		

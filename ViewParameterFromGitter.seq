@@ -1,0 +1,65 @@
+;_index = PnGetSelectedItem("DataExploration.ParameterListe")
+;sequenz ClearSelectedPlot "ChannelOverview.VISA_plot"
+_index =PnTableGetSelectedRows("ChannelOverview.ParameterListeGitter")
+wenn lang?(_index) > 0
+	_Partext = ParNameList[_index]
+
+	_index =PnTableGetSelectedRows("ChannelOverview.ChannelListeGitter")
+	wenn lang?(_index) > 0
+		;_channel = ChannelInfo:Chname[_index]
+		_channel = AssetInfo:Channels[_index]
+
+		_parname = _channel +"_" + _partext
+		{<_Parname>} = FeatData:{<_Parname>}
+		;sequenz ClearSelectedPlot "ParameterOverview.VISA_plot"
+	
+		index = PnGetvalue("ParameterOverview.VISA_axis")
+		wenn index = 1; TrendPlot_vs_Date
+			{<_Parname>} = FeatData:{<_Parname>}
+			xaxis = 1
+		else
+			if  IsXY({<_Parname>})
+				{<_Parname>} = kmpy(FeatData:{<_Parname>})
+			else
+				{<_Parname>} = xdel({<_Parname>},1)
+			ende
+			xaxis = 0
+		ende
+		_pardata0 = {<_Parname>};FeatData:{<_Parname>}
+	
+		sequenz FindFeatureNameAndUnit ; from xlsconfig.
+	
+		;	PnSetText("DataExploration.Channel",_signame)
+		;	PnSetText("DataExploration.FeatureIdx",tform(_index,"f4.0"))
+		;	PnSetText("DataExploration.ChUnit",_ChannelUnit )
+
+	
+		;Neu - 10092019 - Francis
+		;---------------------------------------------
+		_parname_ = _parname
+		if txwo(_parname_,".") > 0
+			_parname_ = txreplace( _parname_,".","_",0,1)
+		end
+		if txwo(_parname_ ," ") > 0
+			_parname_ = txreplace( _parname_ ," ","_",0,1)
+		end
+		if txwo(_parname_ ,"\") > 0
+			_parname_ = txreplace( _parname_ ,"\","_",0,1)
+		end
+		if txwo(_parname_ ,"/") > 0
+			_parname_ = txreplace( _parname_ ,"/","_",0,1)
+		end
+		{<_parname_>} =  {<_Parname>}
+		;---------------------------------------------
+		line_width = PnGetValue("ParameterOverview.line_width")
+		if line_width >= 1
+			line_width = 1
+		end
+		;	page_ist = PnGetActivePage()
+		if page_ist = 3
+			sequenz plot_2d_trend {<_Parname_>} xaxis "ParameterOverview.VISA_plot"
+		else
+			sequenz plot_2d_trend {<_Parname_>} xaxis "ChannelOverview.VISA_plot"
+		end
+	end
+end

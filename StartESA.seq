@@ -1,0 +1,14 @@
+sequenz imc_logging "start_esa started"
+
+if varexist?("MeasData") 
+	if GrChanNum?(MeasData) > 1
+		if  u_sig_list >= 3 and i_sig_list >= 3
+			
+			streamingFeatureextraction = 0; 1 for MeasData extraction or 0 for esa_analysis
+			sequenz ESA_Processing_streaming; ESA_Processing
+
+			sequenz update_tables
+		ende
+	ende
+ende
+

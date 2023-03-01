@@ -1,0 +1,267 @@
+;sequenz SelectSuesParameter
+sequenz imc_logging "select_sues_parameter started"
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Ausgewählter Parameter
+; Output: Ausgewählte Messungszeitpunkt
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+_file_search = ""
+PnSetText("Parameter",_file_search)
+PnSetText("Spectrum",_file_search)
+PnSetText("FreqParameter",_file_search)
+
+sequenz ClearSelectedPlot "VMS_Freq_Data.ParameterPlot"
+sequenz ClearSelectedPlot "VMS_Freq_Data.SpectrumPlot"
+
+
+
+_index = PnGetSelectedItem("VMS_Freq_Data.ParameterListe")
+wenn _index <> 0
+	_Parname = PnGetItemText("VMS_Freq_Data.ParameterListe", _index)
+	PnSetText("Parameter",_Parname)
+	; channel liste tabelle
+	_anz_par = txArrayGetSize( SuesParListe)
+	_table_name = "VMS_Freq_Data.ParameterTableSel"
+	_table_cols = PnTableColumns?(_table_name)
+	_table_rows = PnTableRows?(_table_name)
+	for _ii = 1 to _table_rows
+		for _jj = 1 to _table_cols
+			PnTableSetCell(_table_name,_jj,_ii,"")
+			_parstatus_color = RGB(255, 255, 255)
+			PnTableSetProperty(_table_name,_jj,_ii,"FillColor",_parstatus_color)	
+		ende
+	ende
+
+	_ii = 1	
+	PnTableSetCell(_table_name,1,_ii,"Id")
+	for _jj = 1 to  txArrayGetSize( SuesStatsListe)
+		_stats_par = SuesStatsListe[_jj]
+		PnTableSetCell(_table_name,_jj+1,_ii,_stats_par)
+	end
+
+	SuesParLowerLimit = 0
+	SuesParUpperLimit = 0
+	_sues_freq_par = _Parname
+	_sues_freq_par_idx = TxFind(SuesParListe,_sues_freq_par,-1,1)
+	_sues_freq_par_idx_ = posi(_sues_freq_par_idx,1)+1
+	_ii = 2
+	for _jj = 1 to  txArrayGetSize( SuesStatsListe)
+		_stats_par = SuesStatsListe[_jj]
+		PnTableSetCell(_table_name,1,_ii,tform(_sues_freq_par_idx_,"f1.0"))
+		if _jj = 1
+			_stats_val = SuesParListe
+			PnTableSetCell(_table_name,_jj+1,_ii,_stats_val[_sues_freq_par_idx_])
+		else
+			_stats_val = SuesParData:{<_stats_par>}
+			if tverg(_stats_par, "Fault_VibMode") = 0
+				PnTableSetCell(_table_name,_jj+1,_ii,_stats_val[_sues_freq_par_idx_])
+			else
+				PnTableSetCell(_table_name,_jj+1,_ii,tform(_stats_val[_sues_freq_par_idx_],"f1.4"))
+			end
+		end
+		if tverg(_stats_par,"CurrentStatus") = 0
+			_parstatus = _stats_val:[_sues_freq_par_idx_]
+			if _parstatus = 2
+				_parstatus = 4
+			end
+			sequenz find_status_colour; -> _parstatus_color
+			PnTableSetProperty(_table_name,4,_ii,"FillColor",_parstatus_color)	
+		end
+		if tverg(_stats_par,"LowerLimit") = 0
+			SuesParLowerLimit = _stats_val:[_sues_freq_par_idx_]
+			_parstatus = 4;_stats_val:[_sues_freq_par_idx_]
+			sequenz find_status_colour; -> _parstatus_color
+			PnTableSetProperty(_table_name,6,_ii,"FillColor",_parstatus_color)	
+		end
+		if tverg(_stats_par,"UpperLimit") = 0
+			SuesParUpperLimit = _stats_val:[_sues_freq_par_idx_]
+			_parstatus = 4;_stats_val:[_sues_freq_par_idx_]
+			sequenz find_status_colour; -> _parstatus_color
+			PnTableSetProperty(_table_name,8,_ii,"FillColor",_parstatus_color)	
+		end
+		if tverg(_stats_par,"RefVal") = 0
+			_parstatus = 1;_stats_val:[_sues_freq_par_idx_]
+			sequenz find_status_colour; -> _parstatus_color
+			PnTableSetProperty(_table_name,7,_ii,"FillColor",_parstatus_color)	
+		end
+	end
+
+	sequenz ClearSelectedPlot "VMS_Freq_Data.ParameterPlot"
+	sequenz ClearSelectedPlot "VMS_Freq_Data.SpectrumPlot"
+		
+
+	_index = PnGetvalue("VMS_Freq_Data.TrendPlotaxis")
+	{<_Parname>} = SuesFreqData:{<_Parname>}
+	wenn _index = 1; TrendPlot_vs_Date
+		xaxis = 1
+	else
+		if  IsXY({<_Parname>})
+			{<_Parname>} = kmpy(SuesFreqData:{<_Parname>})
+		else
+			{<_Parname>} = xdel({<_Parname>},1)
+		ende
+		xaxis = 2
+	ende
+	_pardata0 = {<_Parname>};SuesFreqData:{<_Parname>}
+	
+	sequenz FindFeatureNameAndUnit
+	
+	;Neu - 10092019 - Francis
+	;---------------------------------------------
+	_parname_ = _parname
+	if txwo(_parname_,".") > 0
+		_parname_ = txreplace( _parname_,".","_",0,1)
+	end
+	if txwo(_parname_ ," ") > 0
+		_parname_ = txreplace( _parname_ ," ","_",0,1)
+	end
+	if txwo(_parname_ ,"\") > 0
+		_parname_ = txreplace( _parname_ ,"\","_",0,1)
+	end
+	if txwo(_parname_ ,"/") > 0
+		_parname_ = txreplace( _parname_ ,"/","_",0,1)
+	end
+	{<_parname_>} =  {<_Parname>}
+	if 0
+		if txwo(_parname, "fft_mag")
+			{<_parname_>} =  clip(20*log({<_Parname>}),100, -100)
+		elseif txwo(_parname, "psd_mag")
+			{<_parname_>} =  clip(10*log({<_Parname>}),100, -100)
+		elseif txwo(_parname, "frf_mag")
+			{<_parname_>} =  clip(10*log({<_Parname>}),100, -100)
+		else
+			;{<_parname_>} =  clip(20*log({<_Parname>}),10, -100)
+		end
+	end
+	; db -> db_value = 20*log(linear_value) --> idb-> linear_value = 10 ^ (db_value / 20)
+	; db -> db_value = 10*log(linear_value) --> idb-> linear_value = 10 ^ (db_value / 10)
+	
+	;	if txwo(_parname,"_mag_")<>0
+	;		seteinheit({<_parname_>},"dB",1)
+	;	elseif  txwo(_parname,"_ph_")<>0
+	;		seteinheit({<_parname_>},"Deg",1)	
+	;	elseif txwo(_parname,"_coh_")<>0
+	;		seteinheit({<_parname_>},"",1)	
+	;	elseif txwo(_parname,"_peak_")<>0
+	;		seteinheit({<_parname_>},"Hz",1)	
+	;	else txwo(_parname,"_peak_")<>0
+	;		seteinheit({<_parname_>},"Hz",1)	
+	;	end
+	sequenz FindFeatureNameAndUnit
+	
+	;---------------------------------------------
+	sequenz plot_2d_trend {<_Parname_>} xaxis "VMS_Freq_Data.ParameterPlot"
+	; build and load boxplot, histogram, fft_averaged and fft3d
+	PnSetText("FreqParUnit",einheit?({<_Parname_>},1))
+	
+	_parname_red = _parname_ + "_red"
+	
+	FileId_x = kmpx(FileId_)
+	FileId_y = kmpy(FileId_)
+	FileId_y_max = max(FileId_y)
+	_tvec = leer
+	_yvec = leer
+	for _mm = 1 to FileId_y_max + 1
+		idx_list = posiex(FileId_y,_mm-1)
+		idx_min = min(idx_list)
+		idx_max = max(idx_list)
+		if xaxis = 1
+			mean_tvec = mean(grenindex(kmpx({<_Parname_>}),idx_min+1,idx_max+1))
+			mean_yvec = mean(grenindex(kmpy({<_Parname_>}),idx_min+1,idx_max+1))
+			_tvec= binde(_tvec, mean_tvec)
+			_yvec= binde(_yvec, mean_yvec)
+		else
+			mean_tvec = mean(idx_list); + Time?({<_Parname_>}) + xoff?({<_Parname_>})
+			mean_yvec = mean(grenindex({<_Parname_>},idx_min+1,idx_max+1))
+			_tvec= binde(_tvec, mean_tvec)
+			_yvec= binde(_yvec, mean_yvec)
+		end
+		
+	end
+	tvec_sues_par = _tvec
+	{<_Parname_red>} = xyvon(_tvec,_yvec)
+	settime({<_Parname_red>},Time?({<_Parname_>}))
+	seteinheit({<_Parname_red>},einheit?({<_Parname_>},1),1)
+	
+	sequenz plot_2d_trend {<_Parname_red>} xaxis "VMS_Freq_Data.ParameterPlot"
+
+	
+	; View Spectrum
+	OutputFolder = AssetFolder + "\Output";
+	FFTFolder = OutputFolder + "\Features\"; 
+	_parname_name_parts = txsplit(_Parname,"_"); Sig_FFT_Par_FreqmHz  or Sig_PSD_Par_FreqmHz or Sig1_Sig2_FRF_Par_FreqmHz or Sig_FFT_Par_Freq1_Freq2
+	Featfile = ""
+	SpectrumPlot = "SpectrumPlot"
+	if _parname_name_parts[2] = "fft" or _parname_name_parts[2] = "psd" ;
+		if txarraygetsize(_parname_name_parts) <= 4  ;--> Sig_FFT_Par_FreqmHz  or Sig_PSD_Par_FreqmHz
+			_channel1 = _parname_name_parts[1]
+			_fct_name = _parname_name_parts[2]
+			_spec_par_name = _parname_name_parts[3]
+			_signame = _channel1
+			if txwo(_fct_name, "psd") <> 0
+				_file_search = _channel1 + "_PSD_Trend.csv"
+				SpectrumTemplate = "FRF_Mag_Plot.ccv"
+			else
+				if txwo(_spec_par_name, "ph") <> 0
+					_file_search = _channel1 + "_FFT_Ph_Trend.csv"
+					SpectrumTemplate = "FRF_Ph_Plot.ccv"
+				else
+					_file_search = _channel1 + "_FFT_Mag_Trend.csv"
+					SpectrumTemplate = "FRF_Mag_Plot.ccv"
+				end
+			end
+		else; --> Sig_FFT_Par_Freq1_Freq2
+			_channel1 = _parname_name_parts[1]
+			_fct_name = _parname_name_parts[2]
+			_spec_par_name = _parname_name_parts[3]
+			_freq_lower = _parname_name_parts[4]
+			_freq_upper = _parname_name_parts[5]
+			_signame = _channel1
+			_file_search = _channel1 + "_FFT_Mag_Trend.csv"
+			SpectrumTemplate = "FRF_Mag_Plot.ccv"
+		end
+		spec_filename = FFTFolder + _file_search
+		
+		sequenz Load_Sues_Spectrum; --> 	AssetFolder, spec_filename,Featfile,SpectrumPlot
+	ende
+	
+	if txarraygetsize(_parname_name_parts) >4 and _parname_name_parts[3] = "frf"
+		_channel1 = _parname_name_parts[1]
+		_channel2 = _parname_name_parts[2]
+		_fct_name = _parname_name_parts[3]
+		_frf_name = _parname_name_parts[4]
+		_signame = _channel1 +"_" + _channel2		
+		if _frf_name = "Mag"
+			_file_search = _signame + "_FRF_Mag_Trend.csv"
+			spec_filename = FFTFolder + _file_search
+			;SpectrumTemplate = "ViSA_frf_mag_kask.ccv"
+			SpectrumTemplate = "FRF_Mag_Plot.ccv"
+			sequenz Load_Sues_Spectrum; --> 	AssetFolder, spec_filename,Featfile,SpectrumPlot
+		elseif _frf_name = "Ph"
+			_file_search = _signame + "_FRF_Ph_Trend.csv"
+			spec_filename = FFTFolder + _file_search
+			;SpectrumTemplate = "ViSA_ph_spec_kask.ccv"
+			SpectrumTemplate = "FRF_Ph_Plot.ccv"
+			sequenz Load_Sues_Spectrum; --> 	AssetFolder, spec_filename,Featfile,SpectrumPlot
+		elseif _frf_name = "Coh"
+			_file_search = _signame + "_FRF_Coh_Trend.csv"
+			spec_filename = FFTFolder + _file_search
+			;SpectrumTemplate = "ViSA_coh_kask.ccv"
+			SpectrumTemplate = "FRF_Coh_Plot.ccv"
+			sequenz Load_Sues_Spectrum; --> 	AssetFolder, spec_filename,Featfile,SpectrumPlot, SpectrumTemplate
+		else
+			_file_search = _signame + "_FRF_Mag_Trend.csv"
+			spec_filename = FFTFolder + _file_search
+			;SpectrumTemplate = "ViSA_frf_mag_kask.ccv"
+			SpectrumTemplate = "FRF_Mag_Plot.ccv"
+			sequenz Load_Sues_Spectrum; --> 	AssetFolder, spec_filename,Featfile,SpectrumPlot
+		end		
+	end
+	PnSetText("Spectrum",_file_search)
+	
+	sequenz ShowSuesLimits
+	
+	sequenz ShowSuesMarkers
+ende
+
+entf _*

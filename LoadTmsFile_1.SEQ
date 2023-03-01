@@ -1,0 +1,124 @@
+sequenz imc_logging "load_tdms_file started"
+; input: filename
+; outputs: Data, date_time_str, OP_Data, Feature, Data_Channel
+
+; 1) Open tdms file
+_fh = FileOpenFAS(filename, "#TdmImportExport.dll|DIAdem TDM / TDMS", 0)
+
+; Aufpasse -> TDMS Optionen -> Import mit Datengruppen
+; Triggertime = wf_start_time = EventDate + 1h - PreTrigger
+
+
+WENN _fh > 0 
+	_anzGr = FileObjNum?(_fh); Anzahl der Gruppen in der Datei
+	_ii = 1
+	SOLANGE _ii <= _anzGr
+		_GrName = FileObjName?(_fh, _ii)
+
+		; Read Waveforms -> To condition files
+		wenn _GrName = "Waveforms"; or _GrName = "OperatingParameters"  or _GrName = "Speed"
+			{<_GrName>} = FileObjRead(_fh, _ii)
+			_kk = 1
+			_anzKan = GrKanalZahl?({<_GrName>})
+			solange _kk <= _anzKan
+				channel_ratio = floor(_kk/_anzKan*100) 
+				seteinheit(channel_ratio,"%",1)
+				zeigen channel_ratio
+				
+				_VarName = GrKanalName?({<_GrName>},_kk)
+			
+				{<_VarName>} ={<_GrName>}:{<_VarName>}
+				;SetDataFormat ({<_VarName>}, 0, 0, 0 ) 
+							
+				seteinheit({<_VarName>},"s",0)
+				wenn lang?({<_VarName>}) >= 1
+
+					; Set TrigZeit and Xoffset
+					_Trigzeit = Zeit?({<_VarName>})
+					_T0 = Xoff?({<_VarName>})
+					_Trigzeit_new = _Trigzeit + _T0
+					setzeit({<_VarName>},_Trigzeit_new)
+					{<_VarName>} = xoff({<_VarName>},0)
+					;_Messdatum = ZeitInText(_Trigzeit_new,3)
+				
+					sequenz CleanChannel _varname {<_VarName>} 
+					sequenz Insert_Item "ParameterList" _VarName
+;					if xdel?({<_VarName>}) <= 1/100; wegen Sondermessung Daten mit statischen Signalen wie Temperaturen
+;						sequenz CleanChannel _varname {<_VarName>} 
+;						;Data:{<_VarName>} = {<_VarName>}
+;					else
+;						WENN IsXY( {<_VarName>} ) = 1
+;							{<_VarName>}  = xy(kmpx({<_VarName>}),kmpy({<_VarName>}))
+;							setzeit({<_VarName>},_Trigzeit_new)
+;							{<_VarName>} = xoff({<_VarName>},0)
+;						ENDE
+;					
+;						;						if txwo(_VarName, "T080") <> 0 or  txwo(_VarName, "T260") <> 0
+;						OP_Data:{<_VarName>} = mvmean({<_VarName>},1,1)
+;						;						ende
+;					
+;					ende
+;				else
+;					_file = AssetFolder +"\"+"corrupted_channels.txt"; 
+;					_txt = filename + " ---> " + _VarName
+;					_fh1 = FileOpenASCII(_file,2)
+;					_err = FileLineWrite(_fh1,_txt,0)
+;					_err = FileClose(_fh1)
+				ende
+			
+				_kk = _kk + 1
+			ende
+		ende	
+	
+		; Read OperatingParameters-> To process files
+		wenn _GrName = "OperatingParameters";  or _GrName = "Speed"
+			{<_GrName>} = FileObjRead(_fh, _ii)
+			_kk = 1
+			_anzKan = GrKanalZahl?({<_GrName>})
+			solange _kk <= _anzKan
+				
+				channel_ratio = floor(_kk/_anzKan*100) 
+				seteinheit(channel_ratio,"%",1)
+				zeigen channel_ratio
+				
+				_VarName = GrKanalName?({<_GrName>},_kk)
+				_VarName_ = _VarName;
+						
+				{<_VarName_>} ={<_GrName>}:{<_VarName>}
+				;SetDataFormat ({<_VarName>}, 0, 0, 0 ) 
+				
+				wenn lang?({<_VarName>}) >= 1
+					
+					; Set TrigZeit and Xoffset
+					_Trigzeit = Zeit?({<_VarName>})
+					_T0 = Xoff?({<_VarName>})
+					_Trigzeit_new = _Trigzeit + _T0
+					setzeit({<_VarName>},_Trigzeit_new)
+					{<_VarName>} = xoff({<_VarName>},0)
+					;_Messdatum = ZeitInText(_Trigzeit_new,3)
+
+					WENN IsXY( {<_VarName>} ) = 1
+						{<_VarName>}  = xy(kmpx({<_VarName>}),kmpy({<_VarName>}))
+						setzeit({<_VarName>},_Trigzeit_new)
+						{<_VarName>} = xoff({<_VarName>},0)
+					ENDE
+					
+					RawData:{<_VarName>} = mvmean({<_VarName>},1,1)
+					sequenz Insert_Item "ParameterList" _VarName
+;				else
+;					_file = AssetFolder +"\"+"corrupted_channels.txt";
+;					_txt = filename + " ---> " + _VarName
+;					_fh1 = FileOpenASCII(_file,2)
+;					_err = FileLineWrite(_fh1,_txt,0)
+;					_err = FileClose(_fh1)
+				ende
+				_kk = _kk + 1
+			ende
+			entf {<_VarName>}
+		ende
+		_ii = _ii + 1
+	ende
+	_err = fileclose(_fh)	
+sonst
+	BoxNachricht("Info","No files in Inputfolder","?1")
+ende

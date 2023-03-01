@@ -1,0 +1,112 @@
+sequenz imc_logging "select_and_load_trend_file started"
+
+_fileidx = pnGetSelectedItem("TrendFileListe")
+trendfile = pnGetItemText("TrendFileListe",_fileidx)
+
+wenn varexist?("trendfile")
+	trendfilepath = TrendFileFolder + "\"+ trendfile ;D:\OL3\Output\export\ChannelFeature
+	_erg = FsFileExists(trendfilepath)
+	wenn _erg = 1
+		$filename = trendfilepath
+		Data = Grneu()
+		zeigen $filename
+		if tverg(trendfileformat,"*.tdms") = 0 or tverg(trendfileformat,"*.tdm") = 0
+			Importsvorlage = "#TdmImportExport.dll|DIAdem TDM / TDMS
+			_fh = FileOpenFAS($filename, Ímportsvorlage, 0)
+			; Aufpasse -> TDMS Optionen -> Import mit Datengruppen
+			WENN _fh > 0 
+				_anzGr = FileObjNum?(_fh); Anzahl der Gruppen in der Datei
+				_ii = 1
+				SOLANGE _ii <= _anzGr
+					_GrName = FileObjName?(_fh, _ii)
+					_parameterfile = _grname
+					{<_GrName>} = FileObjRead(_fh, _ii)
+					_kk = 1
+					_anzKan = GrKanalZahl?({<_GrName>})
+					solange _kk <= _anzKan
+						_Parname = GrKanalName?({<_GrName>},_kk)
+						if txwo(_Parname, "Date_Time") <> 0
+							DateTimeVec = {<_GrName>}:{<_Parname>}
+						else
+							{<_Parname>} ={<_GrName>}:{<_Parname>}
+							;						dt = 0.05; xdel?({<_Parname>})
+							;						RedFactor = 1/dt
+							;						Data:{<_Parname>} = MvMean({<_Parname>},1,1)	
+							FeatData:{<_Parname>} = {<_Parname>}
+						end
+						if _kk = 2
+							_Messdatum = ZeitInText(Zeit?({<_GrName>}:{<_Parname>}),3)
+						end
+					
+						_kk = _kk + 1
+						sequenz insert_item "ParameterListe" _Parname
+					ende
+					entf {<_GrName>}
+					_ii = _ii + 1
+				ende
+				_err = fileclose(_fh)	
+				; 2) Store Dat File
+				_Tag_ = TTeil(_Messdatum,1,2)
+				_Tag=TzuEW(_Tag_,"e")
+				_Monat_ = TTeil(_Messdatum,4,2)
+				_Monat=TzuEW(_Monat_,"e")
+				_Jahr_ = TTeil(_Messdatum,7,4)
+				_Jahr=TzuEW(_Jahr_,"e")
+				
+				_Stun_ = TTeil(_Messdatum,12,2)
+				_Stun=TzuEW(_Stun_,"e")
+				_Min_ = TTeil(_Messdatum,15,2)
+				_Min=TzuEW(_Min_,"e")
+				_Sek_ = TTeil(_Messdatum,18,2)
+				_Sek=TzuEW(_Sek_,"e")
+				
+				_Messdatum_zahl=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+				Date_string = _Jahr_+_Monat_+_Tag_+"_"+_Stun_+_Min_+_Sek_
+				
+				;sicherungsfolder = output_verz +"\" + _datefolder +"\" + _hourfolder +"\"
+				sicherungsfolder = AssetFolder + "\TrendFilesCSV\"
+				_status = FsCreateDirectory(sicherungsfolder)
+				wenn _status <>0
+					_error = FsGetLastError()
+				ende
+				wenn lang?(Data:[1]) > 0 
+					sicherungsfile = sicherungsfolder + _parameterfile +"_"+  Date_string + ".csv"; 
+					_fileid = FileOpenAscii2(sicherungsfile, "Parameter_TimeSeries",1)
+					_err = FileObjWrite(_fileid,Data)
+					_err = FileClose(_fileid)
+				ende
+			ende
+		ende
+		wenn  tverg(trendfileformat,"*.csv") = 0 or tverg(trendfileformat,"*.txt") = 0
+			Ímportsvorlage = "#ImportAscii1.dll|ascii_statusfile"
+			;Ímportsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+			_fileid = FileOpenFAS($filename, Ímportsvorlage, 0); ascii_statusfile
+			wenn _fileid > 0
+				_anzPar = FileObjNum?(_fileid)
+				_index = 1
+				SOLANGE _index <= _anzPar  
+					_typ = FileObjType?(_fileid,_index)
+					wenn _typ = 1
+						_Parname = FileObjName?(_fileid,_index)
+						{<_Parname>} = FileObjRead(_fileid,_index)
+						wenn IsXY({<_Parname>})
+							{<_Parname>} = sort({<_Parname>},7)
+							FeatData:{<_Parname>}={<_Parname>}
+						sonst
+							FeatData:{<_Parname>}={<_Parname>}
+						ende
+						wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+							DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+							FeatData:Date_Time=DateTimeVec
+						ende
+						sequenz insert_item "ParameterListe" _Parname
+					ende
+					_index = _index + 1
+				ende
+				_err = fileclose(_fileid)
+			ende
+		ende
+		FeatData00 = FeatData
+sonst
+	BoxNachricht("Info","No files in Inputfolder","?1")
+ende

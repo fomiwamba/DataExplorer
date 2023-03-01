@@ -1,0 +1,60 @@
+sequenz imc_logging "check_parameter_vs_limits started"
+; sequenz check_parameter_vs_limits
+;a.y; Parameter, e.g. ESA_Parameter_Trend:U_HD_Zero_avg.y
+;PA2; ok_u
+;PA3; ok_o
+;PA4; pal_u
+;PA5; pal_o
+;PA6; al_u
+;PA7; al_o
+
+; ok/green if [PA2---PA3[
+; pal/yellow  if [PA4---PA2[ or [PA3---PA5[
+; al/orange if [PA6---PA4[ or [PA5---PA7[
+; dg/red  if <= PA6 or >= PA7
+a = PA1
+a0 = mean(a.y)
+a1 = PA2
+a2 = PA3
+a3 = PA4
+a4 = PA5
+a5 = PA6
+a7 = PA7
+
+status_green = rgb(0,255,0)
+status_red =rgb(255,0,0)
+status_orange = rgb(255,114,0)
+status_yellow = rgb(255,255,0);
+
+if PA2<PA3
+	if mean(a.y) >= PA2 and mean(a.y) < PA3
+		status = status_green
+	else
+		status = status_red
+	end
+end
+
+if PA4<PA2 and PA3<PA5
+	if (mean(a.y) >= PA3 and mean(a.y) < PA5) or  (mean(a.y) >= PA4 and mean(a.y) < PA2)
+		status = status_yellow
+	else
+		status = status_red
+	end
+end
+
+
+if PA6<PA4 and PA5<PA7
+	if (mean(a.y) >= PA5 and mean(a.y) < PA7) or  (mean(a.y) > PA4 and mean(a.y) <= PA6)
+		status = status_orange
+	else
+		status = status_red
+	end
+	if mean(a.y) >= PA7 or mean(a.y) <= PA6
+		status = status_red
+	end
+end
+
+
+; return status
+
+Grün = RGB( 0, 255, 0)

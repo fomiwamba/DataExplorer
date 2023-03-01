@@ -1,0 +1,16 @@
+;sequenz imc_logging "log_txt"
+log_text = PA1
+
+log_file = "C:\BDA\" + "imc_logs.txt"
+
+
+date_str = zeitintext(zeitsystem?(),3)
+log_text = date_str + " ---> " + log_text
+_fh_id = FileOpenASCII(log_file,2)
+if _fh_id > 0
+	_err = FileLineWrite(_fh_id,log_text,0)
+	_err = FileClose(_fh_id)
+sonst
+	_err = FileErrCode?() 
+	zeigen _err
+ende

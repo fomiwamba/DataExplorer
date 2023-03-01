@@ -1,0 +1,229 @@
+sequenz imc_logging "get_channel_features started"
+
+inputfile = "C:\BDA\DataExploration\CreateReport.txt"
+idDatei= FileOpenASCII(inputfile,0 )
+TxZeile = ""
+ok = 0
+count = 0
+solange ok = 0
+	ok = FileLineRead( idDatei, TxZeile, 0 )
+	if ok = 0 
+		if count = 0
+			AssetFolder = TxZeile
+		ende
+		if count = 1
+			Channels = TxZeile
+		ende
+		count = count + 1
+	ende
+ende
+FileClose(idDatei)
+
+
+
+ist_channel = "V101"
+
+	
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; time series parameters
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if 1; find time series parameters
+	featuretable_file = assetfolder + "\" + "Output\Features\" + "FeatureTable_Clean.csv"
+	;featuretable_file = assetfolder + "\" + "Output\Features\" + "FeatureTable_Clean.csv"
+	; channel_time_series_parameters
+	file = featuretable_file
+	Ímportsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+	
+
+	_fileid = FileOpenFAS(file, Ímportsvorlage, 0); ascii_statusfile
+	FeatData = Grneu()
+
+	wenn _fileid > 0
+		_anzPar = FileObjNum?(_fileid)
+		_index = 1
+				
+		SOLANGE _index <= _anzPar  
+					
+			_typ = FileObjType?(_fileid,_index)
+			wenn _typ = 1
+				_Parname = FileObjName?(_fileid,_index)
+				_ok = 0
+				if txwo(_parname, ist_channel) <> 0  and txwo(_parname, "Status") = 0
+					_parname_list = TxSplit(_parname,"_")
+					_parname = _parname_list[2]
+					{<_Parname>} = FileObjRead(_fileid,_index)
+					if lang?({<_Parname>} ) > 1
+						parameters_ok = 1
+						wenn IsXY({<_Parname>})
+							{<_Parname>} = sort({<_Parname>},7)
+							FeatData:{<_Parname>}={<_Parname>}
+						sonst
+							FeatData:{<_Parname>}={<_Parname>}
+						ende
+						wenn tverg(_Parname,"Date_Time") = 0; _index = 1
+							DateTimeVec = sort(Zeit?({<_ParName>})+kmpx({<_ParName>}),1)
+							FeatData:Date_Time=DateTimeVec
+						ende
+					ende
+					
+				ende
+				
+			ende
+			_index = _index + 1
+		ende
+		fileclose(_fileid)
+	sonst
+		_err = FileErrCode?()
+		zeigen _err
+	ende
+
+			
+			
+	channel_ts_parameters = grneu()
+	if GrKanalZahl?(FeatData) >= 2
+		_iimax = GrKanalZahl?(FeatData)
+		for _ii = 1 to _iimax
+			
+			_varname = grkanalName?(FeatData,_ii)
+			_vaname_ext = _varname + "_min"
+			channel_ts_parameters:{<_vaname_ext>}  = min(kmpy(FeatData:{<_varname>}))
+			_vaname_ext = _varname + "_mean"
+			channel_ts_parameters:{<_vaname_ext>}  = mitte(kmpy(FeatData:{<_varname>}))
+			_vaname_ext = _varname + "_max"
+			channel_ts_parameters:{<_vaname_ext>}  = max(kmpy(FeatData:{<_varname>}))
+			_vaname_ext = _varname + "_std"
+			channel_ts_parameters:{<_vaname_ext>}  = streu(kmpy(FeatData:{<_varname>}))
+			
+		ende
+	ende
+
+	
+ende
+
+	
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;  channel_twf + last measurement data
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if 1; find last measurement file
+	chname = ist_channel
+	file = featuretable_file
+	_fileid = FileOpenXLS(file,0)
+	wenn _fileid > 0
+		FileXLSSelectSheet(_fileid,1)
+		Measfiles = TxArrayCreate(1)
+		_ii = 1
+		SOLANGE _ii <=  2560
+			_PName = FileXLSCellRead(_fileid,_ii,1,0)
+			wenn tverg(_Pname,"FileId") = 0
+				col_ist = _ii
+				break
+			sonst
+				_ii = _ii + 1
+			ende
+		ENDE
+		_ii = 1
+		SOLANGE _ii <=  2^32
+			_PName = FileXLSCellRead(_fileid,col_ist,_ii+1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				Measfiles[_ii] = _PName
+				last = _ii
+				date_time_str = Measfiles [last]
+				_ii = _ii + 1
+			ende
+		ENDE
+		; return Measfiles
+		err = FileClose(_fileid)
+	ende
+	
+	_ii = 1
+	current_idx = leer
+	_iimax = last
+	count = 0
+	for _ii = 1 to _iimax
+		if tverg(Measfiles[_ii], date_time_str) = 0
+			count = count + 1
+			current_idx = binde(current_idx,_ii)
+			last_idx = count
+		end
+	end
+	
+	channel_current_parameters = grneu()
+	if GrKanalZahl?(FeatData) >= 2
+		_iimax = GrKanalZahl?(FeatData)
+		for _ii = 1 to _iimax
+			
+			_varname = grkanalName?(FeatData,_ii)
+			_varvalues = kmpy(FeatData:{<_varname>})
+			_idx1 = current_idx[1]
+			_idxN = current_idx[last_idx]
+			_varvalues_red = grenindex(_varvalues,_idx1,_idxN)
+			_vaname_ext = _varname + "_min"
+			channel_current_parameters:{<_vaname_ext>}  = min(_varvalues_red)
+			_vaname_ext = _varname + "_mean"
+			channel_current_parameters:{<_vaname_ext>}  = mitte(_varvalues_red)
+			_vaname_ext = _varname + "_max"
+			channel_current_parameters:{<_vaname_ext>}  = max(_varvalues_red)
+			_vaname_ext = _varname + "_std"
+			channel_current_parameters:{<_vaname_ext>}  = streu(_varvalues_red)
+			
+		ende
+	ende
+			
+	
+	; channel liste tabelle
+	table_name = "Table"
+	
+	PnSetCellText("Table", 1, 1, "ParName")
+	PnSetCellText("Table", 1, 2, "TS_Min")
+	PnSetCellText("Table", 1, 3, "TS_Mean")
+	PnSetCellText("Table", 1, 4, "TS_Max")
+	PnSetCellText("Table", 1, 5, "TS_Std")
+	PnSetCellText("Table", 1, 6, "Current_Min")
+	PnSetCellText("Table", 1, 7, "Current_Mean")
+	PnSetCellText("Table", 1, 8, "Current_Max")
+	PnSetCellText("Table", 1, 9, "Current_Std")
+	_ii = 1
+	_iimax = grkanalzahl?(channel_ts_parameters)
+	_jjmax = grkanalzahl?(channel_current_parameters)
+	zeile = 1
+	for _ii = 1 to _iimax step 4
+		_varname1 = grkanalname?(channel_ts_parameters,_ii)
+		_varname1 = txSplit(_varname1,"_")
+		_varname1 = _varname1[1]
+		idx = _ii
+		ts_min = tform(channel_ts_parameters:[idx],"f2.3")
+		idx = _ii + 1
+		ts_mean = tform(channel_ts_parameters:[idx],"f2.3")
+		idx = _ii + 2
+		ts_max = tform(channel_ts_parameters:[idx],"f2.3")
+		idx = _ii + 3
+		ts_std = tform(channel_ts_parameters:[idx],"f2.3")
+		
+		_varname2 = grkanalname?(channel_current_parameters,_ii)
+		_varname2 = txSplit(_varname2,"_")
+		_varname2 = _varname2[1]
+		idx = _ii
+		current_min = tform(channel_current_parameters:[idx],"f2.3")
+		idx = _ii+1
+		current_mean = tform(channel_current_parameters:[idx],"f2.3")
+		idx = _ii+ 2
+		current_max = tform(channel_current_parameters:[idx],"f2.3")
+		idx = _ii +3
+		current_std = tform(channel_current_parameters:[idx],"f2.3")
+		
+		zeile = zeile +1
+		PnSetCellText( "Table", zeile, 1, _varname1)
+		PnSetCellText( "Table", zeile, 2,ts_min )
+		PnSetCellText( "Table", zeile, 3,ts_mean)
+		PnSetCellText( "Table", zeile, 4, ts_max)
+		PnSetCellText( "Table", zeile, 5, ts_std)
+		PnSetCellText( "Table", zeile, 6, current_min)
+		PnSetCellText( "Table", zeile, 7, current_mean)
+		PnSetCellText( "Table", zeile, 8, current_max)
+		PnSetCellText( "Table", zeile, 9, current_std)
+
+	ENDE
+	
+ende

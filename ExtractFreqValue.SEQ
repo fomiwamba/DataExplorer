@@ -1,0 +1,144 @@
+;sequenz ExtractFreqValue
+
+sequenz imc_logging "extract_freq_value started"
+
+_Freqvalue = PnGetValue("FreqValue")
+
+; Update Marker in Spectrum
+SpecName = SpectrumPlot
+
+CwSelectMode("auto")
+_erg = CwSelectWindow(SpecName)
+CwSelectByIndex("x-axis",1)
+AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+;zeigen Freqvec
+_ii = 1
+;CwNewElement("marker")
+_anz_markers = CwDisplayGet("marker.count")
+CwNewElement("marker.vert.line")
+
+;CwNewElement("marker.harmonic.harmonic")
+CwSelectByIndex("marker", _anz_markers+1)
+CwMarkerSet("text",_Freqvalue)
+CwMarkerSet("x.type",1)
+CwMarkerSet("x",_Freqvalue)
+CwMarkerSet("y.type",2)
+CwMarkerSet("y",95)
+CwMarkerSet("arrow",0)
+	
+;CwMarkerSet("dimline.distance",8)
+CwMarkerSet("extension",0)
+CwMarkerSet("font.size",6)
+CwMarkerSet("text.orientation",90)
+_fb = RGB( 255, 255, 0 ) ;Rot
+CwMarkerSet("color.background",_fb)
+_fb = RGB( 0, 0, 0) ;Blau
+CwMarkerSet("color.text",_fb)
+
+
+
+
+
+_nlinien = SegLang?(Ax_Trend_Plot)
+_spalte_laenge = lang?(Ax_Trend_Plot)/_nlinien
+if isxy(Ax_Trend_Plot[1])
+	_a = Ax_Trend_Plot[1]
+	_b = _a.x
+	_deltaf = _b[2]-_b[1]
+	entf _a
+	entf _b
+else
+	_deltaf = xdel?(Ax_Trend_Plot[1])
+end
+	
+FrequencyWindow_Hz = 0
+sequenz search_item Asset_Props:Name "FrequencyWindow_Hz"
+if search_index <>0
+	FrequencyWindow_Hz = tzuew (Asset_Props:Val[search_index],"a")
+ende
+if FrequencyWindow_Hz < 0
+	_freq_window = 1 * _deltaf
+else
+	_freq_window = FrequencyWindow_Hz
+end
+	
+;_freqvalue = Freqvec[1]
+
+_spalte_counter = 1
+
+mag_freq_kask = leer
+
+solange _spalte_counter <= round(_spalte_laenge,1)
+	_mag_spect = Ax_Trend_Plot[_spalte_counter];_Ax_trend[_spalte_counter];
+	_Fu =_Freqvalue - _freq_window
+	_Fo = _Freqvalue + _freq_window
+	
+	if isxy(_mag_spect)
+		_Fu = posi(_mag_spect.x,_Fu)
+		_Fo = posi(_mag_spect.x,_Fo)
+		_mag_spect = grenindex(_mag_spect.y,_Fu,_Fo); Amplitudespektrum fuer X
+	else
+		_mag_spect = gren(_mag_spect,_Fu,_Fo); Amplitudespektrum fuer X
+	end
+	
+	_mag_freq = 0
+	wenn lang?(_mag_spect) < 1 
+		_mag_freq = 0
+	sonst
+		_mag_freq = max(_mag_spect)
+	ende
+	mag_freq_kask = binde(mag_freq_kask,_mag_freq)
+	_spalte_counter = _spalte_counter + 1
+ende
+	
+;zeigen mag_freq_kask
+;_index = PnGetSelectedItem("VMS_Freq_Data.ParameterListe")
+;wenn _index <> 0
+;	_Parname = PnGetItemText("VMS_Freq_Data.ParameterListe", _index)
+_index = PnTableGetSelectedRows("VMS_Freq_Data.ParameterTable")
+wenn _index > 0
+	_Parname = SuesParListe[_index]
+	_parname_name_parts = txsplit(_Parname,"_")
+	
+	if txarraygetsize(_parname_name_parts) <= 4
+		_channel1 = _parname_name_parts[1]
+		_fct_name = _parname_name_parts[2]
+		_spec_par_name = _parname_name_parts[3]
+		_Parname_ext = _channel1 + "_" +_fct_name + "_" + _spec_par_name + "_" + tform(_freqvalue*1000,"f1.0")
+	ende
+	if txarraygetsize(_parname_name_parts) >4
+		_channel1 = _parname_name_parts[1]
+		_channel2 = _parname_name_parts[2]
+		_fct_name = _parname_name_parts[3]
+		_spec_par_name = _parname_name_parts[4]
+		_Parname_ext = _channel1 + "_" +_channel2 + "_" +_fct_name + "_" + _spec_par_name + "_" + tform(_freqvalue*1000,"f1.0")
+	ende
+	
+	;	if txwo(_spec_par_name,"Mag") <> 0
+	;		mag_freq_kask = idb(mag_freq_kask)
+	;	end
+
+	if 1
+		AveragedSpectrum = PnGetValue("AveragedSpectrum")
+		_Parname_ext = _Parname_ext + "_ext"
+		if xaxis = 1
+			if AveragedSpectrum = 0
+				{<_Parname_ext>} = xyvon(kmpx({<_Parname>}),mag_freq_kask)
+			else
+				{<_Parname_ext>} = xyvon(tvec_sues_par,mag_freq_kask)
+			end
+		else
+			if AveragedSpectrum =0
+				{<_Parname_ext>} = mag_freq_kask
+			else
+				{<_Parname_ext>} = xyvon(tvec_sues_par,mag_freq_kask)
+			end
+		end
+	
+		_unit = PnGetText("FreqParUnit")
+		seteinheit({<_Parname_ext>},_unit,1)
+		sequenz plot_2d_trend {<_Parname_ext>} xaxis "VMS_Freq_Data.ParameterPlot"
+		PnSetText("FreqParameter",_Parname_ext)
+	end
+end
+;entf _*

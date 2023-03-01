@@ -1,0 +1,11 @@
+sequenz imc_logging "delete_item started"
+;PA1 = "Dialog"
+;PA2 = "VarName"
+sequenz imc_logging "delete_item started"
+
+_Chindex = PnFindItem(PA1,PA2)
+wenn _Chindex <> 0
+	PnDeleteItem(PA1,_Chindex)
+	;PnInsertItem(PA1,0, PA2 , 0)
+ende
+

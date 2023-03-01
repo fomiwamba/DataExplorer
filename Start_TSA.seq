@@ -1,0 +1,36 @@
+; Order Spectrum
+if varexist?("ChannelX") and varexist?("ChannelTacho")
+	sigx = ChannelX
+	peak = ChannelTacho
+	
+	chann_name = ChannelXName
+
+	sigx = xoff(sigx,0)
+	peak = xoff(peak,0)
+	
+	sequenz SignaleGleichsetzen sigx peak
+	sigx = _sig1
+	peak = _sig2
+	
+	sig_diff = sigx-peak
+	if mean(sig_diff) = 0
+		BoxMessage("Info","SignalX is equal to Tacho","I1")
+	else
+	
+		; tfenster = pam * samples_per_rev, if transient --> tfenster must be small --> pam = 4 revolutions
+		samples_per_rev = Pngetvalue("VibrationAnalysis.SamplesPerRev");
+		pam = Pngetvalue("VibrationAnalysis.RevPerWindow");
+	
+		integrate_vib = Pngetvalue("VibrationAnalysis.Integration");
+		_window = Pngetvalue("VibrationAnalysis.Window");
+		windowfft = 2
+		overlap = Pngetvalue("VibrationAnalysis.Overlap");
+		envelope =Pngetvalue("VibrationAnalysis.envelope");
+		TrigLevel = Pngetvalue("VibrationAnalysis.TrigLevel");
+		PulsPerRev = Pngetvalue("VibrationAnalysis.PulsPerRev");
+		
+		show_brg_freqs = Pngetvalue("VibrationAnalysis.show_brg_freqs");
+	
+		sequenz TSA_Analysis sigx peak samples_per_rev pam windowfft overlap TrigLevel PulsPerRev integrate_vib envelope 
+	end
+end

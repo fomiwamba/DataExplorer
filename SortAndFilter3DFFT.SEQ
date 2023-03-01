@@ -1,0 +1,84 @@
+sequenz imc_logging "sort_and_filter_3d_fft started"
+
+t0 = ZeitSystem?()
+;Ax_Trend = S3X_FFT_Ax_Trend_sorted
+Data = Ax_Trend
+_anz = eventnum?(Data);
+Eventidx = leer;
+Eventdate = leer;
+_ii=1
+_x = leer
+MeasListSorted = TxArrayCreate(0)
+solange _ii <= _anz
+	ActEvent = Eventprop?(Data,_ii,0);
+	Eventidx = binde(Eventidx,_ii)
+	ActEventDate = EventProp?(Data,_ii,0)	
+	Eventdate = binde(Eventdate,ganz(ActEventDate))
+	_x = binde(_x,_ii)
+	_ii = _ii + 1 
+end
+Eventdatediff = diff(Eventdate)
+if min(Eventdatediff) < 0
+	EventSorted = sort(xyvon(Eventidx,Eventdate),5)
+	IdxSorted = Kmpx(EventSorted)
+	DateSorted = Kmpy(EventSorted)
+	
+	_ii=1
+	DataSortedRed = Data
+	DataSorted = Data
+	DataOut = Data
+	solange _ii <= _anz
+		kk = IdxSorted[_ii]
+		ActEvent = Eventget(Data,kk,0);
+		Eventset(DataSorted,ActEvent,_ii,0)
+		
+		EventDate = EventProp?(DataSorted,_ii,0)	
+		EventDate_str = TimeToText(EventDate,3)
+		EventDate_str = tpart(EventDate_str,7,4)+"-"+tpart(EventDate_str,4,2)+"-"+tpart(EventDate_str,1,2)+" "+tpart(EventDate_str,12,8)
+		MeasListSorted [_ii] = EventDate_str
+		_ii = _ii + 1 
+	end
+	Ax_Trend = DataSorted
+ende
+
+
+if 0
+_pardata0 = Ax_Trend
+;a = lang?(_pardata0)
+;
+;_tzeit = ZeitInText(1170325646,3)
+wenn abs(_anz - lang?(_pardata0)) > 2
+	;BoxAusgabe("Filtering 3D FFT recommended",LEER,"",0)
+	_erg = BoxNachricht("Info","Filtering 3D FFT recommended","?4")
+	if _erg = 1
+		;_pardata0 = xyvon(Date_Time,S3X_TA_P_std_Trend)
+		_datetimevec = ganz(kmpx(_pardata0) +  Zeit?(_pardata0))	
+		wenn lang?(_datetimevec) > 0
+			_jj = 1
+			_jjmax = lang?(_datetimevec)
+			_datetimevec_ist = xyvon(_x,Eventdate)
+			_count = 1
+			_idx = leer
+			solange _jj <= _jjmax
+				_ax = posiex2(_datetimevec_ist.y,_datetimevec[_jj],2,2)
+				if lang?(_ax) >0 ; < 1e15
+					_a = _ax[1]
+					_idx = binde(_idx, _a)
+					;zeigen _a
+					wenn _count = 1
+						Ax_Trend_neu = EventNew(Ax_Trend[_a],0)
+					sonst
+						EventAppend(Ax_Trend_neu,Ax_Trend[_a],0)
+					end
+					EventProp(Ax_Trend_neu,_count,0,_datetimevec[_jj])	
+					_count = _count + 1
+				ende
+				_jj = _jj + 1
+			ENDE
+			t1 = ZeitSystem?()
+			dt1 = t1-t0
+			Ax_Trend = Ax_Trend_neu
+		ende
+	ende
+ende
+ende

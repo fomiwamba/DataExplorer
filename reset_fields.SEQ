@@ -1,0 +1,340 @@
+sequenz imc_logging "reset_fields started"
+
+entf DelFeatureList
+entf ChFeatStatusData_
+entf ChListe
+entf ChIdx
+
+table_name = "AssetOverview.ChannelTable1"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+table_name = "AssetOverview.ChannelTable2"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+
+table_name = "AssetOverview.ChannelTable3"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+
+
+sequenz ClearSelectedPlot "AssetOverview.ChannelStatusMap"
+
+
+sequenz ClearSelectedPlot "ChannelOverview.ChannelParTimeSeries"
+sequenz ClearSelectedPlot "ChannelOverview.ParameterStatusMap"
+
+table_name = "ChannelOverview.ParameterTable"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+
+sequenz ClearSelectedPlot "ParameterOverview.VISA_plot"
+sequenz ClearSelectedPlot "ParameterOverview.CascadePlot"
+
+
+
+sequenz ClearSelectedPlot "FrequencyParameters.FreqParameterPlot"
+sequenz ClearSelectedPlot "FrequencyParameters.FreqSpectrumPlot"
+
+
+sequenz ClearSelectedPlot "MeasurementOverview.SignalPlot"
+sequenz ClearSelectedPlot "MeasurementOverview.ParameterPlot"
+sequenz ClearSelectedPlot "MeasurementOverview.TimeWaveForm"
+sequenz ClearSelectedPlot "MeasurementOverview.HistPlotT"
+sequenz ClearSelectedPlot "MeasurementOverview.FFT3D"
+sequenz ClearSelectedPlot "MeasurementOverview.FFT_averaged"
+
+PnDeleteItem("VibrationAnalysis.ChannelX",0)
+;PnDeleteItem("VibrationAnalysis.MeasFile",0)
+
+sequenz ClearSelectedPlot "VibrationAnalysis.TimeWaveform"
+sequenz ClearSelectedPlot "VibrationAnalysis.Boxplot"
+sequenz ClearSelectedPlot "VibrationAnalysis.CascadeSpectrum"
+sequenz ClearSelectedPlot "VibrationAnalysis.CurrentSpectrum"
+sequenz ClearSelectedPlot "VibrationAnalysis.Visa_Parameters"
+sequenz ClearSelectedPlot "VibrationAnalysis.VectorPlot"
+sequenz ClearSelectedPlot "VibrationAnalysis.CascadeFullSpectrum"
+sequenz ClearSelectedPlot "VibrationAnalysis.Orbit"
+sequenz ClearSelectedPlot "VibrationAnalysis.CurrentFullSpectrum"
+sequenz ClearSelectedPlot "VibrationAnalysis.StaticPosition"
+sequenz ClearSelectedPlot "VibrationAnalysis.Forward_Backward_Par"
+
+Pnsettext("ElectricalAnalysis.U1","")
+Pnsettext("ElectricalAnalysis.U2","")
+Pnsettext("ElectricalAnalysis.U3","")
+Pnsettext("ElectricalAnalysis.I1","")
+Pnsettext("ElectricalAnalysis.I2","")
+Pnsettext("ElectricalAnalysis.I3","")
+;PnDeleteItem("ElectricalAnalysis.MeasFile",0)
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_TWF"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_DemodTwf"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_STFT"
+sequenz ClearSelectedPlot "ElectricalAnalysis.esa_stft_demod"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_Spectrum"
+sequenz ClearSelectedPlot "ElectricalAnalysis.esa_spectrum_demod"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_Parameter"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_Harmonics"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_metrics_twf"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_metrics_spectrum"
+sequenz ClearSelectedPlot "ElectricalAnalysis.ESA_FrequencyData"
+
+
+table_name = "MotorTable.ParameterTable"
+_table_cols = PnTableColumns?(table_name)
+_table_rows = PnTableRows?(table_name)
+_avg_spalte = 5
+_unbalance_spalte = 9
+_zeilei = 2
+PnTableSetProperty(table_name,_avg_spalte,1,"FillColor",rgb(255,255,255))
+solange _zeilei <= _table_rows
+	_spaltei = 1
+	solange _spaltei <= _table_cols
+		_val = ""
+		PnTableSetCell(table_name,_spaltei,_zeilei,_val); name
+		PnTableSetProperty(table_name,_unbalance_spalte,_zeilei,"FillColor",rgb(255,255,255))
+		PnTableSetProperty(table_name,_avg_spalte,_zeilei,"FillColor",rgb(255,255,255))
+		_spaltei = _spaltei +1 
+	ende
+	_zeilei = _zeilei + 1
+ende
+
+table_name = "MotorTable.MetricTable"
+_table_cols = PnTableColumns?(table_name)
+_table_rows = PnTableRows?(table_name)
+_zeilei = 2
+solange _zeilei <= _table_rows
+	_val = ""
+	PnTableSetCell(table_name,1,_zeilei,_val); name
+	PnTableSetCell(table_name,2,_zeilei,_val); _value
+	_zeilei = _zeilei + 1
+ende
+
+
+
+PnSetText("ViewTrendData.Filename","")
+PnSetText("ViewTrendData.FileIndex","")
+PnSetText("ViewTrendData.ParName","")
+PnSetText("ViewTrendData.ParIndex","")
+
+;PnSetActivePage(9)
+PnDeleteItem("ViewTrendData.FileList",0)
+PnDeleteItem("ViewTrendData.ParameterList",0);
+sequenz ClearSelectedPlot "ViewTrendData.ParameterDataPlot"
+
+PnSetText("ViewProcessData.Filename","")
+PnSetText("ViewProcessData.FileIndex","")
+PnSetText("ViewProcessData.ParName","")
+PnSetText("ViewProcessData.ParIndex","")
+
+;PnSetActivePage(10)
+PnDeleteItem("ViewProcessData.FileList",0)
+PnDeleteItem("ViewProcessData.ParameterList",0);
+sequenz ClearSelectedPlot "ViewProcessData.ParameterDataPlot"
+
+if 0
+;PnShow("DataExploration.FRFSignalList",0)
+;PnShow("DataExploration.FRFList",0)
+;PnDeleteItem("DataExploration.ParameterListe",0)
+PnSetText("DataExploration.Feature","");
+PnSetText("DataExploration.FeatureIdx","");
+PnSetText("DataExploration.Channel","");
+PnSetText("DataExploration.Chunit","");
+PnSetText("DataExploration.FFT_Trend_Name","");
+PnSetText("DataExploration.MeasDate","");
+PnSetText("DataExploration.MeasIndex","");
+PnSetText("DataExploration.MeasFile","");
+;PnSetText("DataExploration.ParFilterInput","");
+;PnSetValue("DataExploration.ParFilter",0);
+PnDeleteItem("DataExploration.LabelList",0)
+PnDeleteItem("DataExploration.LabelGroupList",0)
+PnDeleteItem("DataExploration.Channels",0)
+
+
+_table_name = "DataExploration.ParameterTableSel"
+_table_cols = PnTableColumns?(_table_name)
+_table_rows = PnTableRows?(_table_name)
+for _ii = 1 to _table_rows
+	for _jj = 1 to _table_cols
+		PnTableSetCell(_table_name,_jj,_ii,"")
+		_parstatus_color = RGB(255, 255, 255)
+		PnTableSetProperty(_table_name,_jj,_ii,"FillColor",_parstatus_color)	
+	ende
+ende
+
+
+;PnSetText("VibrationAnalysis.MeasFile","");Filename
+
+PnSetText("ParStatusTable.Channel","")
+PnSetText("ParStatusTable.ChannelUnit","")
+sequenz ClearSelectedPlot "ParStatusTable.ChannelParTimeSeries"
+sequenz ClearSelectedPlot "ParStatusTable.ParameterStatusMap"
+
+PnSetText("ConditionData.Filename","")
+PnSetText("ConditionData.FileIndex","")
+PnSetText("ConditionData.ParName","")
+PnSetText("ConditionData.ParIndex","")
+
+
+
+PnSetText("VMS_Freq_Data.Parameter","")
+PnSetText("VMS_Freq_Data.Spectrum","")
+PnSetValue("VMS_Freq_Data.FreqValue",0)
+PnSetText("VMS_Freq_Data.FreqParameter","")
+;PnSetText("VMS_Freq_Data.ParFilterInput","");
+;PnSetValue("VMS_Freq_Data.ParFilter",0);; 
+Del SuesParData
+Del SuesParListe
+table_name = "VMS_Freq_Data.ParameterTableSel"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+
+
+;PnSetText("ElectricalAnalysis.MeasFile","");
+
+
+CwSelectMode("title")
+_ret = CwIsWindow("ChannelStatusTable.ChannelStatusMap")
+wenn _ret <> 0
+	CwSelectWindow("ChannelStatusTable.ChannelStatusMap")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+
+
+table_name = "ParStatusTable.ParameterTable"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+
+if 0
+table_name = "VISATable.VISA_table"
+table_cols = PnTableColumns?(table_name)
+table_rows = PnTableRows?(table_name)
+for _ii = 1 to table_rows
+	for _jj = 1 to table_cols
+		PnTableSetCell(table_name,_jj,_ii,"")
+		PnTableSetProperty(table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
+	ende
+	;PnTableSetProperty(table_name,2,_ii,"FillColor",rgb(255,255,255))	
+ende
+end
+
+_table_cols = PnTableColumns?("ESATable.ParameterTable")
+_table_rows = PnTableRows?("ESATable.ParameterTable")
+_avg_spalte = 5
+_unbalance_spalte = 9
+_zeilei = 2
+PnTableSetProperty("ESATable.ParameterTable",_avg_spalte,1,"FillColor",rgb(255,255,255))
+solange _zeilei <= _table_rows
+	_spaltei = 1
+	solange _spaltei <= _table_cols
+		_val = ""
+		PnTableSetCell("ESATable.ParameterTable",_spaltei,_zeilei,_val); name
+		PnTableSetProperty("ESATable.ParameterTable",_unbalance_spalte,_zeilei,"FillColor",rgb(255,255,255))
+		PnTableSetProperty("ESATable.ParameterTable",_avg_spalte,_zeilei,"FillColor",rgb(255,255,255))
+		_spaltei = _spaltei +1 
+	ende
+	_zeilei = _zeilei + 1
+ende
+
+
+_table_cols = PnTableColumns?("ESATable.MetricTable")
+_table_rows = PnTableRows?("ESATable.MetricTable")
+_zeilei = 2
+solange _zeilei <= _table_rows
+	_val = ""
+	PnTableSetCell("ESATable.MetricTable",1,_zeilei,_val); name
+	PnTableSetCell("ESATable.MetricTable",2,_zeilei,_val); _value
+	_zeilei = _zeilei + 1
+ende
+
+sequenz ClearPlots
+sequenz cleanmarkers
+
+entf StatusData
+entf StatusListe
+entf ParameterStatusListe
+entf VisaHealthData
+entf VisaCompFaultListe
+entf VisaChanParListe
+entf ParStatusMap
+entf Par_Liste
+entf Date_Time_List
+
+entf RawData
+
+;PnSetActivePage(8)
+PnDeleteItem("ConditionData.FileList",0)
+PnDeleteItem("ConditionData.ParameterList",0);
+CwSelectMode("title")
+_ret = CwIsWindow("ConditionData.ParameterDataPlot")
+wenn _ret <> 0
+	CwSelectWindow( "ConditionData.ParameterDataPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+	
+
+
+;PnSetActivePage(10)
+;PnDeleteItem("VMS_Freq_Data.ParameterListe",0)
+CwSelectMode("title")
+_ret = CwIsWindow("VMS_Freq_Data.ParameterPlot")
+wenn _ret <> 0
+	CwSelectWindow( "VMS_Freq_Data.ParameterPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+_ret = CwIsWindow("VMS_Freq_Data.SpectrumPlot")
+wenn _ret <> 0
+	CwSelectWindow( "VMS_Freq_Data.SpectrumPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+entf SuesParData
+PnSetActivePage(1)
+end

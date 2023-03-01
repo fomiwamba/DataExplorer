@@ -1,0 +1,51 @@
+sequenz imc_logging "plot_2d_trend started"
+
+
+CwSelectMode("title")
+ret = CwIsWindow(PA3)
+wenn ret <> 0
+	CwSelectWindow(PA3)
+	CwDisplaySet("displaymode",1)
+	CwDisplaySet("grid",1)
+	CwDisplaySet("displaymode",1)
+	CwSelectByIndex("x-axis",1)
+	CwAxisSet("ticks.option",1)
+	;CwAxisSet("ticks.count",11)
+	wenn PA2 = 1
+		CwAxisSet("scale",4)
+		CwAxisSet("range",1)
+	sonst
+		CwAxisSet("scale",1)
+		CwAxisSet("range",1)
+	ende
+	CwSelectByIndex("y-axis",1)
+	CwAxisSet("ticks.option",1)
+	;CwAxisSet("ticks.count",11)
+	
+	;CwDeleteElement("axis")
+	;CwNewChannel("append last axis",{<Parname>})
+	SigUnit = einheit?(PA1,1)
+	wenn varexist?("SigUnitLast")
+		wenn tverg (SigUnit, SigUnitLast) = 0
+			CwNewChannel("append last axis",PA1)
+		sonst
+			CwNewChannel("append new axis",PA1)
+		ende
+	sonst
+		CwNewChannel("append new axis",PA1)
+	ende
+	wenn PA2 = 1
+		CwSelectByChannel("line",PA1)
+		;CwLineSet("symbol",0)
+		CwLineSet("symbol",0)
+		;		CwLineSet("symbolsize.screen",1.25)
+	sonst
+		CwSelectByChannel("line",PA1)
+		CwLineSet("symbol",0)
+	ende
+	CwLineSet("width.screen",line_width)
+	SigUnitLast = SigUnit
+	;ende
+ende
+
+; test

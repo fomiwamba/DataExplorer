@@ -1,0 +1,4 @@
+; File: "autostart.seq"
+; Purpose: Start-Sequence for this project
+Dialog("DataExploration.dlg", "", 0)
+;BoxMessage("Project-Startsequence", "Please insert your code into the sequence <autostart.seq>!", "1!")

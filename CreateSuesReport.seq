@@ -1,0 +1,292 @@
+; sequenz create_sues_report
+sequenz imc_logging "create_sues_report started"
+;entf *
+export_mode = "png";"pdf"
+
+; which assetfolder
+inputfile = "C:\BDA\ExpertAnalysis\CreateReport.txt"
+idDatei= FileOpenASCII(inputfile,0 )
+TxZeile = ""
+ok = 0
+count = 0
+solange ok = 0
+	ok = FileLineRead( idDatei, TxZeile, 0 )
+	if ok = 0 
+		if count = 0
+			AssetFolder = TxZeile
+		ende
+		if count = 1
+			Channels = TxZeile
+		ende
+		count = count + 1
+	ende
+ende
+FileClose(idDatei)
+
+;assetfolder = "D:\Projekte\SUES_OL3_HFT2"
+
+
+if 1; folder where the report templates are
+	cadis_report_folder = "C:\BDA\ReportTemplates\"
+else
+	cadis_report_folder = assetfolder + "\reports\"
+ende
+
+if 0
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Load FeatureTable_Clean.csv
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	featuretable_file = assetfolder + "\" + "Output\Features\" + "FeatureTable_Clean.csv"
+	; channel_time_series_parameters
+	file = featuretable_file
+	importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+
+	; search for measfiles
+	_fileid = FileOpenXLS(file,0)
+	wenn _fileid > 0
+		FileXLSSelectSheet(_fileid,1)
+		Measfiles = TxArrayCreate(1)
+		_ii = 1
+		SOLANGE _ii <=  2560
+			_PName = FileXLSCellRead(_fileid,_ii,1,0)
+			wenn tverg(_Pname,"FileId") = 0
+				col_ist = _ii
+				break
+			sonst
+				_ii = _ii + 1
+			ende
+		ENDE
+		_ii = 1
+		SOLANGE _ii <=  2^32
+			_PName = FileXLSCellRead(_fileid,col_ist,_ii+1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				Measfiles[_ii] = _PName
+				last = _ii
+				_ii = _ii + 1
+			ende
+		ENDE
+		; return Measfiles
+		err = FileClose(_fileid)
+	ende
+
+	date_time_lastfile = Measfiles [last]
+	if txwo(date_time_lastfile,"L") = 1
+		date_time_lastfile = tteil(date_time_lastfile,2,tlang(date_time_lastfile))
+	ende
+	if 1
+		date_time_str = date_time_lastfile
+	else
+		date_time_str = zeitintext(zeitsystem?(),3)
+		date_time_str = tteil(date_time_str,7,4)+ tteil(date_time_str,4,2)+ tteil(date_time_str,1,2)+"_"+ tteil(date_time_str,12,2)+ tteil(date_time_str,15,2)+ tteil(date_time_str,18,2)
+	end
+ende
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Load SuesStatisticsTable.csv
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+file = assetfolder + "\" + "Output\Features\" + "SuesStatisticsTable.csv"; -> max(Status) of Channel
+SuesParListe = TxArrayCreate(1)
+SuesStatsListe = TxArrayCreate(1)
+Fault_VibMode_data = TxArrayCreate(1)
+SuesParData_ = GrNeu()
+
+if fsfileexists(file)
+	_fileid = FileOpenXLS(file,0)
+	wenn _fileid > 0
+		; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+		FileXLSSelectSheet(_fileid,1)
+		SuesParListe = TxArrayCreate(1)
+		SuesStatsListe = TxArrayCreate(1)
+		Fault_VibMode_data = TxArrayCreate(1)
+		SuesParData_ = GrNeu()
+		_ii = 1
+		SOLANGE _ii <=  2560
+			_PName = FileXLSCellRead(_fileid,1,_ii+1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				SuesParListe[_ii] = _PName
+				_ii = _ii + 1
+			ende
+		ENDE
+		_iimax = _ii -1 
+		_jj = 1
+		SOLANGE _jj <=  2560
+			_PName = FileXLSCellRead(_fileid,_jj,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				SuesStatsListe[_jj] = _PName
+				
+				wenn tverg(_Pname,"Fault_VibMode") = 0
+					_kkk = 1
+					SOLANGE _kkk <= 2560;_cols
+						_partext = FileXLSCellRead(_fileid,_jj,_kkk+1,0) 
+						wenn tverg(_Partext,"") = 0
+							break
+						sonst
+							Fault_VibMode_data[_kkk] = _partext
+						end
+						_kkk = _kkk + 1
+					ende
+					SuesParData_:{<_PName>} = Fault_VibMode_data
+				else
+					if _jj > 1
+						SuesParData_:{<_PName>} = FileXLSColumnRead(_fileid,_jj,2,_iimax,0)
+					end
+						
+				ENDE
+				_jj = _jj + 1
+			ende
+		end
+		err = FileClose(_fileid)
+	ende
+
+
+	if varexist?("SuesParListe") and varexist?("SuesStatsListe") and varexist?("SuesParData_") and  leng?(SuesParData_:[1]) >= 1
+		table_rows_soll = txarraygetsize(SuesParListe)
+		table_rows_per_page = 30
+		number_pages = floor(table_rows_soll / table_rows_per_page) + 1
+
+		for page = 1  to number_pages
+			cadis_report_frequency_parameters = cadis_report_folder + "cadis_report_frequency_parameters.drb"
+			err = RgDocOpen( cadis_report_frequency_parameters, 0)
+			wenn err = 0
+				if varexist?("SuesParListe") and varexist?("SuesStatsListe") and varexist?("SuesParData_") 
+					;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+					RgTextSet("freq_par_page", tform(page,"f1.0"),0)
+					table_name = "SuesStatusTable"
+					table_cols = RgTableColumns?(table_name)
+					table_rows = RgTableRows?(table_name)
+			
+					if page = 1
+						_ii_min = 1
+						_ii_max = table_rows_per_page 
+					else
+						_ii_min = _ii_max +1
+						_ii_max = _ii_min + table_rows_per_page -1
+					end
+					if _ii_max > table_rows_soll
+						_ii_max = table_rows_soll
+					end
+					;zeigen _ii_min
+					;zeigen _ii_max
+				
+					if GrKanalZahl?(SuesParData_) >=  1 and txarraygetsize(SuesStatsListe) >=1  
+						for _ii =_ii_min to _ii_max+1; txarraygetsize(SuesParListe)+1
+				
+							if _ii = _ii_min
+								if 0
+									RgTableSetCell(table_name,1,_ii - (page-1)*table_rows_per_page,"",0)
+									_parstatus_color = RGB(255, 255, 255)
+									RgObjSetColor(table_name,1,_parstatus_color,1,_ii - (page-1)*table_rows_per_page)
+								end
+					
+								RgTableSetCell(table_name,1,1,"ParId",0)
+								for _kkkk = 1 to txarraygetsize(SuesStatsListe)
+									RgTableSetCell(table_name,1+_kkkk ,1,SuesStatsListe[_kkkk],0)
+								ende				
+							else
+							
+								_parname = SuesParListe[_ii-1]		
+								RgTableSetCell(table_name,1,_ii - _ii_min + 1,tform(_ii-1,"f1.0"),0)
+								for _kkkk = 1 to txarraygetsize(SuesStatsListe)
+									if 0
+										RgTableSetCell(table_name,1+_kkkk ,_ii - (page-1)*table_rows_per_page,"",0)
+										_parstatus_color = RGB(255, 255, 255)
+										RgObjSetColor(table_name,1,_parstatus_color,1+_kkkk ,_ii - (page-1)*table_rows_per_page)
+									end
+						
+									_parstatus_name = SuesStatsListe[_kkkk]
+									if _kkkk = 1
+										_freq_par_name = SuesParListe[_ii-1]
+										RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,_freq_par_name,0)		
+									else
+										_parstatus_val = SuesParData_:{<_parstatus_name>}[_ii-1]
+										if tverg(_parstatus_name, "Fault_VibMode") = 0
+											_parstatus_color = RGB(255, 255, 255)
+											RgObjSetColor(table_name,1,_parstatus_color,1+_kkkk ,_ii - _ii_min + 1)
+											RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,_parstatus_val,0)	
+										else
+										
+											RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,tform(_parstatus_val,"f1.4"),0)		
+										end
+									end
+									if tverg(_parstatus_name, "CurrentStatus") = 0 
+										RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,tform(_parstatus_val,""),0)
+										_parstatus = _parstatus_val
+										;									if _parstatus = 2
+										;										_parstatus = 4
+										;									end
+										;									sequenz find_status_colour; -> _parstatus_color
+									
+										_parstatus_color = RGB(255, 255, 255)
+										RgObjSetColor(table_name,1,_parstatus_color,_kkkk+1 ,_ii - _ii_min + 1)
+									
+									elseif tverg(_parstatus_name, "CurrentVal") = 0 
+										;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,tform(_parstatus_val,"f1.0"),0)
+										;_parstatus = _parstatus_val
+										if _parstatus = 2
+											_parstatus = 4
+										end
+										sequenz find_status_colour; -> _parstatus_color
+										RgObjSetColor(table_name,1,_parstatus_color,_kkkk+1 ,_ii - _ii_min + 1)
+									elseif tverg(_parstatus_name, "LowerLimit") = 0
+										SuesParLowerLimit = _parstatus_val
+										_parstatus = 4;_stats_val:[_sues_freq_par_idx_]
+										sequenz find_status_colour; -> _parstatus_color
+										RgObjSetColor(table_name,1,_parstatus_color,_kkkk+1 ,_ii - _ii_min + 1)
+									elseif tverg(_parstatus_name, "UpperLimit") = 0 
+										SuesParUpperLimit =_parstatus_val
+										_parstatus = 4;_stats_val:[_sues_freq_par_idx_]
+										sequenz find_status_colour; -> _parstatus_color
+										;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+										RgObjSetColor(table_name,1,_parstatus_color,_kkkk+1,_ii - _ii_min + 1)
+									elseif tverg(_parstatus_name, "RefVal") = 0 
+										_parstatus = 1;_stats_val:[_sues_freq_par_idx_
+										sequenz find_status_colour; -> _parstatus_color
+										;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+										RgObjSetColor(table_name,1,_parstatus_color,_kkkk+1,_ii - _ii_min + 1)
+									elseif tverg(_parstatus_name, "Fault_VibMode") = 0 
+										_parstatus_color = RGB(255, 255, 255)
+										RgObjSetColor(table_name,1,_parstatus_color,_kkkk+1,_ii - _ii_min + 1)
+									else			
+										if 0; page = 1
+											_parstatus_color = RGB(255, 255, 255)
+											RgObjSetColor(table_name,1,_parstatus_color,1+_kkkk ,_ii - _ii_min + 1)
+										end
+									ende
+								ende
+
+							ende
+						ende
+					ende
+				end
+		
+				if 0; page = 1
+					err =  RgDocSave(cadis_report_frequency_parameters, 0 )
+				end
+		
+				if page = number_pages
+					_ii_max_ = table_rows_per_page * number_pages 
+					for _ii = _ii_max+1  to _ii_max_
+						for _jj = 1 to table_cols
+							RgTableSetCell(table_name,_jj,_ii - _ii_min + 2,"",0)
+							_parstatus_color = RGB(255, 255, 255)
+							RgObjSetColor(table_name,1,_parstatus_color,_jj,_ii - _ii_min + 2)		
+						ende
+					ende
+				end
+	
+				report_name = "frequency_parameters_page_" + tform(page,"f1.0")
+				sequenz export_report report_name
+				; close report
+				err =  RgDocClose( 1 )
+			ende
+		ende
+
+	ende
+ende
+entf file

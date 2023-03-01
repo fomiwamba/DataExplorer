@@ -1,0 +1,11 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: FeatureFile, AnalyticsFunction, Visualisierungsfunction, PredictionModel
+; Task: Triggerung eine Python Function
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "start_jupyter_notebook started"
+
+;Applikation Vollbild C:\python37\python.exe C:\BDA\AI\ApplyAnalyticsFunction.py
+ret = Execute( "C:\BDA\AI\Start_JupyterNotebook.bat","" , "", 2,0)
+;ret = Execute( "C:\python37\python.exe", "C:\BDA\AI\CADIS_ImportData2InfluxDB.py", "", 3,0)
+;ret = Execute( "cmd.exe", "jupyter notebook", "", 3,0)
+

@@ -1,0 +1,686 @@
+cadis_report_template_sues_channel = cadis_report_folder + "cadis_report_sues_channel.drb"
+
+err = RgDocOpen( cadis_report_template_sues_channel, 0 )
+;ist_channel = "S106"
+wenn err = 0
+	currentsignal = ist_channel
+	channelunit = einheit?({<currentsignal>},1)
+	;RgTextSet("channelname", ist_channel,0)
+	RgTextSet("channelname", ist_channel,0)
+	RgTextSet("channelunit", channelunit,0)
+	RgTextSet("measurementfile",file_ext,0)
+	
+	Featfile = ""
+	_file_search = ist_channel + "_FFT_Mag_Trend.csv"
+	OutputFolder = AssetFolder + "\Output";
+	FFTFolder = OutputFolder + "\Features\"; 
+	spec_filename = FFTFolder + _file_search
+	
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; channel_time_series_spectra
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 1 ; find time series spectra
+		if 0
+			file = ist_channel + "_FFT_Mag_Trend_FromTo.csv"
+			file = assetfolder + "\" + "Output\Features\" +file
+			
+			map = grneu()
+			sues_channel_timeseries_spectra = grneu()
+			err = fsfileexists(file)
+			wenn err = 1
+				importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+				t0 = ZeitSystem?()
+				Eventidx = leer;
+				Eventdate = leer;
+				_x = leer
+				_groupart = 1;
+				_fileid = FileOpenFAS(file,importsvorlage, 0); ascii_statusfile
+				wenn _fileid > 0
+					_anzPar = FileObjNum?(_fileid)
+					_index = 1
+					SOLANGE _index <= _anzPar  
+						;zeigen _index
+						_typ = FileObjType?(_fileid,_index)
+						wenn _typ = 1
+							_Parname = FileObjName?(_fileid,_index)							
+							{<_Parname>} = FileObjRead(_fileid,_index)
+							seteinheit ({<_Parname>},"Hz",0)
+				
+							file_name = FsSplitPath(file,2)
+							parname_trend = file_name
+				
+							wenn _groupart = 1; Segment
+								wenn _index = 1				
+									{<parname_trend>} = GrNeu()
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								sonst
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								ende
+
+							ende
+
+							entf _Parname
+							entf {<_Parname>}
+						ende
+						_index = _index + 1
+					ende
+		
+					map = {<parname_trend>}
+					wenn _groupart = 1 
+						_EwSegLang = lang?(map:[1])
+						_group = GrBinde(map,0)
+						SetSegLang(_group,_EwSegLang)
+						map = _group
+						seteinheit(map,"Time",2)
+						sues_channel_timeseries_spectra = map
+						entf map
+					ende
+	
+					fileclose(_fileid)	
+	
+					t1 = ZeitSystem?()
+					dt1 = t1-t0
+					;zeigen dt1
+				ende
+			end
+		else
+			
+			;sequenz Load_Sues_Spectrum
+			_outputfile = "C:\BDA\ExpertAnalysis\TrendView_Output.txt"
+			_erg = FsDeleteFile(_outputfile)
+			; To Do -> If FeatFile exist? then continue
+
+
+			Store = "OFF"
+			Average = "OFF"
+			AveragedSpectrum = 1;PnGetValue("AveragedSpectrum")
+			Deltaf = 0;PnGetValue("Deltaf")
+			Freq_max = 200;PnGetValue("Freq_max")
+			if AveragedSpectrum = 1
+				Average = "ON"
+			end
+			_datumFromtxt = ""
+			_datumTotxt = ""
+
+			_inputfile = "C:\BDA\ExpertAnalysis\TrendView_Input.txt"
+			_fh = FileOpenASCII(_inputfile,1)
+			_err = FileLineWrite(_fh,AssetFolder,0)
+			_err = FileLineWrite(_fh,spec_filename,0)
+			_err = FileLineWrite(_fh,Featfile,0)
+			_err = FileLineWrite(_fh,Store,0)
+			_err = FileLineWrite(_fh,Average,0)
+			_err = FileLineWrite(_fh,tform(Deltaf,"f1.2"),0)
+			_err = FileLineWrite(_fh,tform(Freq_max,"f1.2"),0)
+			_err = FileLineWrite(_fh,_datumFromtxt,0)
+			_err = FileLineWrite(_fh,_datumTotxt,0)
+			_err = FileClose(_fh)
+
+			;Applikation Vollbild C:\python37\python.exe C:\BDA\AI\FilterFftTrend.py
+			sequenz imc_logging "cadis_filter_fft_trend started"
+			ret = Execute("C:\python37\python.exe", "C:\BDA\AI\Filter_fft_trend.py", "", 0,-1)
+			
+			ts_spec = 0
+
+			_erg = FsFileExists(_outputfile)
+			if _erg = 1
+				_fh0= FileOpenASCII(_outputfile,0 )
+				if _fh0 > 0
+					_TxZeile = ""
+					_ok = 0
+					solange _ok = 0
+						_ok = FileLineRead( _fh0, _TxZeile, 0 )
+						if _ok = 0 
+							FftFileSoll = _TxZeile
+						ende
+					ende
+					FileClose(_fh0)
+				sonst
+					_err = FileErrCode?()
+					zeigen _err
+				ende
+	
+				_erg = FsFileExists(FftFileSoll)
+				if _erg = 1
+
+					importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+					_par_unit_ = "Hz"
+
+					t0 = ZeitSystem?()
+					Eventidx = leer;
+					Eventdate = leer;
+					_x = leer
+					_groupart = 1;
+					_fileid = FileOpenFAS(FftFileSoll, importsvorlage, 0); ascii_statusfile
+					wenn _fileid > 0
+						_anzPar = FileObjNum?(_fileid)
+						fft_idx = 1
+						SOLANGE fft_idx <= _anzPar  
+							;zeigen fft_idx
+							_typ = FileObjType?(_fileid,fft_idx)
+							wenn _typ = 1
+								_Parname = FileObjName?(_fileid,fft_idx)
+								{<_Parname>} = FileObjRead(_fileid,fft_idx)
+								seteinheit ({<_Parname>},_par_unit_,0)
+				
+								fftfile_name = FsSplitPath(FftFileSoll,2)
+								parname_trend = fftfile_name
+				
+								wenn fft_idx = 1				
+									{<parname_trend>} = GrNeu()
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								sonst
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								ende
+						
+								entf _Parname
+								entf {<_Parname>}
+							ende
+							zeigen fft_idx
+							fft_idx = fft_idx + 1
+						ende
+							
+						map = {<parname_trend>}
+						wenn _groupart = 1 
+							_EwSegLang = lang?(map:[1])
+							_group = GrBinde(map,0)
+							SetSegLang(_group,_EwSegLang)
+							map = _group
+							seteinheit(map,"Time",2)
+							sues_channel_timeseries_spectra = map
+							entf map
+							ts_spec = 1
+						ende
+
+						t1 = ZeitSystem?()
+						dt1 = t1-t0
+
+					ende
+					fileclose(_fileid)	
+				ende
+			sonst 
+				txt = "Spektrum Datei existiert nicht"
+				;_res = BoxNachricht("Info:",txt,"!1")
+				zeigen txt
+			ende
+
+			if varexist?("fft_idx")
+				cwselectmode("variable")
+				cwselectwindow(fft_idx)
+				CwAction("win.close")
+			end
+		ende
+		
+		if ts_spec = 1
+			TxErr$ = CwLoadCCV(sues_channel_timeseries_spectra, "sues_channel_timeseries_spectra.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","sues_channel_timeseries_spectra","!1")
+			ende
+			err =RgCurveSet("sues_channel_timeseries_spectra",sues_channel_timeseries_spectra,0)
+			wenn err <> 0
+				err_txt = "sues_channel_timeseries_spectra: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(sues_channel_timeseries_spectra)
+			CwAction("win.close")	
+		
+							
+			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			;  spectrogram + last measurement data
+			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			;Version1 -> faster
+			ok = VerifyVar(sues_channel_timeseries_spectra, "Group")
+			if ok = 1
+				spec_lang =grchannum?(sues_channel_timeseries_spectra)
+			ende
+			ok = VerifyVar(sues_channel_timeseries_spectra, "Seg")
+			if ok = 1
+				spec_lang =SegLen?(sues_channel_timeseries_spectra)
+			ende
+		
+			Ax_kask = sues_channel_timeseries_spectra
+			n_spec = lang?(Ax_kask)/SegLen?(Ax_kask)
+			;Ax_mean = MatrixSumLines(Ax_kask,0)/n_spec
+			sues_channel_averaged_spectra = sues_channel_timeseries_spectra[n_spec]
+		
+			if 1
+			
+				TxErr$ = CwLoadCCV(sues_channel_averaged_spectra, "sues_channel_averaged_spectra.ccv")
+				wenn tverg(TxErr$,"") <> 0
+					err = BoxNachricht("Info","sues_channel_averaged_spectra","!1")
+				ende
+				err = RgCurveSet("sues_channel_averaged_spectra",sues_channel_averaged_spectra,0)
+				wenn err <> 0
+					err_txt ="sues_channel_averaged_spectra: " + RgGetErrorText(err)
+					err = BoxNachricht("Info",err_txt,"!1")
+				ende
+				CwSelectWindow(sues_channel_averaged_spectra)
+				CwAction("win.close")
+	
+			end
+	
+		end
+			
+	ende
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; time series parameters
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if  ts_spec = 1; find time series parameters
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Load FeatureTable_Clean.csv
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		featuretable_file = assetfolder + "\" + "Output\Features\" + "FeatureTable_Clean_Mean.csv"
+		; channel_time_series_parameters
+		file = featuretable_file
+		importsvorlage = "#ImportAscii1.dll|ascii_pythonfile"
+		if FsFileExists(file)
+			_fileid = FileOpenFAS(file, importsvorlage, 0); ascii_statusfile
+			FeatDataAll_mean = Grneu()
+			wenn _fileid > 0
+				_anzPar = FileObjNum?(_fileid)
+				_index = 1
+
+				SOLANGE _index <= _anzPar  
+					_typ = FileObjType?(_fileid,_index)
+					wenn _typ = 1
+						_Parname = FileObjName?(_fileid,_index)
+						{<_Parname>} = FileObjRead(_fileid,_index)
+						if lang?({<_Parname>} ) > 1
+							wenn IsXY({<_Parname>})
+								{<_Parname>} = sort({<_Parname>},7)
+								FeatDataAll_mean:{<_Parname>}={<_Parname>}
+							sonst
+								FeatDataAll_mean:{<_Parname>}={<_Parname>}
+							ende
+						ende
+					ende
+					_index = _index + 1
+				ende
+			sonst
+				_err = FileErrCode?()
+				zeigen _err
+			ende
+			fileclose(_fileid)	
+		else
+			FeatDataAll_mean = FeatDataAll
+		end
+		
+		FeatData = Grneu()
+		OPData = Grneu()
+		parameters_ok = 0
+		speed_ok = 0
+		op_ok = 0
+		_anzPar = GrChanNum?(FeatDataAll_mean)
+		_index = 1
+		speed_count = 0
+		SOLANGE _index <= _anzPar  
+			; load parameters
+			_ok = 0
+			_Parname = GrChanName?(FeatDataAll_mean,_index)
+			_parname_0 = tteil(_Parname,1,tleng(ist_channel))
+			if  txwo(_parname, "_speed" ) = 0 and txwo(_parname_0, ist_channel) <> 0  and txwo(_parname, "-Status") = 0 and txwo(_parname, "-Sev") = 0
+				_ok = 1
+				_parname_list = TxSplit(_parname,"_")
+				_parname_ = _parname_list[2]
+				{<_Parname_>} = FeatDataAll_mean:[_index]
+				if lang?({<_Parname_>} ) > 1 and tverg(_parname_list[1],ist_channel) = 0
+					parameters_ok = 1
+					wenn IsXY({<_Parname_>})
+						{<_Parname_>} = sort({<_Parname_>},7)
+						FeatData:{<_Parname_>}={<_Parname_>}
+					sonst
+						FeatData:{<_Parname_>}={<_Parname_>}
+					ende
+				ende
+			ende
+				
+			; load speed parameter
+			if txwo(_parname, "_speed") <> 0  and txwo(_parname, "-Status") = 0 and txwo(_parname, "-Sev") = 0
+				speed_ok = 1
+				speed_count = speed_count + 1
+				_parname_ = "speed_" + tform(speed_count,"")
+				{<_parname_>} = FeatDataAll_mean:[_index]
+				seteinheit({<_parname_>}  , "rpm",1)
+				wenn IsXY({<_parname_>} )
+					{<_parname_>} = sort({<_parname_>},7)
+					OPData:{<_parname_>} ={<_parname_>} 
+				sonst
+					OPData:{<_parname_>} ={<_parname_>} 
+				ende
+			ende
+				
+			; load Op_data
+			_kkmax = TxArrayGetSize(OP_Info:ParCode)
+			for _kk = 1 to _kkmax
+				op_par_verg = _parname
+				op_par = OP_Info:ParCode[_kk]
+				op_unit = OP_Info:ParUnit[_kk]
+				if txwo(op_par,_parname ) <> 0
+					op_ok = 1
+					{<_Parname>} = FeatDataAll_mean:[_index]
+					seteinheit({<_Parname>}  , op_unit,1)
+					wenn IsXY({<_Parname>} )
+						{<_Parname>} = sort({<_Parname>},7)
+						OPData:{<_Parname>} ={<_Parname>} 
+					sonst
+						OPData:{<_Parname>} ={<_Parname>} 
+					ende
+				ende
+			ende
+			_index = _index + 1
+		ende
+	
+		sues_channel_ts_parameters = grneu()
+		sues_channel_timeseries_parameters = grneu()
+		if parameters_ok = 1 and GrKanalZahl?(FeatData) >= 1; _kkmax-1
+			sues_channel_timeseries_parameters = FeatData
+			for _ii = 1 to GrChanNum?(FeatData)
+				_varname = GrChanName?(FeatData,_ii)
+				if txwo(_varname, "-Sev") = 0 and txwo(_varname, "-Status") = 0
+					feat_data = FeatData:[_ii]
+					if txwo(_varname,"SubSynchronous") <>0
+						_varname_ ="SubSync"
+					elseif txwo(_varname,"NonSynchronous") <>0  
+						_varname_ ="NonSync"
+					elseif txwo(_varname,"Synchronous") <>0 
+						_varname_ ="Sync"
+					else
+						_varname_ =_varname
+					ende
+					sues_channel_ts_parameters:{<_varname_>} = feat_data
+					;					if isxy(feat_data)
+					;						sues_channel_ts_parameters:{<_varname_>} = kmpy(feat_data)
+					;						sues_channel_timeseries_parameters = kmpy(FeatData)
+					;					else
+					;						x_vec = ramp(0,1,leng?(feat_data))
+					;						sues_channel_ts_parameters:{<_varname_>} = xy(x_vec, feat_data)
+					;						sues_channel_timeseries_parameters = FeatData
+					;					ende
+				ende
+			ende
+				
+		ende
+		
+	
+		TxErr$ = CwLoadCCV(sues_channel_timeseries_parameters, "sues_channel_timeseries_parameters.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","sues_channel_timeseries_parameters","!1")
+		ende
+		err =RgCurveSet("sues_channel_timeseries_parameters",sues_channel_timeseries_parameters,0)
+		wenn err <> 0
+			err_txt ="sues_channel_timeseries_parameters: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(sues_channel_timeseries_parameters)
+		CwAction("win.close")
+
+		if 0
+			sues_speed_parameter = leer
+			if speed_ok = 1; GrKanalZahl?(channel_timeseries_parameters) > 0
+				if isxy( SpeedData:[1] )
+					sues_speed_parameter= kmpy(SpeedData)
+				else
+					x_vec = ramp(0,1,leng?(SpeedData:[1]))
+					sues_speed_parameter = SpeedData:[1];xy(x_vec, {<_parname_speed>} )
+				ende
+			ende
+			TxErr$ = CwLoadCCV(sues_speed_parameter, "speed.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","speed","!1")
+			ende
+			err =RgCurveSet("sues_speed",sues_speed_parameter,0)
+			wenn err <> 0
+				err_txt ="sues_speed: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(sues_speed_parameter)
+			CwAction("win.close")
+		end
+
+	ende
+		
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Load Channel Parameter Data & Status
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	if ts_spec = 1
+		asset_parameter_status = assetfolder + "\" + "Output\Features\" + "current_statistics_table.csv"; Last Status of ChannelFeature
+		if fsfileexists(asset_parameter_status)
+			StatusData = Grneu()
+			_fileid = FileOpenXLS(asset_parameter_status,0)
+			wenn _fileid > 0
+				; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+				FileXLSSelectSheet(_fileid,1)
+				StatusListe = TxArrayCreate(1)
+				ParameterStatusListe = TxArrayCreate(1)
+				_ii = 1
+				SOLANGE _ii <=  2560
+					_PName = FileXLSCellRead(_fileid,3,_ii+1,0)
+					wenn tverg(_Pname,"") = 0
+						break
+					sonst
+						StatusListe[_ii] = _PName
+						_ii = _ii + 1
+					ende
+				ENDE
+				_iimax = _ii
+				_ii = 1
+				SOLANGE _ii <=  2560
+					_PName = FileXLSCellRead(_fileid,_ii+3,1,0) 
+			
+					wenn tverg(_Pname,"") = 0
+						break
+					sonst
+						_pname = _pname + "_stat"
+						ParameterStatusListe[_ii] = _PName
+						{<_pname>} = FileXLSColumnRead(_fileid,_ii+3,2,2560, 0)
+						StatusData:{<_pname>}={<_pname>}
+						_ii = _ii + 1
+					ende
+				ENDE
+				; return ParameterListe, ChannelListe
+				err = FileClose(_fileid)
+			ende
+		ende
+
+		if varexist?("StatusListe") and varexist?("asset_current_status_cols") and varexist?("asset_current_status_map0") and leng?(StatusData:[1]) >1
+			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			; channel page 2 update
+			;RgTextSet("channelname", ist_channel,0)
+			for _kk = 1 to txarraygetsize(asset_current_status_cols)
+				if tverg(ist_channel, asset_current_status_cols[_kk]) = 0
+					_colidx = _kk;-1	
+					ist_channel_par_status = asset_current_status_map0:[_colidx]
+					_parstatus = max(ist_channel_par_status)
+					sequenz find_status_colour; -> _parstatus_color
+					RgObjSetColor("channelname",1,_parstatus_color,0,0)		
+					break
+				ende
+			ende
+		
+			table_name = "Sues_ParameterStatusTable"
+			table_cols = RgTableColumns?(table_name)
+			table_rows = RgTableRows?(table_name)
+
+			if GrKanalZahl?(StatusData) >= 1 and leng?(StatusData:[1]) >= txarraygetsize(StatusListe)
+				_count = 0
+				channel_par_liste_1 = TxArrayCreate(0)
+				for _ii =1 to grkanalzahl?(StatusData)
+					_parname = grkanalname?(StatusData,_ii)
+					_parname_parts = TxSplit(_parname,"_")
+					_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
+					if tverg(_parname_red,currentsignal) = 0
+						_count = _count + 1
+						channel_par_liste_1[_count] = _parname
+					ende
+				ende
+			ende
+			
+		
+			for _ii =1 to txarraygetsize(channel_par_liste_1)+1
+				if _ii = 1
+					RgTableSetCell(table_name,1,_ii,"ParId",0)
+					RgTableSetCell(table_name,2,_ii,"ParName",0)
+					for _kkkk = 1 to txarraygetsize(StatusListe)
+						RgTableSetCell(table_name,2+_kkkk,_ii,StatusListe[_kkkk],0)
+					ende
+				else
+			
+					_parname = channel_par_liste_1[_ii-1]
+					_parname_parts = TxSplit(_parname,"_")
+					if txarraygetsize(_parname_parts) <=3
+						_parname_red = _parname_parts[2]
+					elseif txarraygetsize(_parname_parts) =4
+						_parname_red = _parname_parts[2] +"_"+_parname_parts[3]
+					elseif txarraygetsize(_parname_parts) =5
+						_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4]
+					else
+						_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4] +"_"+_parname_parts[5]
+					end
+					_par_stats = StatusData:{<_parname>}
+					RgTableSetCell(table_name,1,_ii,tform(_ii-1,"f1.0"),0)
+					RgTableSetCell(table_name,2,_ii,_parname_red,0)
+					for _kkkk = 1 to txarraygetsize(StatusListe)
+						_parstatus_name = StatusListe[_kkkk]
+						RgTableSetCell(table_name,2+_kkkk,_ii,tform(_par_stats[_kkkk],"f1.4"),0)		
+						if tverg(_parstatus_name, "CurentVal") = 0 or tverg(_parstatus_name, "CurrentVal") = 0 
+							_parstatus =StatusData:{<_parname>}[1]
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)	
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "RefVal") = 0
+							_parstatus =1
+							sequenz find_status_colour; -> _parstatus_color
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "DGm") = 0 or tverg(_parstatus_name, "DGp") = 0
+							_parstatus =4
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "ALm") = 0 or tverg(_parstatus_name, "ALp") = 0
+							_parstatus =3
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "pALm") = 0 or tverg(_parstatus_name, "pALp") = 0
+							_parstatus =2
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						else			
+	
+						ende
+					ende
+				ende
+			ende
+		ende
+	end
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; export doc, pdf, png, etc.
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if ts_spec = 1
+		sues_txt = "sues_"+ ist_channel
+		sequenz export_report sues_txt
+		;err = RgDocSave(cadis_report_template_sues_channel,0)
+	end
+	;err = RgDocSave(cadis_report_template_sues_channel,0)
+	; close report
+	err =  RgDocClose( 0 )
+	if err < 0
+		zeigen (err)
+	ende
+	
+	
+	if varexist?("OPData") and ch = 1
+		cadis_report_summary= cadis_report_folder + "cadis_report_sues_operatingparameters.drb"
+		err = RgDocOpen( cadis_report_summary, 0 )
+		if GrChanNum?(OPData)>0 ; GrKanalZahl?(channel_timeseries_parameters) > 0
+			; channel liste tabelle
+			anz_op = GrChanNum?(OPData)
+			table_name= "sues_op_liste"
+			table_cols = RgTableColumns?(table_name)
+			table_rows = RgTableRows?(table_name)
+			for _ii = 1 to table_rows
+				for _jj = 1 to table_cols
+					RgTableSetCell(table_name,_jj,_ii,"",0)
+					_parstatus_color = RGB(255, 255, 255)
+					RgObjSetColor(table_name,1,_parstatus_color,_jj,_ii)		
+				ende
+			ende
+	
+	
+			OPData0 = OPData
+			entf OPData
+			OPData = GrNeu()
+			sues_op_parameter = leer
+	
+			for _ii =1 to anz_op +1
+				if _ii = 1
+					RgTableSetCell(table_name,1,_ii,"Id",0)
+					RgTableSetCell(table_name,2,_ii,"OPName",0)
+				else
+					opname = GrChanName?(OPData0,_ii-1)
+					RgTableSetCell(table_name,1,_ii,_ii-1,0)
+					RgTableSetCell(table_name,2,_ii,opname,0)
+				
+					opname_ = "OP_"+tform(_ii-1,"f2.0")
+					_idx = _ii-1
+					opval_ = OPData0:[_idx]
+					;					if isxy( opval_)
+					;						opval_= kmpy(opval_)
+					;					else
+					;						x_vec = ramp(0,1,leng?(OPData0:[1]))
+					;						opval_ = opval_;xy(x_vec, {<_parname_speed>} )
+					;					ende
+					OPData:{<opname_>} = opval_
+				ende
+			ende
+			
+			sues_op_parameter = OPData
+			TxErr$ = CwLoadCCV(sues_op_parameter, "sues_op_parameter.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","sues_op_parameter","!1")
+			ende
+			err =RgCurveSet("sues_op_parameter",sues_op_parameter,0)
+			wenn err <> 0
+				err_txt ="sues_op_parameter: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(sues_op_parameter)
+			CwAction("win.close")
+		ende
+		sequenz export_report "sues_operating_parameters"
+		
+		; close report
+		err =  RgDocClose( 0 )
+	ende
+	
+
+
+
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; delete channel data
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	entf parameters_ok
+	entf speed_ok
+		
+	entf channel_timeseries_parameters
+	entf measurementfile
+	entf speed_parameter
+	entf channel_ts_parameters
+	entf channel_twf_parameters
+	entf FeatData
+	entf channel_timeseries_spectra
+	entf channel_timeseries_spectra
+	entf channel_twf
+	entf HistPlotT
+	entf Ax_kask
+	entf Ax_mean
+else
+	zeigen  err
+ende

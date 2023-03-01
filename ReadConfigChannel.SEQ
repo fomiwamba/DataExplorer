@@ -1,0 +1,180 @@
+sequenz imc_logging "read_config_channel started"
+zeigen ChannelName
+sequenz search_item Ch_Config:SigName ChannelName; search_index
+wenn search_index > 0 and varexist?("MeasData")
+	_kk_config = search_index
+	
+	MeasData:ChannelX = MeasData:{<ChannelName>}
+	ChannelX = MeasData:{<ChannelName>}
+	ChannelXName = ChannelName
+	
+	ind_channely = Ch_Config:OrbitChannelY[_kk_config]
+	wenn ind_channely = "None"
+		ChannelYName = ChannelName
+		MeasData:ChannelY = MeasData:{<ChannelName>}
+	sonst
+		_kky = tzuew(tteil(ind_channely,3,5),"f")+1	
+		sequenz search_item Ch_Config:ChName ind_channely; search_index
+		ChannelYName = Ch_Config:SigName[search_index]
+		MeasData:ChannelY = MeasData:{<ChannelYName>}
+	ende
+	ChannelY = MeasData:{<ChannelYName>}
+	
+	ind_tacho = Ch_Config:TachoChannel[_kk_config]
+	wenn ind_tacho = "None"
+		ChannelTachoName = "None"
+		MeasData:ChannelTacho = 0 * MeasData:{<ChannelName>}
+	sonst
+		_kkpuls = tzuew(tteil(ind_tacho,3,5),"f")+1	
+		sequenz search_item Ch_Config:ChName ind_tacho; search_index
+		ChannelTachoName = Ch_Config:SigName[search_index]
+		MeasData:ChannelTacho = MeasData:{<ChannelTachoName>}
+	ende
+	ChannelTacho = MeasData:ChannelTacho
+
+	wenn varexist?("ChannelName")
+		idx = PnFindItem("VibrationAnalysis.ChannelX",ChannelName)
+		PnSelectItem("VibrationAnalysis.ChannelX",idx)
+	ende
+	wenn varexist?("ChannelyName")
+		Pnsettext("VibrationAnalysis.ChannelY",ChannelyName)
+	ende
+	wenn varexist?("ChannelTacho")
+		Pnsettext("VibrationAnalysis.ChannelPuls",ChannelTachoName)
+	ende
+	
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Read Aktuelle Konfiguration
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;PnSetValue(,Ch_Config:tachochannel)
+	;_index = tzuew(Ch_Config:windowfft[1],"f")
+	_kkk = _kk_config
+	timeanalysis = Ch_Config:timeanalysis[_kkk]
+	orbitanalysis = Ch_Config:orbitanalysis[_kkk]
+	fftanalysis = Ch_Config:fftanalysis[_kkk]
+	orderanalysis = Ch_Config:orderanalysis[_kkk]
+	envelopeanalysis = Ch_Config:envelopeanalysis[_kkk]
+	
+	_windowfft = Ch_Config:windowfft[_kkk]
+	wenn _windowfft = "Rechteck"
+		_index = 1;0
+		PnSetText("VibrationAnalysis.Window","Rechteck")
+	ende
+	wenn _windowfft = "Hanning"
+		_index = 2;2
+		PnSetText("VibrationAnalysis.Window","Hanning")
+	ende
+	wenn _windowfft = "Flattop"
+		_index = 3;5
+		PnSetText("VibrationAnalysis.Window","Flattop")
+	ende
+	;PnSelectItem("Window",_index)
+	_window = _index
+	
+	_overlap = tzuew(Ch_Config:overlap[_kkk],"f")
+	PnSetValue("VibrationAnalysis.Overlap",_overlap)
+	
+	
+	_BPFu = tzuew(Ch_Config:BPFu_Env[_kkk],"f")
+	;PnSetValue("BPFu",_BPFu)
+	_BPFo = tzuew(Ch_Config:BPFo_Env[_kkk],"f")
+	;PnSetValue("BPFo",_BPFo)
+	_TPF = tzuew(Ch_Config:TPF_Env[_kkk],"f")
+	;PnSetValue("TPF",_TPF)
+	
+	_PulsPerRev = tzuew(Ch_Config:PulsPerRev[_kkk],"f")
+	PnSetValue("VibrationAnalysis.PulsPerRev",_PulsPerRev)
+	_Triglevel = tzuew(Ch_Config:TrigLevel[_kkk],"f")
+	PnSetValue("VibrationAnalysis.TrigLevel",_Triglevel)
+	
+	RotatingDirection = Ch_Config:RotatingDirection[_kkk]
+	Pnsettext("VibrationAnalysis.RotDir",RotatingDirection)
+	
+	RotatingOrder = Ch_Config:RotatingOrder[_kkk]
+	Pnsettext("VibrationAnalysis.RotOrder",RotatingOrder)
+	
+	_envType = Ch_Config:EnvelopeType[_kkk]
+	wenn _envType = "Integrated"
+		_index = 1;0
+	ende
+	wenn _envType  = "Gleichrichtung"
+		_index = 2;2
+	ende
+	wenn _envType  = "Hilbert"
+		_index = 3;5
+	ende
+	;PnSelectItem("EnvType",_index)
+	_envtype = _index
+	
+	
+	_SampPerRev = tzuew(Ch_Config:samplesPerRev[_kkk],"f")
+	;PnSetValue("SpR",_SampPerRev)
+	_Omax = _SampPerRev/2
+	;PnSetValue("Omax",_Omax)
+	
+	
+	;PnSetValue("LPFreq",0)
+	;PnSetValue("HPFreq",0)
+	;PnSetValue("Order",1)
+	
+	_t_ntd = tzuew(Ch_Config:windowlength[_kkk],"a")
+	PnSetValue("VibrationAnalysis.Twindow",_t_ntd)
+	_twindow = PnGetValue("VibrationAnalysis.Twindow")
+;	wenn _twindow < 4
+;		PnSetValue("Twindow",_t_ntd)
+;	ende
+	_t_ntd = PnGetValue("VibrationAnalysis.Twindow")	
+	_ng = lang?(MeasData:channelx)
+	_dt = xdel?(MeasData:channelx)
+	_fs = 1/_dt
+	_time_max = _ng*_dt
+	_tges = _time_max
+	PnSetValue("VibrationAnalysis.Tmax",_time_max)
+	PnSetValue("VibrationAnalysis.Tmin",0)
+	_time_max = PnGetValue("VibrationAnalysis.Tmax")
+	_ntd = _t_ntd/_dt
+	_Length = _ntd
+	;PnSetValue("Length",_Length)
+	
+	_pam = _Length/_SampPerRev;tzuew(Ch_Config:rev_per_windowlength[1],"f")
+	;PnSetValue("NoR",_pam)
+	_dO = 1/_pam
+	;PnSetValue("DeltaO",_dO)
+	
+	_averages = ganz((_ng-_overlap/100*_ntd)/(_ntd-_overlap/100*_ntd));
+	wenn _averages < 0
+		BoxNachricht("Configuration error","Please reduce the block size (Length)","?1")
+	ende
+	_deltat = _ntd*_dt
+	_deltaf = 1/_deltat
+	_fmax = _fs/2
+	PnSetValue("VibrationAnalysis.Fs",_fs)
+	PnSetValue("VibrationAnalysis.Samples",_ng)
+	PnSetValue("VibrationAnalysis.Tgesamt",_tges)
+	
+	PnSetValue("VibrationAnalysis.Averages",_averages)
+	PnSetValue("VibrationAnalysis.Twindow",_deltat)
+	PnSetValue("VibrationAnalysis.deltaf",_deltaf)
+	PnSetValue("VibrationAnalysis.Fmax",_fmax)
+	wenn 0
+		wenn Tachochannel <> -1
+			_index = GrKanalFinde(MeasData,"Channelpuls")
+			wenn _index > 0
+				sequenz SignaleGleichSetzen MeasData:ChannelX MeasData:Channelpuls
+				_vibsignal = _sig1
+				_pulssignal = _sig2
+				;_peak_1 = _pulssignal - _TrigLevel 
+				_peak = STri(_pulssignal,_Triglevel,_Triglevel)
+				OtrTachoMode(3, 0, _PulsPerRev, 0)
+				_rs = OtrResample(_vibsignal,_peak,_Omax ,1)
+				_Tgesamt = ganz(lang?(_rs))
+				_T_fenster = _pam*_SampPerRev
+				a = _Tgesamt/_T_fenster
+				_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+				;PnSetValue("NoA",_nn_mit_overlap)
+			ende
+		ende
+	ende
+	
+ende

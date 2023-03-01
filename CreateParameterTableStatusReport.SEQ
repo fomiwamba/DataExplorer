@@ -1,0 +1,357 @@
+sequenz imc_logging "create_parameter_table_status_report started"
+; sequenz ShowParameterTableStatus
+; channel liste tabelle
+
+
+if varexist?("StatusData") and varexist?("StatusListe") and varexist?("ParameterStatusListe")
+else
+	asset_parameter_status = assetfolder + "\" + "Output\Features\" + "current_statistics_table.csv"; Last Status of ChannelFeature
+	if fsfileexists(asset_parameter_status)
+		StatusData = Grneu()
+		_fileid = FileOpenXLS(asset_parameter_status,0)
+		wenn _fileid > 0
+			; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+			FileXLSSelectSheet(_fileid,1)
+			StatusListe = TxArrayCreate(1)
+			ParameterStatusListe = TxArrayCreate(1)
+			_ii = 1
+			SOLANGE _ii <=  2560
+				_PName = FileXLSCellRead(_fileid,3,_ii+1,0)
+				wenn tverg(_Pname,"") = 0
+					break
+				sonst
+					StatusListe[_ii] = _PName
+					_ii = _ii + 1
+				ende
+			ENDE
+			_iimax = _ii
+			_ii = 1
+			SOLANGE _ii <=  2560
+				_PName = FileXLSCellRead(_fileid,_ii+3,1,0) 
+			
+				wenn tverg(_Pname,"") = 0
+					break
+				sonst
+					_pname = _pname + "_stat"
+					ParameterStatusListe[_ii] = _PName
+					{<_pname>} = FileXLSColumnRead(_fileid,_ii+3,2,2560, 0)
+					StatusData:{<_pname>}={<_pname>}
+					_ii = _ii + 1
+				ende
+			ENDE
+			; return ParameterListe, ChannelListe
+			err = FileClose(_fileid)
+		ende
+	ende
+ende
+
+
+if varexist?("StatusListe") and varexist?("asset_current_status_cols") and varexist?("asset_current_status_map0") and leng?(StatusData:[1]) >1
+	cadis_report_template_channel_page2 = cadis_report_folder + "cadis_report_channel_page2.drb"
+	err = RgDocOpen( cadis_report_template_channel_page2, 0 )
+	wenn err = 0
+		if varexist?("StatusListe") and varexist?("asset_current_status_cols") and varexist?("asset_current_status_map0") 
+			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			; channel page 2 update
+			currentsignal = ist_channel
+			channelunit = einheit?({<currentsignal>},1)
+			;RgTextSet("channelname", ist_channel,0)
+			RgTextSet("channelname", ist_channel,0)
+			RgTextSet("channelunit", channelunit,0)
+			RgTextSet("measurementfile",file_ext,0)
+			for _kk = 1 to txarraygetsize(asset_current_status_cols)
+				if tverg(ist_channel, asset_current_status_cols[_kk]) = 0
+					_colidx = _kk;-1	
+					ist_channel_par_status = asset_current_status_map0:[_colidx]
+					_parstatus = max(ist_channel_par_status)
+					sequenz find_status_colour; -> _parstatus_color
+					RgObjSetColor("channelname",1,_parstatus_color,0,0)		
+					break
+				ende
+			ende
+		
+			table_name = "ParameterStatusTable"
+			table_cols = RgTableColumns?(table_name)
+			table_rows = RgTableRows?(table_name)
+
+			if GrKanalZahl?(StatusData) >= 1 and leng?(StatusData:[1]) >= txarraygetsize(StatusListe)
+				_count = 0
+				channel_par_liste_1 = TxArrayCreate(0)
+				for _ii =1 to grkanalzahl?(StatusData)
+					_parname = grkanalname?(StatusData,_ii)
+					_parname_parts = TxSplit(_parname,"_")
+					_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
+					if tverg(_parname_red,currentsignal) = 0
+						_count = _count + 1
+						channel_par_liste_1[_count] = _parname
+					ende
+				ende
+			ende
+		
+			for _ii =1 to txarraygetsize(channel_par_liste_1)+1
+				if _ii = 1
+					RgTableSetCell(table_name,1,_ii,"ParId",0)
+					RgTableSetCell(table_name,2,_ii,"ParName",0)
+					for _kkkk = 1 to txarraygetsize(StatusListe)
+						RgTableSetCell(table_name,2+_kkkk,_ii,StatusListe[_kkkk],0)
+					ende
+				else
+			
+					_parname = channel_par_liste_1[_ii-1]
+					_parname_parts = TxSplit(_parname,"_")
+					if txarraygetsize(_parname_parts) <=3
+						_parname_red = _parname_parts[2]
+					elseif txarraygetsize(_parname_parts) =4
+						_parname_red = _parname_parts[2] +"_"+_parname_parts[3]
+					elseif txarraygetsize(_parname_parts) =5
+						_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4]
+					else
+						_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4] +"_"+_parname_parts[5]
+					end
+					_par_stats = StatusData:{<_parname>}
+					RgTableSetCell(table_name,1,_ii,tform(_ii-1,"f1.0"),0)
+					RgTableSetCell(table_name,2,_ii,_parname_red,0)
+					for _kkkk = 1 to txarraygetsize(StatusListe)
+						_parstatus_name = StatusListe[_kkkk]
+						RgTableSetCell(table_name,2+_kkkk,_ii,tform(_par_stats[_kkkk],"f1.4"),0)		
+						if tverg(_parstatus_name, "CurentVal") = 0 or tverg(_parstatus_name, "CurrentVal") = 0 
+							_parstatus =StatusData:{<_parname>}[1]
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)	
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "RefVal") = 0
+							_parstatus =1
+							sequenz find_status_colour; -> _parstatus_color
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "DGm") = 0 or tverg(_parstatus_name, "DGp") = 0
+							_parstatus =4
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "ALm") = 0 or tverg(_parstatus_name, "ALp") = 0
+							_parstatus =3
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						elseif tverg(_parstatus_name, "pALm") = 0 or tverg(_parstatus_name, "pALp") = 0
+							_parstatus =2
+							sequenz find_status_colour; -> _parstatus_color
+							;PnTableSetProperty(table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+							RgObjSetColor(table_name,1,_parstatus_color,_kkkk+2,_ii)
+						else			
+	
+						ende
+					ende
+				ende
+			ende
+			
+			for _ii = txarraygetsize(channel_par_liste_1)+2 to table_rows
+				for _jj = 1 to table_cols
+					RgTableSetCell(table_name,_jj,_ii,"",0)
+					_parstatus_color = RGB(255, 255, 255)
+					RgObjSetColor(table_name,1,_parstatus_color,_jj,_ii)		
+				ende
+			ende
+		ende
+	
+	
+		; Plot Channel Parameters
+		ChannFeatData = GrNeu()
+		if GrKanalZahl?(FeatDataAll) >= 1; _kkmax-1
+			for _ii = 1 to GrChanNum?(FeatDataAll)
+				_chann_feat = GrChanName?(FeatDataAll,_ii)
+				_chann_feat_parts = TxSplit(_chann_feat,"_")
+				_chann_ = _chann_feat_parts[1]
+			
+				if tverg(currentsignal,_chann_) = 0 and txwo(_chann_feat,"-Sev") =0 and txwo(_chann_feat,"-Status") =0
+					_varname_ = _chann_feat_parts[2]
+					if  IsXY(FeatDataAll:{<_chann_feat>})
+						{<_chann_feat>} = kmpy(FeatDataAll:{<_chann_feat>})
+					else
+						{<_chann_feat>} = xdel(FeatDataAll:{<_chann_feat>},1)
+					ende
+					ChannFeatData:{<_varname_>} = {<_chann_feat>}
+				end
+			end
+
+			TxErr$ = CwLoadCCV(ChannFeatData, "ChannFeatData.ccv")
+			wenn tverg(TxErr$,"") <> 0
+				err = BoxNachricht("Info","ChannFeatData","!1")
+			ende
+			err =RgCurveSet("ChannFeatData",ChannFeatData,0)
+			wenn err <> 0
+				err_txt ="ChannFeatData: " + RgGetErrorText(err)
+				err = BoxNachricht("Info",err_txt,"!1")
+			ende
+			CwSelectWindow(ChannFeatData)
+			CwAction("win.close")
+		end
+
+			
+		if varexist?("ParStatusMap") and varexist?("Par_Liste") and varexist?("Date_Time_List") 
+			if leng?(ParStatusMap:[1]) >= 1 
+				_count = 0
+				channel_par_liste_1 = TxArrayCreate(0)
+				ParStatusData = GrNeu()
+
+				for _ii =1 to txarraygetsize(Par_Liste);grkanalzahl?(parameter_status_vs_time_map)
+					_parname = Par_Liste[_ii]
+					;_parname = grkanalname?(parameter_status_vs_time_map,_ii)
+					_parname_parts = TxSplit(_parname,"_")
+					_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
+					if tverg(_parname_red,currentsignal) = 0
+						_count = _count + 1
+						_parname_parts_ = TxSplit(_parname,"-")
+						_parname_ =_parname_parts_[1]
+						ParStatusData:{<_parname_>} = ParStatusMap:[_ii]
+						channel_par_liste_1[_count] = _parname_
+					ende
+				ende
+			
+				if GrChanNum?(ParStatusData) > 0
+					_EwSegLang = lang?(ParStatusData:[1])
+					_group = GrBinde(ParStatusData,0)
+					SetSegLang(_group,_EwSegLang)
+					ParStatusData = _group; MatrixTranspose(_group)
+					;ParStatusDataT = MatrixTranspose(ParStatusData)
+					parameter_status_vs_time_map= ParStatusData
+				
+					TxErr$ = CwLoadCCV(parameter_status_vs_time_map, "ParStatusData.ccv")
+					wenn tverg(TxErr$,"") <> 0
+						err = BoxNachricht("Info","parameter_status_vs_time_map","!1")
+					ende
+		
+					err = RgCurveSet("parameter_status_vs_time_map",parameter_status_vs_time_map,0)
+					wenn err <> 0
+						err_txt ="parameter_status_vs_time_map: " + RgGetErrorText(err)
+						err = BoxNachricht("Info",err_txt,"!1")
+					end
+					CwSelectWindow(parameter_status_vs_time_map)
+					CwAction("win.close")
+				ende
+			ende
+		end
+
+		report_name = currentsignal + "_p2"
+		sequenz export_report report_name
+		; close report
+		err =  RgDocClose( 0 )
+	ende
+ende
+
+
+
+
+; VisaHealthTable
+if 0
+	if varexist?("VisaHealthData") and varexist?("VisaCompFaultListe") and varexist?("VisaChanParListe")
+	else
+		;assetfolder = "D:\Projekte\TEST"
+		asset_visahealth_status = assetfolder + "\" + "Output\Features\" + "visa_fault_table.csv"; Last Status of ChannelFeature
+		if fsfileexists(asset_visahealth_status)
+			VisaHealthData = Grneu()
+			_fileid = FileOpenXLS(asset_visahealth_status,0)
+			wenn _fileid > 0
+				; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+				FileXLSSelectSheet(_fileid,1)
+				VisaCompFaultListe = TxArrayCreate(1)
+				VisaChanParListe = TxArrayCreate(1)
+				_ii = 1
+				SOLANGE _ii <=  2560
+					_PName = FileXLSCellRead(_fileid,2,_ii+1,0)
+					wenn tverg(_Pname,"") = 0
+						break
+					sonst
+						VisaCompFaultListe[_ii] = _PName
+						_ii = _ii + 1
+					ende
+				ENDE
+				
+				_iimax = _ii
+				_ii = 1
+				SOLANGE _ii <=  2560
+					_PName = FileXLSCellRead(_fileid,_ii+2,1,0) 
+			
+					wenn tverg(_Pname,"") = 0
+						break
+					sonst
+						_pname = _pname + "_stat"
+						VisaChanParListe[_ii] = _PName
+						{<_pname>} = FileXLSColumnRead(_fileid,_ii+2,2,2560, 0)
+						VisaHealthData:{<_pname>}={<_pname>}
+						_ii = _ii + 1
+					ende
+				ENDE
+				; return ParameterListe, ChannelListe
+				err = FileClose(_fileid)
+			ende
+		ende
+	ende
+
+	table_name = "ComponentHealthTable"
+	table_cols = RgTableColumns?(table_name)
+	table_rows = RgTableRows?(table_name)
+	for _ii = 1 to table_rows
+		for _jj = 1 to table_cols
+			RgTableSetCell(table_name,_jj,_ii,"",0)
+			_parstatus_color = RGB(255, 255, 255)
+			RgObjSetColor(table_name,1,_parstatus_color,_jj,_ii)		
+		ende
+	ende
+		
+	sequenz search_item Ch_Config:SigName ist_channel; search_index -> search the configuration of the current channel in the xlsconfig file
+	wenn search_index > 0
+		_kkk = search_index
+		; finde und setze channelpuls
+		_ind_channelPuls = Ch_Config:TachoChannel[_kkk]
+	end
+	if _ind_channelPuls <>"None"
+		if GrKanalZahl?(VisaHealthData) >= 1 and leng?(VisaHealthData:[1]) >= txarraygetsize(VisaCompFaultListe)
+			_count = 0
+			channel_par_liste_2 = TxArrayCreate(0)
+			;currentsignal = "Ch000"
+			for _ii =1 to grkanalzahl?(VisaHealthData)
+				_parname = grkanalname?(VisaHealthData,_ii)
+				_parname_red = tteil(_parname,1,tleng(currentsignal))
+				if tverg(_parname_red,currentsignal) = 0
+					_count = _count + 1
+					channel_par_liste_2[_count] = _parname
+				ende
+			ende
+		ende
+		for _ii =1 to txArrayGetSize( channel_par_liste_2)+1
+			if _ii = 1
+				RgTableSetCell(table_name,_ii,1,"ParName",0)
+				;RgTableSetCell(table_name,2,_ii,"Channel",0)
+				for _kkkk = 1 to txarraygetsize(VisaCompFaultListe)
+					RgTableSetCell(table_name,_ii,1+_kkkk,VisaCompFaultListe[_kkkk],0)
+				ende
+			else
+				_parname = channel_par_liste_2[_ii-1]
+				_parname_parts = TxSplit(_parname,"_")
+				if txarraygetsize(_parname_parts) <=3
+					_parname_red = _parname_parts[2]
+				elseif txarraygetsize(_parname_parts) =4
+					_parname_red = _parname_parts[2] +"_"+_parname_parts[3]
+				elseif txarraygetsize(_parname_parts) =5
+					_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4]
+				else
+					_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4] +"_"+_parname_parts[5]
+				end
+				_par_stats = VisaHealthData:{<_parname>}
+				RgTableSetCell(table_name,_ii,1,_parname_red,0)
+				for _kkkk = 1 to txarraygetsize(VisaCompFaultListe)
+					_parstatus_name = VisaCompFaultListe[_kkkk]
+					_parseverity = _par_stats[_kkkk]; 
+					; feat_delta_ref_value = abs((current_feat_value - feat_ref_value) / feat_ref_value) * 100
+					RgTableSetCell(table_name,_ii,1+_kkkk,tform(_parseverity,"f1.2"),0)
+					sequenz find_healthseverity_colour; -> _parseverity_color
+					;PnTableSetProperty(table_name,_ii,1+_kkkk,"FillColor",_parseverity_color)		
+					RgObjSetColor(table_name,1,_parseverity_color,_ii,1+_kkkk)
+				ende
+			ende
+		ende
+	ende
+
+end
+

@@ -1,0 +1,36 @@
+sequenz imc_logging "update_feature_list_red started"
+
+_Idx = PnGetSelectedItem("LabelGroupList")
+if _Idx > 0
+	_ist_label_group = PnGetItemText("LabelGroupList",_Idx)
+	if tverg(_ist_label_group,"None") <> 0
+		path_label_group = AssetFolder + "\Output\LabelGroup.txt"
+		_fh = FileOpenASCII(path_label_group,1)
+		if _fh > 0
+			_err = FileLineWrite(_fh,_ist_label_group,0)
+			_err = FileClose(_fh)
+		sonst
+			_err = FileErrCode?() 
+			zeigen _err
+		ende
+	
+		_erg = boxnachricht("Info","Please wait until the feature data have been reduced to the labelgroup!","!1")
+		_ret = Execute( "C:\python37\python.exe", "C:\BDA\AI\CADIS_Reduce2LabelGroup.py", "", 2,-1)
+		;zeigen FeatFile
+		_file_search = FeatFile; = _pathname + _suchname
+		_suchname = "FeatureTable_Clean_FamosRed.csv"
+	else
+		_suchname = "FeatureTable_Clean_Famos.csv"
+	ende
+	
+	;Pninsertitem("FeatureTableType",1,_suchname,0)
+	;sequenz insert_item "FeatureTableType" _suchname
+	PnSetText("FeatureTableType",_suchname)
+	;_Idx1 = Pnfinditem("FeatureTableType",_suchname)
+	;PnSelectItem("FeatureTableType",_Idx1)
+	_Pathname = OutputFolder + "\Features\"
+	;_FileListID=FsFileListNew(_PathName, _suchname,0,0,0)
+	sequenz LoadFeatureFile
+ende
+entf _*
+

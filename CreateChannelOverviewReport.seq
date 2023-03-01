@@ -1,0 +1,119 @@
+; open report_template
+
+cadis_report_template_deckblatt = cadis_report_folder + "cadis_report_channel_status.drb"
+err = RgDocOpen( cadis_report_template_deckblatt, 0 )
+wenn err = 0
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Deckblatt seite update
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 1
+		;		channel_status_vs_feature_file = assetfolder + "\" + "Output\Features\" + "ChannelFeatureStatusTable.csv"
+		;		channel_status_vs_time_file = assetfolder + "\" + "Output\Features\" + "ChannelStatusTable.csv"
+		;		
+		;		file = channel_status_vs_feature_file	
+		;		sequenz get_table_data_as_map
+		;		channel_status_vs_feature_map = Map
+		;		channel_status_vs_feature_rows = ParameterListe
+		;		channel_status_vs_feature_cols =ChannelListe
+		;		FeatureListe = ParameterListe
+		;	
+		;		file = channel_status_vs_time_file
+		;		sequenz get_table_data_as_map
+		;		channel_status_vs_time_map = Map
+		;		channel_status_vs_time_rows = ParameterListe
+		;		channel_status_vs_time_cols =ChannelListe
+	
+		
+			
+		; channel liste tabelle
+		ChannelListe = ChannelListeAll
+		anz_channels = txArrayGetSize( ChannelListe)
+		table_name1 = "asset_channe_liste1"
+		table_cols1 = RgTableColumns?(table_name1)
+		table_rows1 = RgTableRows?(table_name1)
+		for _ii = 1 to table_rows1
+			for _jj = 1 to table_cols1
+				RgTableSetCell(table_name1,_jj,_ii,"",0)
+				_parstatus_color = RGB(255, 255, 255)
+				RgObjSetColor(table_name1,1,_parstatus_color,_jj,_ii)		
+			ende
+		ende
+		table_rows2  = 0
+		if anz_channels > table_rows1
+			table_name2 = "asset_channe_liste2"
+			table_cols2 = RgTableColumns?(table_name2)
+			table_rows2 = RgTableRows?(table_name2)
+			for _ii = 1 to table_rows2
+				for _jj = 1 to table_cols2
+					RgTableSetCell(table_name2,_jj,_ii,"",0)
+					_parstatus_color = RGB(255, 255, 255)
+					RgObjSetColor(table_name2,1,_parstatus_color,_jj,_ii)		
+				ende
+			ende
+		end
+		
+		for _ii =1 to anz_channels+1
+			if _ii > table_rows1 + table_rows2
+				break
+			end
+			if _ii = 1
+				RgTableSetCell(table_name1,1,_ii,"Id",0)
+				RgTableSetCell(table_name1,2,_ii,"Channel",0)
+			else
+				if _ii <= table_rows1
+					RgTableSetCell(table_name1,1,_ii,_ii-1,0)
+					RgTableSetCell(table_name1,2,_ii,ChannelListe[_ii-1],0)
+				else
+					RgTableSetCell(table_name2,1,_ii-table_rows1,_ii-1,0)
+					RgTableSetCell(table_name2,2,_ii-table_rows1,ChannelListe[_ii-1],0)
+				end
+			
+				ist_channel_ = ChannelListe[_ii-1]
+				for _kk = 1 to txarraygetsize(asset_current_status_cols)
+					if tverg(ist_channel_, asset_current_status_cols[_kk]) = 0
+						_colidx = _kk;-1	
+						ist_channel_par_status = asset_current_status_map0:[_colidx]
+						_parstatus = max(ist_channel_par_status)
+						sequenz find_status_colour; -> _parstatus_color
+						;RgObjSetColor(table_name,1,_parstatus_color,2,_ii)	
+						if _ii <= table_rows1
+							RgObjSetColor(table_name1,1,_parstatus_color,2,_ii)	
+							;PnTableSetProperty(table_name1,2,_ii,"FillColor",_parstatus_color)	
+						else
+							RgObjSetColor(table_name2,1,_parstatus_color,2,_ii-table_rows1)	
+							;PnTableSetProperty(table_name3,2,_ii-table_rows_1-table_rows_2,"FillColor",_parstatus_color)	
+						end
+						break
+					ende
+				ende
+			ende
+		ende
+		
+		channel_status_vs_time_map = MatrixTranspose(channel_status_vs_time_map)
+		TxErr$ = CwLoadCCV(channel_status_vs_time_map, "channel_status_vs_time_map.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","channel_status_vs_time_map","!1")
+		ende
+		err = RgCurveSet("channel_status_vs_time",channel_status_vs_time_map,0)
+		wenn err <> 0
+			err_txt ="channel_status_vs_time_map: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		end
+		CwSelectWindow(channel_status_vs_time_map)
+		CwAction("win.close")
+		
+	ende
+	
+	; export doc
+	sequenz export_report "channel_status"
+
+
+	; close report
+	err =  RgDocClose( 0 )
+	if err < 0
+		zeigen (err)
+	ende
+	
+else
+	zeigen  err
+ende

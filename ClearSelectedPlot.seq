@@ -1,0 +1,10 @@
+sequenz imc_logging "clear_selected_plot started"
+
+CwSelectMode("title")
+_ret = CwIsWindow(PA1)
+wenn _ret <> 0
+	CwSelectWindow(PA1)
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende

@@ -1,0 +1,84 @@
+;sequenz LoadMeasFileIst
+
+;MeasFileIdx = PnGetSelectedItem("VibrationAnalysis.MeasFile")
+;if MeasFileIdx > 0
+;	file_ist_= PnGetItemText("VibrationAnalysis.MeasFile", MeasFileIdx)
+
+
+_fileidx =PnTableGetSelectedRows("VibrationAnalysis.MeasurementListeGitter")
+wenn _fileidx > 0
+	filename = CompletedFolder +"\"+ MeasFiles[_fileidx]
+	filename_short = FsSplitPath(filename,4)
+	file_ist_= filename; PnGetItemText("VibrationAnalysis.MeasFile", MeasFileIdx)
+	
+	PnSetText("VibrationAnalysis.measfilename", filename_short) 
+
+
+	searchname = file_ist_
+	pathname = AssetFolder + "\Output\TWF\"
+	_filelist_mm = FsFileListNew(pathname, searchname, 0, 1, 1)
+	wenn _filelist_mm > 0
+		_cntfile = FsFileListGetCount(_filelist_mm)
+		wenn _cntfile> 0
+			file_ist = FsFileListGetName(_filelist_mm, 1)
+		ende
+		FsFileListClose(_filelist_mm)
+	sonst
+		_err = FsGetLastError() 
+		zeigen _err
+	ende
+	
+	channelName = Ch_Config:SigName[1]
+	if fsfileexists(file_ist)
+		tdms_files = 0
+		dat_files = 1
+		d7d_files = 0
+		_file_ext = ".dat"
+		_filename = file_ist
+		sequenz filename2filedate; --> FileId
+		file_id = FileId
+		
+		_fileid = FileOpenDSF(file_ist,100)
+		wenn _fileid > 0; and _filesize > 1000
+			_index = FileObjNum?(_fileid)
+			wenn _index <> 0
+				_count = 1
+				solange _count <= _index		
+					_parvalue = FileObjRead(_fileid,_count)
+					_signame = FileObjName?(_fileid,_count)
+					sequenz insert_item "VibrationAnalysis.ChannelX" _signame
+					{<_signame>} = _parvalue
+					MeasData:{<_signame>} = {<_signame>}
+					wenn tverg(_signame, channelName) = 0; _count = 1
+						signal1 = {<_signame>}
+						currentsignal = _signame
+						;channelName = currentsignal
+					ende
+					wenn txwo(_signame,"U1") = 1 or txwo(_signame,"U2") = 1 or txwo(_signame,"U3") = 1 or txwo(_signame,"I1") = 1 or txwo(_signame,"I2") = 1 or txwo(_signame,"I1") = 1
+						chname_red_list = txsplit(chname,"_")
+						chname_red = chname_red_list[1]
+						wenn txwo(_signame,chname_red) = 1
+							currentsignal = _signame
+							signal1 = {<_signame>}
+							;tdata = 10; sec
+							;break
+						ende
+					ende
+					;channelName = currentsignal
+					_count = _count + 1
+				ende
+			ende
+			_err = fileclose(_fileid)
+		sonst
+			_err = FileErrCode?()
+			zeigen _err
+		ende
+		
+		sequenz ReadConfigChannel
+			
+		sequenz ReadConfigChannel_esa
+		
+	sonst
+		BoxNachricht("Info","Measurement file does not exist!","?1")
+	ende
+END

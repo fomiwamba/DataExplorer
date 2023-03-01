@@ -1,0 +1,70 @@
+sequenz imc_logging "export_report started"
+
+; inputs = export_mode, cadis_report_folder, date_time_str;
+;PA1 = "cover or channelname
+; PA2
+
+if varexist?("date_time_str")
+else
+	date_time_str = "_"
+end
+
+;report_folder = assetfolder + "\reports\"
+report_folder = assetfolder + "\" + "reports_" +date_time_str + "\"
+_err = FsCreateDirectory(report_folder)
+if _err <> 0
+	err = BoxNachricht("Info","create report folder error","!1")
+end
+
+
+if varexist?("export_mode")
+else
+	export_mode = "png"
+end
+		
+
+cadis_report_file_new = report_folder + "cadis_report" + "_" + PA1 + "_" +date_time_str + "." + export_mode
+if export_mode = "jpg"
+	
+	err = RgDocExport(cadis_report_file_new, 3, 300, 0, 100 )
+elseif export_mode = "emf"
+	;cadis_report_file_new = report_folder + "cadis_report_" +date_time_str + ".emf"
+	err = RgDocExport(cadis_report_file_new, 0, 0, 0, 0 )
+elseif export_mode = "png"
+	;cadis_report_file_new = report_folder + "cadis_report_" +date_time_str + ".png"
+	err = RgDocExport(cadis_report_file_new, 4, 0, 3, 0 )
+elseif export_mode = "pdf"
+	;cadis_report_file_new = report_folder + "cadis_report_" +date_time_str + ".pdf"
+	err = RgDocExport( cadis_report_file_new, 5, 0,3, 0 )
+else
+	;cadis_report_file_new = report_folder + "cadis_report_" +date_time_str + ".pdf"
+	err = RgDocExport(cadis_report_file_new, 4, 300, 3, 0 )
+ende
+if err < 0
+	err_txt = RgGetErrorText(err)
+	zeigen err_txt
+else
+	sleep(1)
+	;ret = Execute( "C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe",cadis_report_file_new , "Open", 2,0)
+ende
+
+
+if 0
+	if txwo(PA1,"cover")
+		cadis_report_asset_deckblatt = report_folder + "cadis_report_deckblatt_3.drb"
+		err = RgDocSave(cadis_report_asset_deckblatt,0)
+	elseif txwo(PA1,"summary")
+		cadis_report_asset_deckblatt = report_folder + "cadis_report_deckblatt_2.drb"
+		err = RgDocSave(cadis_report_asset_deckblatt,0)
+	elseif txwo(PA1,"_")
+		cadis_report_asset_channel_2 = report_folder + "cadis_report_channel_2.drb"
+		err = RgDocSave(cadis_report_asset_channel_2,0)
+	else
+		cadis_report_asset_channel = report_folder + "cadis_report_channel.drb"
+		err = RgDocSave(cadis_report_asset_channel,0)
+	ende
+	if err < 0
+		err_txt = RgGetErrorText(err)
+		zeigen err_txt
+	ende
+ende

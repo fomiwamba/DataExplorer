@@ -1,0 +1,9 @@
+sequenz imc_logging "insert_item started"
+
+;PA1 = "DataList1"
+;PA2 = $WatchVarName
+_Chindex = PnFindItem(PA1,PA2)
+wenn _Chindex = 0
+	PnInsertItem(PA1,0, PA2 , 0)
+ende
+

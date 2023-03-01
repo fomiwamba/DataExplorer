@@ -1,0 +1,39 @@
+sequenz imc_logging "show_selected_3d_frf_spectrum started"
+
+_spec_index = PnGetSelectedItem("FRFSignalList")
+wenn _spec_index <> 0
+	spec_name = PnGetItemText("FRFSignalList", _spec_index)
+	spec_name_parts = txsplit(spec_name,"_")
+	channel1 = spec_name_parts[1]
+	channel2 = spec_name_parts[2]
+	_signame = channel1 +"_" + channel2
+	spec_name = "frf"
+	_frf_index = PnGetSelectedItem("FRFList")
+	wenn _frf_index <> 0
+		frf_name = PnGetItemText("FRFList", _frf_index)
+		if tverg(frf_name,"Mag") = 0
+			_file_search = _signame + "_FRF_Mag_Trend.csv"
+		elseif tverg(frf_name,"Ph") = 0
+			_file_search = _signame + "_FRF_Ph_Trend.csv"
+		elseif tverg(frf_name,"Coh") = 0
+			_file_search = _signame + "_FRF_Coh_Trend.csv"
+		else
+			_file_search = _signame + "_FRF_Mag_Trend.csv"
+		ende
+		;	currentchannel = _signame
+		_text = "Display 3D FRF of " + _signame + "?"
+		_erg = BoxNachricht("Info",_text,"?4")
+		wenn _erg = 1
+			Pnsettext("FFT_Trend_Name",_file_search)
+			_pathname = FFTFile
+			fft_file = _pathname + _file_search
+			FftFileIst = fft_file
+			sequenz Read_Python_3dfft; -> Ax_Trend
+			if GrChanNum?(Ax_Trend) > 1
+				Ax_trend_plot = Ax_Trend
+				;sequenz plot_3d_trend Ax_trend 1 "CascadePlot"
+				sequenz FFT3D_Plot
+			ende
+		ende
+	ende			
+ende

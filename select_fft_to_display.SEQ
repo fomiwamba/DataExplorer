@@ -1,0 +1,14 @@
+sequenz imc_logging "select_fft_to_display started"
+
+wenn streamingfeatureextraction = 0	
+	idx = PnGetSelectedItem("ESA_metrics_spectrum_List")
+	_txt = PnGetItemText("ESA_metrics_spectrum_List", idx)
+
+	if tverg(_txt, "RealPower_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_metrics_spec = realpower_spec
+	ende
+	if tverg(_txt, "Torque_spec") = 0; freq_task = "FrequencyLine"; FL
+		esa_metrics_spec = torque_spec
+	ende
+ende
+

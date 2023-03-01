@@ -1,0 +1,39 @@
+sequenz imc_logging "update_feature_list_red started"
+
+
+_datumFrom = PnGetValue("DateFrom")
+_datumTo = PnGetValue("DateTo")
+
+
+if _datumFrom < _datumTo
+
+	_datumFromtxt = zeitintext(_datumFrom, 3)
+	_datumTotxt = zeitintext(_datumTo, 3)
+		
+	DateFromFile = AssetFolder + "\Output\DateFromTo.txt"
+	_fh = FileOpenASCII(DateFromFile,1)
+	if _fh > 0
+		_err = FileLineWrite(_fh,AssetFolder,0)
+		_err = FileLineWrite(_fh,_datumFromtxt,0)
+		_err = FileLineWrite(_fh,_datumTotxt,0)
+		_err = FileClose(_fh)
+	sonst
+		_err = FileErrCode?() 
+		zeigen _err
+	ende
+	
+	;_erg = boxnachricht("Info","Please wait until the feature data have been reduced to the labelgroup!","!1")
+	_ret = Execute( "C:\python37\python.exe", "C:\BDA\AI\CADIS_ReduceFeatureDataFromTo.py", "", 2,-1)
+	;zeigen FeatFile
+	_file_search = FeatFile; = _pathname + _suchname
+	_suchname = "FeatureTable_Clean_FamosRed.csv"
+else
+	_suchname = "FeatureTable_Clean_Famos.csv"
+ende
+	
+PnSetText("FeatureTableType",_suchname)
+_Pathname = OutputFolder + "\Features\"
+sequenz LoadFeatureFile
+
+entf _*
+

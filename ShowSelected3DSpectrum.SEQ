@@ -1,0 +1,102 @@
+; Show 3D spectrum
+sequenz imc_logging "show_selected_3d_spectrum started"
+
+page_ist = PnGetActivePage()
+if page_ist = 3
+	_spec_index = PnGetSelectedItem("ParameterOverview.ShowSpectrum")
+	_spec_name = PnGetItemText("ParameterOverview.ShowSpectrum", _spec_index)
+else
+	_spec_index = PnGetSelectedItem("ChannelOverview.ShowSpectrum")
+	_spec_name = PnGetItemText("ChannelOverview.ShowSpectrum", _spec_index)
+end
+
+wenn _spec_index <> 0
+	
+	_parname_name_parts = txsplit(_Parname,"_")
+	if txarraygetsize(_parname_name_parts) < 2
+		_channel1 = _parname_name_parts[1]
+		_par_name = ""
+		_fct_name = "fft"
+		_signame = _channel1
+	ende
+	if txarraygetsize(_parname_name_parts) >= 2
+		_channel1 = _parname_name_parts[1]
+		_par_name = _parname_name_parts[2]
+		_fct_name = "fft"
+		_signame = _channel1
+	ende
+	if txarraygetsize(_parname_name_parts) >= 3
+		_channel1 = _parname_name_parts[1]
+		_fct_name = _parname_name_parts[2]
+		_signame = _channel1
+	ende
+	if txarraygetsize(_parname_name_parts) >=4
+		_channel1 = _parname_name_parts[1]
+		_channel2 = _parname_name_parts[2]
+		_fct_name = _parname_name_parts[3]
+		_frf_name = _parname_name_parts[4]
+		_signame = _channel1 +"_" + _channel2
+	end
+	
+	if txarraygetsize(_parname_name_parts) >= 1
+		if tverg(_spec_name,"fft") = 0; and tverg(_fct_name,"fft") = 0
+			_file_search = _channel1 + "_FFT_Mag_Trend.csv"
+			_text = "Display 3D FFT of " + _channel1 + "?"
+
+		elseif tverg(_spec_name,"psd") = 0; and tverg(_fct_name,"psd") = 0
+			_file_search = _channel1 + "_PSD_Trend.csv"
+			_text = "Display 3D PSD of " + _channel1 + "?"
+			
+		elseif tverg(_spec_name,"hist") = 0; and tverg(_fct_name,"psd") = 0
+			_file_search = _channel1 + "_Hist_Trend.csv"
+			_text = "Display 3D Histogram of " + _channel1 + "?"
+			
+		elseif tverg(_spec_name,"frf") = 0; and tverg(_fct_name,"frf") = 0
+			_text = "Display 3D FRF of " + _signame + "?"
+			if tverg(_frf_name,"Mag") = 0
+				_file_search = _signame + "_FRF_Mag_Trend.csv"
+			elseif tverg(_frf_name,"Ph") = 0
+				_file_search = _signame + "_FRF_Ph_Trend.csv"
+			elseif tverg(_frf_name,"Coh") = 0
+				_file_search = _signame + "_FRF_Coh_Trend.csv"
+			else
+				_file_search = _signame + "_FRF_Mag_Trend.csv"
+			ende
+		else
+			_spec_name = "None"
+		end
+	
+		;	current_channel = _signame
+		if tverg(_spec_name,"None")<> 0 
+			page_ist = PnGetActivePage()
+			if page_ist = 3
+				_erg = PnGetValue("ParameterOverview.Show_Spectrum"); 1;BoxNachricht("Info",_text,"?4")
+			else
+				_erg = PnGetValue("ChannelOverview.Show_Spectrum"); 1;BoxNachricht("Info",_text,"?4")
+			end
+			
+			wenn _erg = 1
+				;Pnsettext("DataExploration.FFT_Trend_Name",_file_search)
+				if tverg(_spec_name,"hist") = 0
+					_pathname = AssetFolder + "\Output\Hist\" + _channel1 + "\";
+				else
+					_pathname = AssetFolder + "\Output\FFT\" + _channel1 + "\";
+				end
+				FftFileIst = _pathname + _file_search
+				sequenz Read_Python_3dfft; inputs: FFTFileIst, output-> Ax_Trend
+			
+			else
+				CwSelectMode("title")
+				_ret = CwIsWindow("CascadePlot")
+				wenn _ret <> 0
+					CwSelectWindow("CascadePlot")
+					CwAction("delete.lines")
+					CwAction("delete.markers")
+					CwAction("reset")
+				ende
+			ende
+		ende
+	end
+ende
+
+;entf _*

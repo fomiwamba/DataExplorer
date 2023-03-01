@@ -1,0 +1,21 @@
+sequenz imc_logging "clean_markers started"
+
+_idx = PnGetSelectedItem("ElectricalAnalysis.SpectralList")
+_SpecName = PnGetItemText("ElectricalAnalysis.SpectralList", _idx)
+
+CwSelectMode("title")
+_erg = CwSelectWindow(_SpecName)
+CwSelectByIndex("x-axis",1)
+AxisScale = CwAxisGet("scale"); 4<-> Absolute Zeit oder 1<-> Linear
+	
+
+
+if 1; delete markers
+	_anz_markers = CwDisplayGet("marker.count")
+	_ii = 1
+	solange _ii <= _anz_markers
+		CwSelectByIndex("marker", 1)
+		CwDeleteElement("marker")
+		_ii = _ii + 1
+	ende
+ende

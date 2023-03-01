@@ -1,0 +1,42 @@
+sequenz imc_logging "start_visa started"
+
+if varexist?("MeasData") 
+	if GrChanNum?(MeasData) > 1	
+		; Load Channel Config for Visa
+		_sigidx = PnFindItem("VibrationAnalysis.ChannelX",currentsignal)
+		wenn _sigidx > 0
+			PnSelectItem("VibrationAnalysis.ChannelX",_sigidx)
+			ChannelName = currentsignal
+		sonst
+			PnSelectItem("VibrationAnalysis.ChannelX",1)
+			ChannelName = PnGetItemText("VibrationAnalysis.ChannelX",1)
+		ende
+	
+		wenn varexist?("ChannelX") and  varexist?("ChannelY") and varexist?("ChannelTacho")
+			if 1
+					
+				CwSelectMode("title")
+	;CwSelectWindow("DataExploration.TrendPlot")
+				CwLoadCCV("VibrationAnalysis.VectorPlot","C:\BDA\ExpertAnalysis\ViSA_OrbitAndVectorPlot.ccv")
+				CwLoadCCV("VibrationAnalysis.Orbit","C:\BDA\ExpertAnalysis\ViSA_OrbitPlot.ccv")
+				CwLoadCCV("VibrationAnalysis.StaticPosition","C:\BDA\ExpertAnalysis\ViSA_OrbitCenterPlot.ccv")
+				CwLoadCCV("VibrationAnalysis.CascadeFullSpectrum","C:\BDA\ExpertAnalysis\ViSA_Basp_kask_i.ccv")
+				CwLoadCCV("VibrationAnalysis.CurrentFullSpectrum","C:\BDA\ExpertAnalysis\ViSA_Basp_i.ccv")
+				CwLoadCCV("VibrationAnalysis.Forward_Backward_Par","C:\BDA\ExpertAnalysis\ViSA_Basp_Parameters.ccv")
+
+				CwLoadCCV("VibrationAnalysis.TimeWaveform","C:\BDA\ExpertAnalysis\ViSA_TWF.ccv")
+				CwLoadCCV("VibrationAnalysis.CascadeSpectrum", "C:\BDA\ExpertAnalysis\ViSA_spectrum_kask.ccv")
+				CwLoadCCV("VibrationAnalysis.CurrentSpectrum", "C:\BDA\ExpertAnalysis\ViSA_spectrum_i.ccv")
+				CwLoadCCV("VibrationAnalysis.Boxplot","C:\BDA\ExpertAnalysis\ViSA_boxplot.ccv")
+				CwLoadCCV("VibrationAnalysis.Visa_Parameters","C:\BDA\ExpertAnalysis\ViSA_parameters.ccv")
+			ende
+
+			sequenz ViSA_BoxPlot_Orbit_Analysis
+		ende
+
+	ende
+else
+	_erg = boxnachricht("Info:","Please go back to DataExploration and  select a measurement file first!","!1")
+ende
+
+entf _*

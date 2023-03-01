@@ -1,0 +1,63 @@
+sequenz imc_logging "append_files_from_to started"
+
+
+page_ist  = PnGetActivePage()
+page_max = PnGetPageCount()
+_file_ext = ""
+if page_ist <= page_max and page_ist = 8
+	sicherungsfolder = ConditionFileFolder
+	PnSetActivePage(page_ist)
+	FileListFromTo = ConditionFileList
+end
+
+if page_ist <= page_max and page_ist = 9
+	sicherungsfolder = TrendFileFolder
+	PnSetActivePage(page_ist)
+	FileListFromTo = TrendFileList
+end
+
+
+if page_ist <= page_max and page_ist = 10
+	sicherungsfolder = ProcessFileFolder
+	PnSetActivePage(page_ist)
+	FileListFromTo = ProcessFileList
+end
+
+
+
+cntfile = TxArrayGetSize(FileListFromTo)
+if cntfile > 0
+	inputfile = "C:\BDA\ExpertAnalysis\PythonInput.txt"
+	
+	;_folder = FsSplitPath(FileListFromTo[_mm],1)
+	
+	_mm = 1
+	_fh = FileOpenASCII(inputfile,1)
+	SOLANGE _mm <= cntfile
+		_err = FileLineWrite(_fh,FileListFromTo[_mm],0)
+		_mm = _mm + 1
+	ende
+	_err = FileClose(_fh)
+		
+		
+	;Applikation Vollbild C:\python37\python.exe C:\BDA\TrendDataAnalysis\CreateTrendFileFromTo.py
+	ret = Execute( "C:\python37\python.exe","C:\BDA\TrendDataAnalysis\AppendFileFromTo.py","" ,0, -1)
+		
+	createdtrendfile = sicherungsfolder + "\AppendFileFromTo.csv"
+	_erg0 = FsFileExists(createdtrendfile)
+	if _erg0 = 1
+		filename = createdtrendfile
+		filename_short = fsSplitPath(createdtrendfile, 4) 
+		sequenz Insert_Item "TrendFileListe" filename
+		
+		sequenz LoadTxtOrCsvTrendFile
+		
+		
+		_fileidx = PnFindItem("TrendFileListe", filename)
+		PnSelectItem("TrendFileListe", _fileidx)
+		sequenz SelectAndLoadTrendFile
+		sequenz SelectItemParameterListe
+	ende
+ende
+
+

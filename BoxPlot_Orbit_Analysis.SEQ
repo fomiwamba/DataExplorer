@@ -1,0 +1,749 @@
+sequenz imc_logging "boxplot_orbit_analysis started"
+
+sigx = xoff(signal1,0)
+sigy = xoff(signal2,0)
+peak = xoff(Peaksig,0)
+
+sequenz SignaleGleichsetzen sigx sigy
+sigx = _sig1
+sigy = _sig2
+sequenz SignaleGleichsetzen sigx peak
+sigx = _sig1
+peak = _sig2
+
+_ordlinie = DlgGetValue("Order")
+_length = dlggetvalue("Ndata");ndata
+_overlap = dlggetvalue("OverlapValue")
+_window = dlggetvalue("Window")
+PulsPerRev = dlggetvalue("PulsPerRev")
+TrigLevel = dlggetvalue("TrigLevel")
+Twindow = dlggetvalue("Twindow")
+_Fall_xy = dlggettext("RotOrder")
+
+peak_ = STri(peak,TrigLevel,TrigLevel)
+Xcenter = leer
+Ycenter = leer
+F0_kask = leer;
+Ax_kask = leer;
+Ay_kask = leer;
+Px_kask = leer
+Py_kask = leer
+Basp_kask = leer
+Orbit_center= grneu() 
+Orbit_unfiltered = grneu()
+Orbit_filtered = grneu()
+Orbit_Forward = grneu()
+Orbit_backward = grneu()
+A1x = leer;
+A1y = leer;
+P1x = leer
+P1y = leer
+OI = leer
+Smax1 = leer; 
+Smin1 = leer; 
+phi1 = leer; 
+Rfa1 = leer; 
+Rba1 = leer; 
+Rfp1 = leer; 
+Rbp1 = leer; 
+
+x_iqr = leer; Interquartile oder quartilabstand
+x_median = leer; Median -> x050 or q2
+x_mean = leer;
+x_min = leer; Max -> Boxplot Whisker
+x_max = leer; Min -> Boxplot Whisker
+x_lq = leer; LowerQuartile -> Boxplot Quartil -> q1
+x_uq = leer; UpperQuartile -> Boxplot Quartil -> q3
+x_lower = leer;
+x_upper = leer;
+x_std = leer;
+x_std_ = leer
+x_skew = leer;
+x_kurt = leer;
+x_range = leer;
+Px_kask = leer; Phasenspektrum von Signalx
+
+RMS_All = leer;
+RMS_LF= leer;
+RMS_ISO= leer;
+RMS_HF= leer;
+RMS_OW= leer;
+RMS_1X= leer;
+RMS_2X= leer;
+RMS_3X= leer;
+RMS_4X= leer;
+
+OB1X = leer
+OF1X = leer
+Ofiltered1X = leer
+Ounfiltered = leer
+PolarPlotX = leer
+P0X = leer
+PendX = leer
+
+PolarPlotY = leer
+P0Y = leer
+PendY = leer
+
+Feature:A1X = leer
+Feature:P1X = leer
+Basp_kask_i = leer
+_Ax_XX = 0*rampe(1,1,4)
+_Px_XX = 0*rampe(1,1,4)
+_Ax_XX_kask = leer; Drehharmonische Amplitude
+_Px_XX_kask = leer; Drehharmonische Phase
+
+FFTV_A1X = leer
+FFTV_P1X = leer
+FFTV_A2X = leer
+FFTV_P2X = leer
+FFTV_A3X = leer
+FFTV_P3X = leer
+FFTV_A4X = leer
+FFTV_P4X = leer
+SumAll_kask = leer
+SubSynchronous_kask = leer
+Harmonics_kask = leer
+Synchronous_kask = leer
+NonSynchronous_kask = leer
+S0_kask = grneu()
+
+ShortViewGroup = grneu()
+
+; Filter Electrical Data; 
+
+Fu = DlgGetValue("BPFu")
+Fo = DlgGetValue("BPFo")
+if Fu <> 0 and Fo <>0 and Fu < Fo
+	sigx = FiltBP(sigx,0,0,10,Fu,Fo)
+	sigy = FiltBP(sigy,0,0,10,Fu,Fo)
+ende
+
+_Tgesamt = xdel?(sigx)*lang?(sigx)
+_time_max = DlgGetValue("Tmax")
+ 
+if _time_max < 0 or _time_max >_Tgesamt
+	_time_max = _Tgesamt
+ende
+_time_min= DlgGetValue("Tmin")
+if _time_min < 0 or _time_min >=  _time_max
+	_time_min = 0
+ende
+	
+if _time_min >= 0 and _time_min <= _time_max
+	dt = xdel?(sigx)
+	sigx = gren(sigx,_time_min, _time_max-dt)
+	sigy = gren(sigy,_time_min, _time_max-dt)
+	peak_ = gren(peak_,_time_min, _time_max-dt)
+end
+
+if 1
+	signal1 = sigx
+	signal2 =  sigy
+	Peaksig = peak_
+ende
+
+;Twindow = 20
+_Tgesamt = xdel?(sigx)*lang?(sigx)
+
+DlgSetValue("Tmax",_Tgesamt)
+_t_window = DlgGetValue("Twindow")	
+_ng = lang?(sigx)
+_dt = xdel?(sigx)
+_fs = 1/_dt
+_ntd = _t_window/_dt ; number of samples per t_window
+_Length = _ntd
+_deltat = _ntd*_dt
+_deltaf = 1/_deltat
+_fmax = _fs/2
+
+_T_fenster = _t_window;_windowlength*xdel?(_signalx); Fensterbreite
+_deltaf = 1/_T_fenster; Abtastzeit
+;DlgSetValue("df",_deltaf)
+_Fs = 1/xdel?(sigx); Abtastfrequenz
+;_Tgesamt = lang?(sigx)*xdel?(sigx); Gesamte Messdauer
+wenn _T_fenster > _Tgesamt
+	_T_fenster = _Tgesamt
+ende
+_anzahl_it_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iterationen mit Overlap-Fkt
+_windowlength = _T_fenster/xdel?(sigx)
+DlgSetValue("Averages",_anzahl_it_mit_overlap)
+
+DlgSetValue("Fs",_fs)
+DlgSetValue("Ndata",_ng)
+DlgSetValue("T",_Tgesamt)
+	
+;DlgSetValue("Averages",_averages)
+DlgSetValue("Twindow",_deltat)
+DlgSetValue("df",_deltaf)
+DlgSetValue("fmax",_fmax)
+
+
+
+
+_count = 0
+
+ii = 1;
+SOLANGE ii <= _anzahl_it_mit_overlap 
+	ratio = floor(ii/_anzahl_it_mit_overlap*100) 
+	seteinheit(ratio,"%",1)
+	zeigen ratio
+	;zeigen ii 
+	; Overlap theorie
+	;Tgesamt = _windowlength*Tfenster - (_windowlength-1)*Overlap*Tfenster
+	;Tbeginn = i*Tfenster - (i-1)*Overlap*Tfenster - Tfenster
+	;Tende = i*Tfenster - (i-1)*Overlap*Tfenster 
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;1) Zeitfenster Selektion
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	_Tbeginn = (ii-1)*_T_fenster-(ii-1)*_overlap/100*_T_fenster
+	_Tende = ii*_T_fenster-(ii-1)*_overlap/100*_T_fenster;Tbeginn + T_fenster
+	_T_fenster_verifikation = _Tende-_Tbeginn
+	_N_beginn = floor(((ii-1)-(ii-1)*_overlap/100)*_windowlength);
+	_N_end = floor((ii-(ii-1)*_overlap/100)*_windowlength)-1
+	_Tmittel = (_Tende+_Tbeginn)/2
+	wenn ii = 1
+		_sigx_i = grenindex(sigx,(ii-1)*_windowlength+1,ii*_windowlength)
+		_sigy_i = grenindex(sigy,(ii-1)*_windowlength+1,ii*_windowlength)
+		_peak_i = grenindex(peak_,(ii-1)*_windowlength+1,ii*_windowlength)
+	sonst 
+		_sigx_i = grenindex(sigx,_N_beginn,_N_end)
+		_sigy_i = grenindex(sigy,_N_beginn,_N_end)
+		_peak_i = grenindex(peak_,_N_beginn,_N_end)
+	ende
+
+	;ii = 1
+	;solange ii <= imax
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; BoxPlot
+	;_sigx_i = _sigx:[ii]
+	x = sort(_sigx_i,1)
+	n = lang?(x)
+	a1 = n*0.25
+	a2 = n*0.75
+	a3 = n*0.5
+	b1 = mod(n,4)
+	b2 = mod(n,4)
+	b3 = mod(n,2)
+	
+	wenn b1 = 0
+		x025 = 0.5*(x[a1]+x[a1+1]); wenn a 
+	sonst
+		x025 = x[a1]
+	end
+	wenn b2 = 0
+		x075 = 0.5*(x[a2]+x[a2+1]); wenn a 
+	sonst
+		x075 = x[a2]
+	end
+	wenn b3 = 0
+		x050 = 0.5*(x[a3]+x[a3+1]); wenn a 
+	sonst
+		x050 = x[a3]
+	end
+	x_iqr = binde(x_iqr, x075-x025); Interquartile oder quartilabstand
+	x_median = binde(x_median, x050); Median -> x050 or q2
+	x_mean = binde(x_mean,mean(x))
+	x_min = binde(x_min, min(x)); Max -> Boxplot Whisker
+	x_max = binde(x_max, max(x)); Min -> Boxplot Whisker
+	x_lq = binde(x_lq, x025); LowerQuartile -> Boxplot Quartil -> q1
+	x_uq = binde(x_uq, x075); UpperQuartile -> Boxplot Quartil -> q3
+	x_std = binde(x_std, Streu(x-mean(x))+mean(x)) 
+	x_range = binde(x_range, max(x)-min(x))
+	x_skew = binde(x_skew, 1/n*summe(((x-mean(x))/Streu(x-mean(x)))^3));
+	x_kurt = binde(x_kurt, 1/n*summe(((x-mean(x))/Streu(x-mean(x)))^4));
+	x_std_ = binde(x_std_, mean(x)- Streu(x-mean(x))) ; x_std 
+	;delta = 1.5*x_iqr; w = maximum whisker length
+	wenn 1
+		x_lower = binde(x_lower,x025 - 1.5*(x075-x025))
+		x_upper = binde(x_upper,x075 + 1.5*(x075-x025))
+	sonst
+		x_lower = x_min
+		x_upper = x_max
+	ende
+	seteinheit(x_iqr,einheit?(signal1,1),1)
+	seteinheit(x_median,einheit?(signal1,1),1)
+	seteinheit(x_mean,einheit?(signal1,1),1)
+	seteinheit(x_lower,einheit?(signal1,1),1)
+	seteinheit(x_upper,einheit?(signal1,1),1)
+	seteinheit(x_lq,einheit?(signal1,1),1)
+	seteinheit(x_uq,einheit?(signal1,1),1)
+	seteinheit(x_max,einheit?(signal1,1),1)
+	seteinheit(x_min,einheit?(signal1,1),1)
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;FFT und Orbit
+	
+	;_Ax = AmpSpectrumPeak_1(Feature:ChannelX-mitte(Feature:ChannelX),_length,_window,_overlap,_average)
+	_Ax = wurz(2)*kmp1(dftspectrum(_sigx_i-mean(_sigx_i),_window))
+	_Ay = wurz(2)*kmp1(dftspectrum(_sigy_i-mean(_sigy_i),_window))
+	
+	seteinheit(_Ax,einheit?(signal1,1),1)
+	seteinheit(_Ay,einheit?(signal2,1),1)
+	
+	Ax_kask = binde(Ax_kask,_Ax)
+	Ay_kask = binde(Ay_kask,_Ay)
+	
+	_Ax_i = _Ax	
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	;sequenz FreqEnergieSchnitt_FFT_RevB Ax_kask 0 24 "RMS_SS"
+	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 0 10 "RMS_LF"
+	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 10 1000 "RMS_ISO"
+	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 1000 Fmax "RMS_HF"
+	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 0 Fmax "RMS_All"
+
+	;sequenz FreqEnergieSchnitt_FFT_RevB _Ax 10 13 "RMS_OW"
+	;	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 24 26 "RMS_1X"
+	;	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 48 52 "RMS_2X"
+	;	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 72 78 "RMS_3X"
+	;	sequenz FreqEnergieSchnitt_FFT_RevB _Ax 96 104 "RMS_4X"
+	;RMS_All = RMS_LF + RMS_ISO + RMS_HF
+	Ax_kask_i = Ax_kask
+	SetSegLang(Ax_kask_i,lang?(_Ax))
+	sigxy = "S0_" + tform(_count,"f1.0")
+	<sigxy> = xy(mean(_sigx_i), mean(_sigy_i)); Phasenwerte Negativer Frequenzlinien
+	S0_i = <sigxy>
+	S0_kask:<sigxy> = <sigxy>
+	
+	wenn a_peaksig<>"None"
+		;sequenz Pulse2Speed _peak_i TrigLevel PulsPerRev 2
+		;_peak_i = Peak
+		;_peak_rec = stri(_peak_i,TrigLevel ,TrigLevel )
+		_dp0 = diff(_peak_i)*xdel?(_peak_i)
+		_Tx1 = posiex(-_dp0,2) - _Tbeginn; findet alle Zeiten, wo peak <= 0
+		_Tx0 = posiex(-_dp0,-2)- 5*xdel?(_peak_i) - _Tbeginn; findet alle Zeiten, wo peak <= 0
+		;_sigx_i = signal1
+		
+		OtrTachoMode(3, 0, PulsPerRev, 0)
+		_drehzahl = OtrTachoToSpeed(_peak_i)
+		SetEinheit(_drehzahl,"U/min",1)
+		_F0 = _drehzahl/60; Drehfrequenz in Hz
+		SetEinheit(_F0,"Hz",1)
+		_T0 = 1/_F0; Drehperiode in Sekunden
+		SetEinheit(_T0,"s",1)
+		_drehzahl_mitte = mitte(_drehzahl)
+		_F0_mitte = mitte(_F0)
+		_T0_mitte = mitte(_T0)
+		;zeigen _drehzahl_mitte
+	sonst
+		_F0_mitte = 0
+	ende
+	F0_kask = binde(F0_kask, _F0_mitte);
+	yeinheit F0_kask Hz
+	wenn _F0_mitte <> 0
+		_px = kmp2(FrequencyResponse(_peak_i,_sigx_i,_windowlength,_window,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+		_py = kmp2(FrequencyResponse(_peak_i,_sigy_i,_windowlength,_window,0,2));+180;*inrad; Phasendifferenz zwischen X und Bezugssignal +180 -> Übereinstimmung mit lsq und fourieranalysator da peak nach unten zeigt
+	sonst
+		_px = kmp2(dftspectrum(_sigx_i,_window))
+		_py = kmp2(dftspectrum(_sigy_i,_window))
+	ende
+	
+	yeinheit _px Grad
+	yeinheit _py Grad
+	;_Ay = AmpSpectrumPeak_1(Feature:ChannelY-mitte(Feature:ChannelY),_length,_window,_overlap,_average)
+	
+	Px_kask = binde(Px_kask,_Px)
+	Py_kask = binde(Py_kask,_Py)
+	
+	wenn lang?(_peak_i)>2
+		_deltaf = xdel?(_Ax); Frequenzlinienabstand
+		_anz_freq_linien = lang?(_Ax); Anzahl der Frequenzliníen
+		_F0_mitte = _drehzahl_mitte/60 
+		_iii = 1
+				
+		
+		wenn _F0_mitte <> 0
+			solange _iii <= lang?(_Ax_XX)
+				_Fo = _iii*_F0_mitte+2*_deltaf
+				_Fu = _iii*_F0_mitte-2*_deltaf
+				;_spect_x_ = wurz(2)*gren(kmp1(fft(_signalx)),_Fu,_F0); Amplitudespektrum fuer X
+				_spect_x = gren(_Ax,_Fu,_Fo); Amplitudespektrum fuer X
+				_fpos = posi(_spect_x,max(_spect_x))
+				_Ax_XX[_iii] = wert(_Ax,_fpos); 
+				_Px_XX[_iii] = wert(_px,_fpos)
+				
+				wenn _iii = 1
+					FFTV_A1X = binde(FFTV_A1X,_Ax_XX[_iii])
+					FFTV_P1X = binde(FFTV_P1X,_Px_XX[_iii])
+				ende
+				wenn _iii = 2
+					FFTV_A2X = binde(FFTV_A2X,_Ax_XX[_iii])
+					FFTV_P2X = binde(FFTV_P2X,_Px_XX[_iii])
+				ende
+				wenn _iii = 3
+					FFTV_A3X = binde(FFTV_A3X,_Ax_XX[_iii])
+					FFTV_P3X = binde(FFTV_P3X,_Px_XX[_iii])
+				ende
+				wenn _iii = 4
+					FFTV_A4X = binde(FFTV_A4X,_Ax_XX[_iii])
+					FFTV_P4X = binde(FFTV_P4X,_Px_XX[_iii])
+				ende
+				
+				_iii = _iii + 1
+		
+			ende
+			Fmax = DlgGetValue("Fs")/2.56
+			_spect_x = gren(_Ax,0,Fmax); Amplitudespektrum fuer X		
+			SumAll = sum(_spect_x)
+			SumAll_kask = binde(SumAll_kask, SumAll)
+				
+			_F0min = _F0_mitte - 1
+			_spect_x = gren(_Ax,0,_F0min); Amplitudespektrum fuer X
+			SubSynchronous = sum(_spect_x)
+			SubSynchronous_kask =  binde(SubSynchronous_kask, SubSynchronous);
+				
+			_anz_harmonics = Fmax/_F0_mitte
+			_qq = 1
+			Harmonics = 0
+			Synchronous = 0
+			solange _qq <= _anz_harmonics
+				_parname = "FFTE_" + tform(_qq,"") + "X"
+				_F0min = _qq * _F0_mitte - 1
+				_F0max = _qq * _F0_mitte + 1
+				_spect_x = gren(_Ax,_F0min,_F0max); Amplitudespektrum fuer X
+				{<_parname>} =  sum(_spect_x);
+				if _qq <= 8
+					Harmonics = Harmonics + {<_parname>}
+				ende
+				Synchronous = Synchronous + {<_parname>}
+		
+				_qq = _qq +1
+			ende
+			Harmonics_kask = binde(Harmonics_kask, Harmonics)
+			Synchronous_kask = binde(Synchronous_kask, Synchronous)
+			NonSynchronous = SumAll - SubSynchronous - Synchronous
+			NonSynchronous_kask = binde(NonSynchronous_kask, NonSynchronous) 
+
+		sonst
+			FFTV_A1X = binde(FFTV_A1X,0)
+			FFTV_P1X = binde(FFTV_P1X,0)
+			FFTV_A2X = binde(FFTV_A2X,0)
+			FFTV_P2X = binde(FFTV_P2X,0)
+			FFTV_A3X = binde(FFTV_A3X,0)
+			FFTV_P3X = binde(FFTV_P3X,0)
+			FFTV_A4X = binde(FFTV_A4X,0)
+			FFTV_P4X = binde(FFTV_P4X,0)
+
+			Fmax = DlgGetValue("Fs")/2.56
+			_spect_x = gren(_Ax,0,Fmax); Amplitudespektrum fuer X		
+			SumAll = sum(_spect_x)
+			SumAll_kask = binde(SumAll_kask, SumAll)
+			SubSynchronous_kask =  binde(SubSynchronous_kask, 0);
+			Harmonics_kask = binde(Harmonics_kask, 0)
+			Synchronous_kask = binde(Synchronous_kask, 0)
+			NonSynchronous_kask = binde(NonSynchronous_kask, 0) 
+		ende
+			
+	ende
+	
+	
+	; sin(a+b) = sina*cosb+cosa*sinb
+	wenn _F0_mitte <> 0 and a_sig1 <> a_peaksig;and a_sig1 <> a_sig2 
+		_count = _count + 1
+		_Acx = _Ax*sin(_px);
+		_Asx = _Ax*cos(_px)
+		_Acy = _Ay*sin(_py)
+		_Asy = _Ay*cos(_py)
+		
+		; wenn y vor x  -> Acx mit Acy und Asx mit Asy austauschen
+		; Gleich und Gegenlaufanteile
+		; fall = 2; (1, wenn x voreilend ist, 2 wenn y voreilend ist)
+		wenn _Fall_xy = "X-Y";1 ; (x vor y -> x = Realachse, y = Imaginärachse)
+			_rf = 1/2*kompl(_Acx+_Asy,_Acy-_Asx);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+			_rb = 1/2*kompl(_Acx-_Asy,_Acy+_Asx);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+		sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+			_rf = 1/2*kompl(_Acy+_Asx,_Acx-_Asy);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+			_rb = 1/2*kompl(_Acy-_Asx,_Acx+_Asy);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+		end
+		_rf_polar = pol(_rf); Polardarstellung des Gleichlaufanteils
+		_rb_polar = pol(_rb); Polardarstellung des Gegenlaufanteils
+		_rf_a = Kmp1(_rf_polar); Amplitude Gleichlauf
+		_rb_a = Kmp1(_rb_polar); Amplitude Gegenlauf
+		_rf_p = Kmp2(_rf_polar); Phase Gleichlauf
+		_rb_p = Kmp2(_rb_polar); Phase Gegenlauf
+		_G = _rf_a + _rb_a;	Grosse Halbachse, entspricht Smax
+		_K = abs(_rf_a - _rb_a);	kleine Halbachse, entspricht Smin
+		_FRI = _K/_G;  Form, Indikator Index Orbit 
+		_phimax = 1/2*(_rf_p+_rb_p); Hauptachseneigung bzgl. Realteil-achse (X oder Y-Richtung)
+		;		_Orbitindikator = abs(pi*_G*_K); Orbitfläche
+		
+		wenn 1
+			_df = xdel?(_rf_a); Frequenzlinineabstand
+			_ff = rampe(0,_df,lang?(_rf_a)); Positive Frequenzlinien
+			_fb = -1*rampe(0,_df,lang?(_rb_a)); Negative Frequenzlinien
+			_ASp_f = xy(_ff,_rf_a); Amplitudenwerte Positiver Frequenzlinien
+			
+			_ASp_b = xy(_fb,_rb_a); Amplitudenwerte Negativer Frequenzlinien
+			_Basp = binde(grenindex(_ASp_b,1,lang?(_ASp_b)-1),grenindex(_ASp_f,1,lang?(_ASp_f))); Zwei-Seitiges-Amplitudenspektrum
+			
+			_PSp_f = xy(_ff,_rf_p); Phasenwerte Positiver Frequenzlinien
+			_PSp_b = xy(_fb,_rb_p); Phasenwerte Negativer Frequenzlinien
+			_Bpsp = binde(grenindex(_PSp_b,1,lang?(_PSp_b)-1),grenindex(_PSp_f,1,lang?(_PSp_f))); Zwei-Seitiges-Phasenspektrum
+		ende	
+		
+		Basp_kask = binde(Basp_kask,_Basp)
+		seteinheit(Basp_kask,einheit?(signal1,1),1)
+		xeinheit Basp_kask Hz
+		Basp_kask_i = Basp_kask
+		SetSegLang(Basp_kask_i,lang?(_Basp))
+		
+		_Basp_i = _Basp
+		
+		; Parameterberechnung
+		;_ordlinie = DlgGetValue("Order")
+		_F0_ist = _ordlinie*_F0_mitte
+		
+		_deltaf = xdel?(_Ax); Frequenzlinienabstand
+		_deltaN = 3; Anzahl der Frequenzlinien
+		
+		_Fo = _F0_ist+_deltaN*_deltaf; Untere Grenzordnung
+		_Fu = _F0_ist-_deltaN*_deltaf; Obere Grenzordnung
+		_FNyquist =  lang?(_Ax)*_deltaf
+		wenn _Fu > _FNyquist or _Fo > _FNyquist
+		sonst
+			_spect_x = gren(_Ax,_Fu,_Fo); Amplitudespektrum fuer X
+			_fxpos = posi(_spect_x,max(_spect_x))
+			_Ax_freq = wert(_Ax,_fxpos); 
+			_Px_freq = wert(_Px,_fxpos)
+			
+			_spect_y = gren(_Ay,_Fu,_Fo); Amplitudespektrum fuer X
+			_fypos = posi(_spect_y,max(_spect_y))
+			_Ay_freq = wert(_Ay,_fypos); 
+			_Py_freq = wert(_Py,_fypos)
+			
+			;Phasenkorrektur
+			if _Px_freq < 0
+				_Px_freq = _Px_freq + 360;
+			end
+			if _Py_freq < 0
+				_Py_freq = _Py_freq + 360;
+			end
+			
+			_Acx1 = _Ax_freq*sin(_Px_freq);
+			_Asx1 = _Ax_freq*cos(_Px_freq)
+			_Acy1 = _Ay_freq*sin(_Py_freq)
+			_Asy1 = _Ay_freq*cos(_Py_freq)
+			
+			; Gleich und Gegenlaufanteile
+			; fall = 2; (1, wenn x voreilend ist, 2 wenn y voreilend ist)
+			wenn  _Fall_xy = "X-Y" ; (x vor y -> x = Realachse, y = Imaginärachse)
+				_rf1 = 1/2*kompl(_Acx1+_Asy1,_Acy1-_Asx1);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+				_rb1 = 1/2*kompl(_Acx1-_Asy1,_Acy1+_Asx1);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+			sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+				_rf1 = 1/2*kompl(_Acy1+_Asx1,_Acx1-_Asy1);   Gleichlaufanteil als komplexe Zahl über die Drehfrequenz
+				_rb1 = 1/2*kompl(_Acy1-_Asx1,_Acx1+_Asy1);   gegenlaufanteil als komplexe Zahl über die Drehfrequenz
+			end
+			_rf_polar1 = pol(_rf1); Polardarstellung des Gleichlaufanteils
+			_rb_polar1 = pol(_rb1); Polardarstellung des Gegenlaufanteils
+			_rf_a1 = Kmp1(_rf_polar1); Amplitude Gleichlauf
+			_rb_a1 = Kmp1(_rb_polar1); Amplitude Gegenlauf
+			_rf_p1 = Kmp2(_rf_polar1); Phase Gleichlauf
+			_rb_p1 = Kmp2(_rb_polar1); Phase Gegenlauf
+			if _rf_p1 < 0
+				_rf_p1 = _rf_p1 + 360;
+			end
+			if _rb_p1 < 0
+				_rb_p1 = _rb_p1 + 360;
+			end
+			_G01 = _rf_a1 + _rb_a1;	Grosse Halbachse, entspricht Smax
+			_K01 = abs(_rf_a1 - _rb_a1);	kleine Halbachse, entspricht Smin
+			_FRI1 = _K01/_G01;  Form, Indikator Index Orbit 
+			_phimax1 = 1/2*(_rf_p1+_rb_p1); Hauptachseneigung bzgl. Realteil-achse (X oder Y-Richtung)
+			;		_phimax1 = 1/2*(_rb_p1-_rf_p1); Hauptachseneigung bzgl. Realteil-achse (X oder Y-Richtung) -> Muszynska
+			if _phimax1 < 0
+				_phimax1 = _phimax1 + 360;
+			end
+			_Orbitindikator1 = abs(pi*_G01*_K01); Orbitfläche
+			
+			;Gleichungen prüfen
+			_t = rampe(0,xdel?(_sigx_i),_windowlength)
+			N_orbit_rev = 4
+			_t_orbit = N_orbit_rev*_T0_mitte
+			_nsamples_orbit = floor(_t_orbit / xdel?(_sigx_i))
+			
+			_Xcenter = mean(_sigx_i)
+			_Ycenter = mean(_sigy_i)
+			
+			sigxy = "orbit_" + tform(_count,"f1.0")
+			<sigxy> = xyvon(grenindex(_sigx_i-mean(_sigx_i),1,_nsamples_orbit ),grenindex(_sigy_i-mean(_sigy_i),1,_nsamples_orbit ))
+			_Orbit_unfiltered_i = <sigxy>
+			GrKanalAdd(Orbit_unfiltered,<sigxy>)
+			
+			<sigxy> = xyvon(_rf_a1*sin(2*pi*_F0_ist*_t + _rf_p1),_rf_a1*cos(2*pi*_F0_ist*_t + _rf_p1))
+			_Orbit_Forward_i = sigxy
+			GrKanalAdd(Orbit_Forward,<sigxy>)
+			<sigxy> =xyvon(_rb_a1*sin(2*pi*_F0_ist*_t + _rb_p1),_rb_a1*cos(2*pi*_F0_ist*_t + _rb_p1))
+			_Orbit_backward_i = <sigxy>
+			GrKanalAdd(Orbit_backward,<sigxy>)
+			
+			wenn  _Fall_xy = "X-Y";1 ; (x vor y -> x = Realachse, y = Imaginärachse)
+				<sigxy> =xyvon(_Ax_freq*sin(2*pi*_F0_ist*_t+_Px_freq*pi/180),_Ay_freq*sin(2*pi*_F0_ist*_t+_Py_freq*pi/180))
+			sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+				<sigxy> =xyvon(_Ay_freq*sin(2*pi*_F0_ist*_t+_Py_freq*pi/180),_Ax_freq*sin(2*pi*_F0_ist*_t+_Px_freq*pi/180))
+			end
+			_Orbit_filtered_i = <sigxy>
+			GrKanalAdd(Orbit_filtered,<sigxy>)
+		ende
+	sonst
+		_count = _count + 1
+		_Ax_freq = 0
+		_Px_freq = 0
+		_Ay_freq = 0
+		_Py_freq = 0
+		_Orbitindikator1 = 0
+		_G01 = 0
+		_K01 = 0
+		_phimax1 = 0
+		_rf_a1 = 0
+		_rb_a1 = 0
+		_rf_p1 = 0
+		_rb_p1 = 0
+		
+		;Gleichungen prüfen
+		_t = rampe(0,xdel?(_sigx_i),_windowlength)
+		N_orbit_rev = 4
+		_t_orbit = N_orbit_rev*_T0_mitte
+		_nsamples_orbit = floor(_t_orbit / xdel?(_sigx_i))
+		
+		_Xcenter = mean(_sigx_i)
+		_Ycenter = mean(_sigy_i)
+		
+		sigxy = "orbit_" + tform(_count,"f1.0")
+		<sigxy> = xyvon(_sigx_i,_sigy_i)
+		_Orbit_unfiltered_i = <sigxy>
+		GrKanalAdd(Orbit_unfiltered,<sigxy>)
+			
+		<sigxy> = xyvon(0,0)
+		_Orbit_Forward_i = sigxy
+		GrKanalAdd(Orbit_Forward,<sigxy>)
+		<sigxy> =xyvon(0,0)
+		_Orbit_backward = <sigxy>
+		GrKanalAdd(Orbit_backward,<sigxy>)
+			
+		wenn  _Fall_xy = "X-Y";1 ; (x vor y -> x = Realachse, y = Imaginärachse)
+			<sigxy> =xyvon(0,0)
+		sonst; (y vor x -> x = Imaginärachse, y = Realachse)
+			<sigxy> =xyvon(0,0)
+		end
+		_Orbit_filtered_i = <sigxy>
+		GrKanalAdd(Orbit_filtered,<sigxy>)
+	ende
+	
+	
+	
+	A1X = binde(A1X,_Ax_freq)
+	P1X = binde(P1X,_Px_freq) 
+	A1Y = binde(A1Y,_Ay_freq)
+	P1Y = binde(P1Y,_Py_freq) 
+	OI = binde(OI,_Orbitindikator1)
+	Xcenter = binde(Xcenter,_Xcenter)
+	Ycenter = binde(Ycenter,_Ycenter) 
+			
+	Smax1 = binde(Smax1,_G01)
+	Smin1 = binde(Smin1,_K01)
+	phi1 = binde(Phi1,_phimax1)
+	Rfa1= binde(Rfa1,_rf_a1)
+	Rba1 = binde(Rba1,_rb_a1)
+	Rfp1 = binde(Rfp1,_rf_p1)
+	Rbp1 = binde(Rbp1,_rb_p1)
+	yeinheit phi1 Grad
+	yeinheit Rfp1 Grad
+	yeinheit Rbp1 Grad
+			
+			
+	OB1X = Orbit_backward:[_count];[ii]
+	OF1X = Orbit_forward:[_count];[[ii]
+	Ofiltered1X = Orbit_filtered:[_count];[[ii]
+	Ounfiltered = Orbit_unfiltered:[_count];[[ii]
+	
+	seteinheit(Xcenter,einheit?(signal1,1),1)
+	seteinheit(Ycenter,einheit?(signal2,1),1)
+	Ocenter = kompl(Xcenter,Ycenter)
+	OcenterStart = Ocenter[1]
+	OcenterEnd = Ocenter[lang?(Ocenter)]
+	
+	seteinheit(A1X,einheit?(signal1,1),1)
+	yeinheit P1X Grad
+	PolarPlotX = kompl(A1X,P1X)
+	P0X = PolarPlotX[1]
+	PendX = PolarPlotX[lang?(PolarPlotX)]
+			
+	seteinheit(A1Y,einheit?(signal2,1),1)
+	yeinheit P1Y Grad
+	PolarPlotY = kompl(A1Y,P1Y)
+	P0Y = PolarPlotY[1]
+	PendY = PolarPlotY[lang?(PolarPlotY)]
+			
+	Feature:A1X = A1X
+	Feature:P1X = P1X	
+	
+	CwSelectWindow("Vector")
+	CwDisplaySet("displaymode",9)
+	CwSelectByIndex("y-axis",1)
+	CwAxisSet("range",1)
+	CwSelectWindow("Orbit")
+	CwDisplaySet("displaymode",9)
+	CwSelectByIndex("y-axis",1)
+	CwAxisSet("range",1)
+	CwSelectWindow("OrbitCenter")
+	CwDisplaySet("displaymode",9)
+	CwSelectByIndex("y-axis",1)
+	CwAxisSet("range",1)
+	
+	
+	
+	_stopidx = dlggettext("stop")
+	if _stopidx <> "No"
+		break
+	ende
+	
+	
+	ii = ii +1
+ende
+
+;x_std = x_std + x_mean
+;x_std_ = x_std_ + x_mean
+
+wenn a_sig2="None"
+	fact = 0
+sonst
+	fact = 1
+ende
+
+SetSegLang(Ax_kask,lang?(_Ax))
+SetSegLang(Ay_kask,lang?(_Ay))
+Ax_mean = MatrixSumLines(Ax_kask,0)/(ii-1)
+Ay_mean = MatrixSumLines(Ay_kask,0)/(ii-1)*fact
+
+wenn _F0_mitte <> 0 and a_sig1 <> a_sig2 and a_sig1 <> a_peaksig
+	SetSegLang(Px_kask,lang?(_Px))
+	SetSegLang(Py_kask,lang?(_Py))
+	Px_mean = MatrixSumLines(Px_kask,0)/(ii-1)
+	Py_mean = MatrixSumLines(Py_kask,0)/(ii-1)*fact
+	SetSegLang(Basp_kask,lang?(_Basp))
+ende
+
+;Feature:SumAll = SumAll_kask;
+;Feature:SubSynchronous = SubSynchronous_kask
+;Feature:Harmonics = Harmonics_kask
+;Feature:Synchronous = Synchronous_kask
+;Feature:NonSynchronous = NonSynchronous_kask
+;	
+;Feature:FFTV_A1X = FFTV_A1X
+;Feature:FFTV_P1X = FFTV_P1X
+;Feature:FFTV_A2X = FFTV_A2X
+;Feature:FFTV_P2X = FFTV_P2X
+;Feature:FFTV_A3X = FFTV_A3X
+;Feature:FFTV_P3X = FFTV_P3X
+;Feature:FFTV_A4X = FFTV_A4X
+;Feature:FFTV_P4X = FFTV_P4X
+
+;entf _*

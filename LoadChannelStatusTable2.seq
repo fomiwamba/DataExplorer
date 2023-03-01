@@ -1,0 +1,272 @@
+;sequenz LoadChannelStatusTable
+
+sequenz imc_logging "load_channel_status_table started"
+
+channel_status_vs_time_file = assetfolder + "\" + "Output\Features\" + "ChannelStatusTable.csv"; -> max(Status) of Channel
+channel_severity_vs_time_file = assetfolder + "\" + "Output\Features\" + "ChannelSeverityTable.csv"; -> max(Status) of Channel
+asset_current_status = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"; Last Status of ChannelFeature
+
+view_sev = PnGetValue("AssetOverview.view_sev")
+
+if fsfileexists(channel_status_vs_time_file) and fsfileexists(channel_severity_vs_time_file) and fsfileexists(asset_current_status)
+	
+
+	;if view_sev = 0
+	file = channel_status_vs_time_file
+	sequenz get_table_data_as_map
+	channel_status_vs_time_map = Map
+	channel_status_vs_time_rows = ParameterListe
+	channel_status_vs_time_cols =ChannelListe
+	channel_status_vs_time_map = channel_status_vs_time_map;MatrixTranspose(channel_status_vs_time_map)
+	ChannelListeAll = ChannelListe
+	entf file
+	;else
+	file = channel_severity_vs_time_file
+	sequenz get_table_data_as_map
+	channel_sev_vs_time_map = Map
+	channel_sev_vs_time_rows = ParameterListe
+	channel_sev_vs_time_cols =ChannelListe
+	channel_sev_vs_time_map = channel_sev_vs_time_map;MatrixTranspose(channel_status_vs_time_map)
+	ChannelListeAll = ChannelListe
+	entf file
+	;end
+	
+	AssetInfo = Grneu()
+	ChannelStatusAll = leer
+	ChannelSeverityAll = leer
+	ChannelIdxAll = leer
+	ChannelListeAll_ = TxArrayCreate(0)
+	for _ii = 1 to txarraygetsize(ChannelListe)
+		ChannelIdxAll = binde(ChannelIdxAll, _ii)
+		_chann_name_parts = TxSplit(ChannelListe[_ii],"-")
+		ChannelListeAll_[_ii] = _chann_name_parts[1]
+		ChannelStatus = channel_status_vs_time_map:[_ii]
+		ChannelSeverity = channel_sev_vs_time_map:[_ii]
+		_last = lang?(ChannelStatus)
+		ChannelStatusAll = binde(ChannelStatusAll, ChannelStatus[_last])
+		ChannelSeverityAll = binde(ChannelSeverityAll, ChannelSeverity[_last])
+	end
+	AssetInfo:ChannelStatus = ChannelStatusAll
+	AssetInfo:ChannelSeverity = ChannelSeverityAll
+	AssetInfo:Channels = ChannelListeAll_
+	AssetInfo:ChannelIdx = ChannelIdxAll
+	;ChannelListe = ChannelListeAll
+	;del ChannelListeAll
+
+	if view_sev = 0
+		_TxErr$ = CwLoadCCV( "AssetOverview.ChannelStatusMap", "channel_status_vs_time_map.ccv")
+		wenn tverg(_TxErr$,"") <> 0
+			err = BoxNachricht("Info","channel_status_vs_time_map","!1")
+		ende
+	else
+		_TxErr$ = CwLoadCCV( "AssetOverview.ChannelStatusMap", "channel_sev_vs_time_map.ccv")
+		wenn tverg(_TxErr$,"") <> 0
+			err = BoxNachricht("Info","channel_sev_vs_time_map","!1")
+		ende
+	end
+	
+	
+	
+	; channel liste tabelle
+	if 0
+		file = asset_current_status
+		sequenz get_table_data_as_map
+		asset_current_status_map0 = Map
+		asset_current_status_rows = ParameterListe
+		asset_current_status_cols =ChannelListe
+		asset_current_status_map = asset_current_status_map0;MatrixTranspose(asset_current_status_map0)
+		entf file
+		
+		_anz_chann = txArrayGetSize( ChannelListe)
+		asset_current_status_cols =ChannelListe
+		_table_name1 = "AssetOverview.ChannelTable1"
+		_table_cols_1 = PnTableColumns?(_table_name1)
+		_table_rows_1 = PnTableRows?(_table_name1)
+		for _ii = 1 to _table_rows_1
+			for _jj = 1 to _table_cols_1
+				PnTableSetCell(_table_name1,_jj,_ii,"")
+				_parstatus_color = RGB(255, 255, 255)
+				;RgObjSetColor(_table_name,1,_parstatus_color,_jj,_ii)		
+				PnTableSetProperty(_table_name1,_jj,_ii,"FillColor",_parstatus_color)	
+			ende
+		ende
+		_table_cols_2 = 0
+		_table_rows_2= 0
+		if _anz_chann > _table_rows_1
+			asset_current_status_cols =ChannelListe
+			_table_name2 = "AssetOverview.ChannelTable2"
+			_table_cols_2 = PnTableColumns?(_table_name2)
+			_table_rows_2= PnTableRows?(_table_name2)
+			for _ii = 1 to _table_rows_2
+				for _jj = 1 to _table_cols_2
+					PnTableSetCell(_table_name2,_jj,_ii,"")
+					_parstatus_color = RGB(255, 255, 255)
+					;RgObjSetColor(_table_name,1,_parstatus_color,_jj,_ii)		
+					PnTableSetProperty(_table_name2,_jj,_ii,"FillColor",_parstatus_color)	
+				ende
+			ende
+		ende
+		_anz_chann_soll1 = _table_rows_1 + _table_rows_2
+		_table_cols_3 = 0
+		_table_rows_3= 0
+		if _anz_chann > _anz_chann_soll1
+			asset_current_status_cols =ChannelListe
+			_table_name3 = "AssetOverview.ChannelTable3"
+			_table_cols_3 = PnTableColumns?(_table_name2)
+			_table_rows_3= PnTableRows?(_table_name2)
+			for _ii = 1 to _table_rows_3
+				for _jj = 1 to _table_cols_3
+					PnTableSetCell(_table_name3,_jj,_ii,"")
+					_parstatus_color = RGB(255, 255, 255)
+					;RgObjSetColor(_table_name,1,_parstatus_color,_jj,_ii)		
+					PnTableSetProperty(_table_name3,_jj,_ii,"FillColor",_parstatus_color)	
+				ende
+			ende
+		ende
+	
+		chname_list = TxArrayCreate(0)
+		chstatus_list = TxArrayCreate(0)
+		chseverity_list = TxArrayCreate(0)
+		_item = 0
+		_anz_chann_soll2 = _table_rows_1 + _table_rows_2 + _table_rows_3
+		for _ii =1 to _anz_chann +1
+			if _ii > _anz_chann_soll2
+				break
+			end
+			if _ii = 1
+				PnTableSetCell(_table_name1,1,_ii,"Id")
+				PnTableSetCell(_table_name1,2,_ii,"Channel")
+			else
+				if _ii <= _table_rows_1
+					PnTableSetCell(_table_name1,1,_ii,_ii-1)
+					PnTableSetCell(_table_name1,2,_ii,ChannelListe[_ii-1])
+				elseif _ii > _table_rows_1 and _ii <= _anz_chann_soll1
+					PnTableSetCell(_table_name2,1,_ii-_table_rows_1,_ii-1)
+					PnTableSetCell(_table_name2,2,_ii-_table_rows_1,ChannelListe[_ii-1])
+				else 
+					_iisoll = _ii-_table_rows_1-_table_rows_2
+					PnTableSetCell(_table_name3,1,_iisoll,_ii-1)
+					PnTableSetCell(_table_name3,2,_iisoll,ChannelListe[_ii-1])
+				end
+			
+				_ist_channel = ChannelListe[_ii-1]
+			
+				for _kk = 1 to txarraygetsize(asset_current_status_cols)
+					if tverg(_ist_channel, asset_current_status_cols[_kk]) = 0
+					
+					
+						_colidx = _kk;-1	
+						__ist_channel_par_status = asset_current_status_map0:[_colidx]
+						_parstatus = max(__ist_channel_par_status)
+						;_parstatus = __ist_channel_par_status[lang?(__ist_channel_par_status)]
+						;_parseverity = channel_severity_vs_time_map[lang?(__ist_channel_par_status)]
+					
+						_item = _item + 1
+						chname_list[_item] = _ist_channel
+						chstatus_list[_item] = tform(_parstatus,"f1.0")
+						;chseverity_list[_item] = tform(_parseverity,"f1.0")
+
+						sequenz find_status_colour; -> _parstatus_color
+						;RgObjSetColor(_table_name,1,_parstatus_color,2,_ii)	
+						if _ii <= _table_rows_1
+							PnTableSetProperty(_table_name1,2,_ii,"FillColor",_parstatus_color)	
+						elseif _ii > _table_rows_1 and _ii <= _anz_chann_soll1
+							PnTableSetProperty(_table_name2,2,_ii-_table_rows_1,"FillColor",_parstatus_color)	
+						else
+							PnTableSetProperty(_table_name3,2,_iisoll,"FillColor",_parstatus_color)	
+						end
+						break
+					ende
+				ende
+				
+			ende
+		ende
+		ChannelInfo = Grneu()
+		ChannelInfo:chname = chname_list
+		ChannelInfo:chstatus = chstatus_list
+		asset_current_status_map = MatrixTranspose(asset_current_status_map)
+	end
+end
+;file = assetfolder + "\" + "Output\Features\" + "ChannelFeatureStatusTable.csv"; -> 1st colummn --> parameters, 1st row --> channels
+if view_sev = 1
+	file = assetfolder + "\" + "Output\Features\" + "current_parameter_table_delta_rel.csv"
+else
+	file = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"
+end
+
+for _kk = 1  to PnTableColumns?("AssetOverview.ChannelFeatureGitter")
+	PnTableShowColumn("AssetOverview.ChannelFeatureGitter",_kk,1)
+end
+
+if fsfileexists(file)
+	_fileid = FileOpenXLS(file,0)
+	wenn _fileid > 0
+		; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+		FileXLSSelectSheet(_fileid,1)
+		ChFeatParListe = TxArrayCreate(1)
+		ChListe = TxArrayCreate(1)
+		ChFeatStatusData_Par = TxArrayCreate(1)
+		ChFeatStatusData_ = GrNeu()
+		ChIdx = leer
+		_ii = 1
+		SOLANGE _ii <=  25;60
+			_ParName = FileXLSCellRead(_fileid,1,_ii,0)
+			wenn tverg(_ParName,"") = 0
+				break
+			sonst
+				if _ii > 1
+					ChFeatParListe[_ii] = _ParName
+				end
+				
+				_jj = 1
+				SOLANGE _jj <=  2560
+					_ChName = FileXLSCellRead(_fileid,_jj,_ii,0)
+					_ChName = TxReplace(_ChName,",",".",0,1)
+					wenn tverg(_ChName,"") = 0
+						break
+					sonst
+				
+						if _ii = 1 and _jj > 1
+							ChListe[_jj-1] = _ChName
+							_zeile = _jj-1
+							ChIdx = binde(ChIdx, _jj-1)
+						end
+						if _ii > 1 and _jj > 1
+							ChFeatStatusData_Par[_jj-1] = tform(tzuew(_ChName,"f"),"f1.0")
+						end					
+					ende
+					_jj = _jj + 1
+				ENDE
+			ende
+			PnTableSetCell("AssetOverview.ChannelFeatureGitter",1,0, "ChannelIdx")
+			PnTableSetColumn("AssetOverview.ChannelFeatureGitter",1,1, ChIdx)
+			PnTableSetCell("AssetOverview.ChannelFeatureGitter",2,0, "Channels")
+			PnTableSetColumn("AssetOverview.ChannelFeatureGitter",2,1, ChListe)
+			if _ii >1
+				ChFeatStatusData_:{<_ParName>} = ChFeatStatusData_Par
+				_spalte = _ii + 1
+				PnTableSetColumn("AssetOverview.ChannelFeatureGitter",_spalte,1, ChFeatStatusData_:{<_ParName>})
+				PnTableSetCell("AssetOverview.ChannelFeatureGitter",_spalte,0, _parname)	
+				
+			end
+			_ii = _ii + 1
+		END
+		err = FileClose(_fileid)
+
+	ende
+ende
+
+for _kk = _ii+1  to PnTableColumns?("AssetOverview.ChannelFeatureGitter")
+	PnTableShowColumn("AssetOverview.ChannelFeatureGitter",_kk,0)
+end
+if 0
+	for _ii = 1 to GrChanNum?(ChFeatStatusData_)
+		_parname = GrChanName?(ChFeatStatusData_,_ii)
+		_spalte = _ii + 2
+		PnTableSetColumn("AssetOverview.ChannelFeatureGitter",_spalte,1, ChFeatStatusData_:[_ii])
+		PnTableSetCell("AssetOverview.ChannelFeatureGitter",_spalte,0, _parname)	
+	end
+end
+	
+entf _*
+;PnTableSetCell( "AssetOverview.ChannelFeatureGitter1", 2, 1, "Kanal1")

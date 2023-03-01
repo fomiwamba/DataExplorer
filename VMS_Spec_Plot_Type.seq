@@ -1,0 +1,69 @@
+;sequenz VMS_Spec_Plot_Type
+sequenz imc_logging "start_analytics_tool started"
+
+Idx = PnGetSelectedItem("VMS_Spec_Plot_Type")
+if idx > 0
+	ist_vms_spec_plot = PnGetItemText("VMS_Spec_Plot_Type",Idx)
+	
+	_fct_name = PnGetText("Spectrum")
+	;SpectrumPlot = "SpectrumPlot"
+	;Ax_Trend_Plot = _group
+	cw_verz = "C:\BDA\ExpertAnalysis\"
+	if tverg(ist_vms_spec_plot,"Spectrogram") = 0
+		if txwo(_fct_name,  "_PSD_Trend") <> 0 or txwo(_fct_name,  "_FFT_Mag_Trend") <> 0 or txwo(_fct_name,  "_FRF_Mag_Trend") <> 0
+			SpectrumTemplate = "FRF_Mag_Plot.ccv"
+		elseif txwo(_fct_name,  "_FFT_Ph_Trend") <> 0 or txwo(_fct_name,  "_FRF_Ph_Trend") <> 0 
+			SpectrumTemplate = "FRF_Ph_Plot.ccv"
+		else
+			SpectrumTemplate = "FRF_Coh_Plot.ccv"
+		end
+		
+	elseif tverg(ist_vms_spec_plot,"Waterfall") = 0
+		if txwo(_fct_name,  "_PSD_Trend") <> 0 or txwo(_fct_name,  "_FFT_Mag_Trend") <> 0 or txwo(_fct_name,  "_FRF_Mag_Trend") <> 0
+			SpectrumTemplate = "FRF_Mag_Plot_Waterfall.ccv"
+		elseif txwo(_fct_name,  "_FFT_Ph_Trend") <> 0 or txwo(_fct_name,  "_FRF_Ph_Trend") <> 0 
+			SpectrumTemplate = "FRF_Ph_Plot_Waterfall.ccv"
+		else
+			SpectrumTemplate = "FRF_Coh_Plot_Waterfall.ccv"
+		end
+	elseif tverg(ist_vms_spec_plot,"Standard") = 0
+		if txwo(_fct_name,  "_PSD_Trend") <> 0 or txwo(_fct_name,  "_FFT_Mag_Trend") <> 0 or txwo(_fct_name,  "_FRF_Mag_Trend") <> 0
+			SpectrumTemplate = "FRF_Mag_Plot_One.ccv"
+		elseif txwo(_fct_name,  "_FFT_Ph_Trend") <> 0 or txwo(_fct_name,  "_FRF_Ph_Trend") <> 0 
+			SpectrumTemplate = "FRF_Ph_Plot_One.ccv"
+		else
+			SpectrumTemplate = "FRF_Coh_Plot_One.ccv"
+		end
+	else
+	end
+	CwLoadCCV(SpectrumPlot,cw_verz + SpectrumTemplate)
+	
+	_freqmax = PnGetValue("FrequencyParameters.View_Freq_max")
+	CwSelectMode("title")
+	_ret = CwIsWindow(SpectrumPlot)
+	wenn _ret <> 0
+		CwSelectWindow(SpectrumPlot)
+		CwSelectByIndex("x-axis", 1)
+		CwAxisSet("range",4)
+		CwAxisSet("min", 0)
+		CwAxisSet("max", _freqmax)
+		
+;		CwSelectWindow(SpectrumPlot)
+;		CwSelectByIndex("z-axis", 1)
+;		CwDisplaySet("displaymode", 3)
+;		CwDisplaySet("3D.perspective",2)
+;		w1 = pngetvalue("FrequencyParameters.winkel1_3d")
+;		w2 = pngetvalue("FrequencyParameters.winkel2_3d")
+;		w3 = pngetvalue("FrequencyParameters.winkel3_3d")
+;		CwDisplaySet("3D.angle1",w1)
+;		CwDisplaySet("3D.angle2",w2)
+;		CwDisplaySet("3D.angle3",w3)
+	ende
+
+	sequenz ShowSuesMarkers
+ende
+	
+;Spectrogram
+;Waterfall
+;Standard
+

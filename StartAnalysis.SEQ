@@ -1,0 +1,59 @@
+sequenz imc_logging "start_analysis started"
+;DlgShow("ViewCirclePlot",1)
+
+;idx = DlgGetSelectedItem("SignalList1")
+;ChannelName = DlgGetItemText("SignalList1",idx)
+;sequenz ReadConfigChannel
+
+sequenz UpdateChannelConfigAndData
+
+sequenz BoxPlot_Orbit_Analysis
+
+
+
+
+;sequenz FamosBoxplot
+
+;wenn a_sig2 <> "None" and a_peak <> "None"
+;	sequenz OrbitFilter
+;;	sequenz FreqEnergieSchnitt_FFT Basp_kask 24 26 "Basp_RMS_1XF"
+;;	sequenz FreqEnergieSchnitt_FFT Basp_kask -26 -24 "Basp_RMS_1XB"
+;;	CwLoadCCV("Vector",input_verz + "PolarPlot.ccv")
+;;	CwLoadCCV("Orbit",input_verz + "Orbit.ccv")
+;;	CwLoadCCV("Fullspectrum",input_verz + "Basp.ccv")
+;;	CwLoadCCV("ForwardBackward",input_verz + "1XFB.ccv")
+;sonst
+;	sequenz FFT_signal
+;;	CwLoadCCV("TWF",input_verz + "TWF.ccv")
+;ende
+;CwLoadCCV("Ax_mean",input_verz + "spectrum.ccv")
+;CwLoadCCV("Ax_kask",input_verz + "spectrum_kask.ccv")
+;CwLoadCCV("Boxplot",input_verz + "boxplot.ccv")
+
+
+wenn 0
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 0 24 "RMS_SS"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 0 10 "RMS_LF"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 10 200 "RMS_ISO1"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 200 1000 "RMS_ISO2"
+	wenn Fmax < 5000
+		sequenz FreqEnergieSchnitt_FFT Ax_kask 1000 Fmax "RMS_HF1"
+	sonst
+		sequenz FreqEnergieSchnitt_FFT Ax_kask 1000 5000 "RMS_HF1"
+		sequenz FreqEnergieSchnitt_FFT Ax_kask 5000 Fmax "RMS_HF2"
+	ende
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 10 13 "RMS_OW"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 24 26 "RMS_1X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 48 52 "RMS_2X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 72 78 "RMS_3X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 96 104 "RMS_4X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 120 130 "RMS_5X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 144 156 "RMS_6X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 168 182 "RMS_7X"
+	sequenz FreqEnergieSchnitt_FFT Ax_kask 192 208 "RMS_8X"
+ende
+;CwLoadCCV("FFT_Features",input_verz + "FFT_Feat.ccv")
+
+;entf _*
+
+

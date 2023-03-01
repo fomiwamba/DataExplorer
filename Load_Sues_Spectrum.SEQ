@@ -1,0 +1,151 @@
+sequenz imc_logging "load_sues_spectrum started"
+
+;sequenz Load_Sues_Spectrum
+_outputfile = "C:\BDA\ExpertAnalysis\TrendView_Output.txt"
+_erg = FsDeleteFile(_outputfile)
+; To Do -> If FeatFile exist? then continue
+
+Featfile = ""
+Store = "OFF"
+Average = "OFF"
+AveragedSpectrum = PnGetValue("AveragedSpectrum")
+Deltaf = PnGetValue("Deltaf")
+Freq_max = PnGetValue("Freq_max")
+if Deltaf > 1 or Deltaf <= 0
+	Deltaf = 0.5
+end
+if Freq_max <= 0
+	Freq_max = 0
+end
+if AveragedSpectrum = 1
+	Average = "ON"
+end
+page_ist  = PnGetActivePage()
+if page_ist = 1
+
+	_datumFrom = PnGetValue("DateFrom")
+	_datumTo = PnGetValue("DateTo")
+	_datumFromtxt = zeitintext(_datumFrom, 3)
+	_datumTotxt = zeitintext(_datumTo, 3)
+else
+	_datumFromtxt = ""
+	_datumTotxt = ""
+end
+
+_inputfile = "C:\BDA\ExpertAnalysis\TrendView_Input.txt"
+_fh = FileOpenASCII(_inputfile,1)
+_err = FileLineWrite(_fh,AssetFolder,0)
+_err = FileLineWrite(_fh,spec_filename,0)
+_err = FileLineWrite(_fh,Featfile,0)
+_err = FileLineWrite(_fh,Store,0)
+_err = FileLineWrite(_fh,Average,0)
+_err = FileLineWrite(_fh,tform(Deltaf,"f1.2"),0)
+_err = FileLineWrite(_fh,tform(Freq_max,"f1.2"),0)
+_err = FileLineWrite(_fh,_datumFromtxt,0)
+_err = FileLineWrite(_fh,_datumTotxt,0)
+_err = FileClose(_fh)
+
+;Applikation Vollbild C:\python37\python.exe C:\BDA\AI\FilterFftTrend.py
+sequenz imc_logging "cadis_filter_fft_trend started"
+ret = Execute("C:\python37\python.exe", "C:\BDA\AI\Filter_fft_trend.py", "", 0,-1)
+
+
+_erg = FsFileExists(_outputfile)
+if _erg = 1
+	_fh0= FileOpenASCII(_outputfile,0 )
+	if _fh0 > 0
+		_TxZeile = ""
+		_ok = 0
+		solange _ok = 0
+			_ok = FileLineRead( _fh0, _TxZeile, 0 )
+			if _ok = 0 
+				FftFileSoll = _TxZeile
+			ende
+		ende
+		FileClose(_fh0)
+	sonst
+		_err = FileErrCode?()
+		zeigen _err
+	ende
+	
+	_erg = FsFileExists(FftFileSoll)
+	if _erg = 1
+
+		importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+		_par_unit_ = "Hz"
+
+		t0 = ZeitSystem?()
+		Eventidx = leer;
+		Eventdate = leer;
+		_x = leer
+		_groupart = 1;
+		_fileid = FileOpenFAS(FftFileSoll, importsvorlage, 0); ascii_statusfile
+		wenn _fileid > 0
+			_anzPar = FileObjNum?(_fileid)
+			fft_idx = 1
+			SOLANGE fft_idx <= _anzPar  
+				;zeigen fft_idx
+				_typ = FileObjType?(_fileid,fft_idx)
+				wenn _typ = 1
+					_Parname = FileObjName?(_fileid,fft_idx)
+					{<_Parname>} = FileObjRead(_fileid,fft_idx)
+					seteinheit ({<_Parname>},_par_unit_,0)
+				
+					fftfile_name = FsSplitPath(FftFileSoll,2)
+					parname_trend = fftfile_name
+				
+					wenn fft_idx = 1				
+						{<parname_trend>} = GrNeu()
+						{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+					sonst
+						{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+					ende
+						
+					entf _Parname
+					entf {<_Parname>}
+				ende
+				zeigen fft_idx
+				fft_idx = fft_idx + 1
+			ende
+		
+			Ax_Trend_Plot = {<parname_trend>}
+			wenn _groupart = 1 
+				_EwSegLang = lang?(Ax_Trend_Plot:[1])
+				_group = GrBinde(Ax_Trend_Plot,0)
+				SetSegLang(_group,_EwSegLang)
+				Ax_Trend_Plot = _group
+			ende
+	
+			fileclose(_fileid)	
+			cw_verz = "C:\BDA\ExpertAnalysis\"
+			CwLoadCCV(SpectrumPlot,cw_verz + SpectrumTemplate)
+		
+			t1 = ZeitSystem?()
+			dt1 = t1-t0
+
+		ende
+	ende
+sonst 
+	txt = "Spektrum Datei existiert nicht"
+	_res = BoxNachricht("Info:",txt,"!1")
+ende
+
+if varexist?("fft_idx")
+	cwselectmode("variable")
+	cwselectwindow(fft_idx)
+	CwAction("win.close")
+end
+
+_freqmax = PnGetValue("View_Freq_max")
+CwSelectMode("title")
+_ret = CwIsWindow(SpectrumPlot)
+wenn _ret <> 0
+	CwSelectWindow(SpectrumPlot)
+	CwSelectByIndex("x-axis", 1)
+	CwAxisSet("range",4)
+	CwAxisSet("min", 0)
+	CwAxisSet("max", _freqmax)
+	;		CwDisplaySet("3D.angle1",10)
+;		CwDisplaySet("3D.angle2",10)
+;		CwDisplaySet("3D.angle3",10)
+ende

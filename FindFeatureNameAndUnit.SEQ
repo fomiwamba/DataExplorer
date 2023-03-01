@@ -1,0 +1,144 @@
+sequenz imc_logging "find_feature_name_and_unit started"
+; find feature_name and unit
+
+_signame = _Parname
+_ChannelUnit = ""
+
+_qqmax = TxArrayGetSize(Ch_Config:SigName)
+
+_parname_parts = txsplit(_Parname,"_")
+_signame = _parname_parts[1]
+_qq = 1
+_search_index = 0
+SOLANGE _qq <= _qqmax 
+	_erg = Tverg(_signame, Ch_Config:SigName[_qq])
+	wenn _erg =  0 
+		_search_index = _qq
+		break
+	sonst	
+		_qq = _qq + 1
+	ende
+ENDE
+
+
+if _search_index > 0
+	_signame = Ch_Config:SigName[_qq]
+	_ChannelUnit = Ch_Config:ChUnit[_qq] ;einheit?({<_Parname>},1)
+	;seteinheit({<_signame>}, _ChannelUnit,1)
+sonst; prüfen bei OP_Parameter
+	wenn varexist?("OP_Info:ParName")
+		_qqqmax = TxArrayGetSize(OP_Info:ParName)
+		_qqq = 1
+		_search_index = 0
+		SOLANGE _qqq <= _qqqmax 	
+			_a1 = _Parname
+			_a2 = OP_Info:ParName[_qqq]
+			
+			_erg = Tverg(_Parname, OP_Info:ParName[_qqq])
+			wenn _erg =  0 
+				_search_index = _qqq
+				break
+			sonst	
+				_qqq = _qqq + 1
+			ende
+		ENDE
+		if _search_index > 0
+			_signame = _Parname
+			_ChannelUnit = OP_Info:ParUnit[_search_index]
+			seteinheit({<_signame>}, _ChannelUnit,1)
+			seteinheit({<_Parname>}, _ChannelUnit,1)
+		ende
+	ende
+ende
+
+
+if txwo(_Parname,"_A1X") <> 0 or txwo(_Parname,"_A2X") <> 0 or txwo(_Parname,"_A3X") <> 0 or txwo(_Parname,"_A4X") <> 0 or txwo(_Parname,"_fft_mag_") <> 0 
+	seteinheit({<_Parname>},_ChannelUnit,1)
+ende
+if txwo(_Parname,"_P1X") <> 0 or txwo(_Parname,"_P2X") <> 0 or txwo(_Parname,"_P3X") <> 0 or txwo(_Parname,"_P4X") <> 0 or txwo(_Parname,"_fft_ph_") <> 0 or txwo(_Parname,"_frf_ph_") <> 0 
+	seteinheit({<_Parname>},"Grad",1)
+ende
+if txwo(_Parname,"_All") <> 0 or txwo(_Parname,"_HF") <> 0 or txwo(_Parname,"_ISO") <> 0 or txwo(_Parname,"_LF") <> 0 or txwo(_Parname,"_eff") <> 0 or txwo(_Parname,"_RMSWhirl") <> 0
+	seteinheit({<_Parname>},_ChannelUnit,1)
+ende
+if txwo(_Parname,"_Harmonics") <> 0 or txwo(_Parname,"_NonSynchronous") <> 0 or txwo(_Parname,"_SubSynchronous") <> 0 or txwo(_Parname,"_Synchronous") <> 0 or txwo(_Parname,"_SumAll") <> 0 or txwo(_Parname,"_TH") <> 0
+	seteinheit({<_Parname>},_ChannelUnit,1)
+ende
+if txwo(_Parname,"_iqr") <> 0 or txwo(_Parname,"_max") <> 0 or txwo(_Parname,"_mean") <> 0 or txwo(_Parname,"_median") <> 0 or txwo(_Parname,"_min") <> 0 or txwo(_Parname,"_peak") <> 0 or txwo(_Parname,"_peak2peak") <> 0 or txwo(_Parname,"_std") <> 0
+	seteinheit({<_Parname>},_ChannelUnit,1)
+ende
+
+if txwo(_Parname,"_fft_peak_") <> 0 or txwo(_Parname,"_psd_peak_") <> 0 or txwo(_Parname,"_frf_peak_") <> 0 or txwo(_Parname,"_FreqWhirl") <> 0 
+	seteinheit({<_Parname>},"Hz",1)
+ende
+if txwo(_parname,"-Status") <> 0 or txwo(_parname,"_frf_coh_") <> 0  and  txwo(_parname,"_crest") <> 0 and txwo(_parname,"_kurtosis") <> 0 and txwo(_parname,"_outliers") <> 0 and txwo(_parname,"_skewness") <> 0 and txwo(_parname,"_nconsts") <> 0
+	seteinheit({<_Parname>},"",1)
+ende
+if txwo(_parname,"_speed") <> 0 
+	seteinheit({<_Parname>},"rpm",1)
+ende
+
+
+if txwo(_Parname,"_irms") <> 0 or txwo(_Parname,"_ipeak") <> 0 or txwo(_Parname,"_ipeak2peak") <> 0 or txwo(_Parname,"_ip2p") <> 0 or txwo(_Parname,"_imean") <> 0 
+	_a1 = 1
+	seteinheit(_a1, _ChannelUnit,1)
+	_a2 = int(_a1)
+	_unit = unit?(_a2,1)
+	seteinheit({<_Parname>},_unit,1)
+ende
+if txwo(_Parname,"_psd_mag_") <> 0 
+	_a1 = 1
+	seteinheit(_a1, _ChannelUnit,1)
+	_b1 = 1
+	seteinheit(_b1, "Hz",1)
+	;_a2 = db(_a1*_a1/_b1)
+	_a2 = _a1*_a1/_b1
+	_unit = unit?(_a2,1)
+	seteinheit({<_Parname>},_unit,1)
+ende	
+if txwo(_Parname,"_frf_mag_") <> 0 
+	_Channel1Unit = _ChannelUnit
+	_Channel2Unit = ""
+	
+	_parname_parts = txsplit(_Parname,"_")
+	_sig1 = _parname_parts[1]
+	_sig2 = _parname_parts[2]
+	
+	; find feature_name and unit
+	_qqmax = TxArrayGetSize(Ch_Config:SigName)
+	_qq = 1
+	_search_index = 0
+	SOLANGE _qq <= _qqmax 
+		_erg = Tverg(_sig2, Ch_Config:SigName[_qq])
+		wenn _erg =  0 
+			_search_index = _qq
+			break
+		sonst	
+			_qq = _qq + 1
+		ende
+	ENDE
+	
+	if _search_index > 0
+		_Channel2Unit = Ch_Config:ChUnit[_search_index] ;einheit?({<_Parname>},1)
+	ende
+	
+	_a1 = 1
+	seteinheit(_a1, _Channel1Unit,1)
+	_b1 = 1
+	seteinheit(_b1, _Channel2Unit,1)
+	_a2 = db(_b1/_a1)
+	_a2 = _b1/_a1
+	_unit = unit?(_a2,1)
+	_unit = _Channel2Unit+"/"+_Channel1Unit
+	seteinheit({<_Parname>},_unit,1)
+ende
+
+
+if txwo(_parname,"-Sev") <> 0 
+	seteinheit({<_Parname>},"%",1)
+ende
+if txwo(_parname,"-Status") <> 0 
+	seteinheit({<_Parname>},"%",1)
+ende
+
+;entf _*

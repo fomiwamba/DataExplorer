@@ -1,0 +1,662 @@
+sequenz imc_logging "esa_processing_streaming started"
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Sequenz zur Motor Signature Analysis im Zeitbereich
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+; streamingfeatureextraction = 1 for feature extraction or 0 for esa_analysis
+
+_Tgesamt = lang?(U_data:[1])*xdel?(U_data:[1]); Gesamte Messdauer
+_time_max = PnGetValue("Tmax")
+if _time_max < 0 or _time_max >_Tgesamt
+	_time_max = _Tgesamt
+	PnSetValue("Tmax",_time_max)
+ende
+_time_min= PnGetValue("Tmin")
+if _time_min < 0 or _time_min >  _time_max
+	_time_min = 0
+	PnSetValue("Tmin",_time_min)
+ende
+
+Tf_min = PnGetValue("ElectricalAnalysis.Twindow")	; Minimum Time Window, e.g. for transient analysis -> adam/siplug
+N_harm = 20; Anzahl der zu berechnenden Harmonics
+; Read Configuration
+transient = 0
+wenn streamingfeatureextraction = 0
+	idx = PnGetSelectedItem("analysis")
+	wenn idx = 1
+		transient = 0
+		;Tf_min = 4	; Minimum Time Window, e.g. for transient analysis -> adam/siplug
+	sonst
+		transient = 1
+		Tf_min = 0.1	; Minimum Time Window, e.g. for transient analysis -> adam/siplug
+		PnSetValue("ElectricalAnalysis.Twindow", Tf_min)
+	ende
+ende
+
+; READ MOTOR NAMEPLATE INFORMATION
+
+sequenz search_item Asset_Props:Name "LineFrequency"
+freqline_Hz_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NameplatePower_W"
+Power_W_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NameplateRotationSpeed_rpm"
+Speed_rpm_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NameplateTorque_Nm"
+Torque_Nm_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NameplateVoltage_V"
+U_V_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NameplateFullLoadCurrent_A"
+I_A_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NumberOfPoles "
+Polpaar_np = tzuew (Asset_Props:Val[search_index],"a")/2
+sequenz search_item Asset_Props:Name "NumberOfRotorBars"
+RotorBars_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "NumberOfStatorSlots"
+StatorSlots_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "PowerFactor"
+PowerFactor_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "Efficiency"
+Efficiency_np = tzuew (Asset_Props:Val[search_index],"a")
+sequenz search_item Asset_Props:Name "MeasuredVoltageType"
+VoltageMeasType = tzuew (Asset_Props:Val[search_index],"a")
+wenn streamingfeatureextraction = 0
+	if VoltageMeasType =1
+		Pnselectitem ("MeasuredVoltageType",1); "Phase-Neutral
+	else
+		Pnselectitem ("MeasuredVoltageType",2); "Phase-Phase
+	ende
+ende
+
+
+
+
+; LOAD ELECTRICAL SIGNALS
+
+U_sig0:U1 = U_data:[1]
+U_sig0:U2 = U_data:[2]
+U_sig0:U3 = U_data:[3]
+I_sig0:I1 = I_data:[1]
+I_sig0:I2 = I_data:[2]
+I_sig0:I3 = I_data:[3]
+
+; Correction due to type of measured voltage
+wenn streamingfeatureextraction = 0
+	idx = PnGetSelectedItem("MeasuredVoltageType")
+	_txt = PnGetItemText("MeasuredVoltageType", idx)
+else
+	if VoltageMeasType =2
+		_txt = "Phase-Phase"
+	else
+		_txt = "Phase-Neutral"
+	ende
+ende
+if tverg(_txt,"Phase-Phase") = 0
+	U_sig0 = sqrt(3)*U_sig0; 
+	I_sig0 = I_sig0
+else; "Phase-Neutral"
+	U_sig0 = U_sig0; U_PP = sqrt(3) * U_PN
+	I_sig0 = I_sig0
+ende
+
+; Filter Electrical Data; 
+Fu = 2
+Fo = 5000
+wenn streamingfeatureextraction = 0
+	Fu = PnGetValue("BPFu")
+	Fo = PnGetValue("BPFo")
+end
+
+if Fu > Fo
+	F_temp = Fo
+	Fo = Fu
+	Fu = F_temp
+	entf F_temp
+end
+if Fo > 1/xdel?(U_sig0:[1])
+	Fo = 1/xdel?(U_sig0:[1])
+end
+if Fu <> 0 and Fo <>0 and Fu < Fo
+	U_sig0:U1 = FiltBP(U_data:[1],0,0,10,Fu,Fo)
+	U_sig0:U2 = FiltBP(U_data:[2],0,0,10,Fu,Fo)
+	U_sig0:U3 = FiltBP(U_data:[3],0,0,10,Fu,Fo)
+	I_sig0:I1 = FiltBP(I_data:[1],0,0,10,Fu,Fo)
+	I_sig0:I2 = FiltBP(I_data:[2],0,0,10,Fu,Fo)
+	I_sig0:I3 = FiltBP(I_data:[3],0,0,10,Fu,Fo)
+	;PnSetValue("Tmin",5)
+	;U_sig0 = xoff(U_sig0,0)
+	;I_sig0 = xoff(I_sig0,0)
+ende
+
+wenn streamingfeatureextraction = 0
+	_time_max = PnGetValue("Tmax")
+	_time_min= PnGetValue("Tmin")
+	if _time_min > 0 and _time_min < _time_max
+		dt = xdel?(U_sig0:[1])
+		U_sig0 = gren(U_sig0,_time_min, _time_max)
+		I_sig0 = gren(I_sig0,_time_min, _time_max)
+	end
+ende
+
+; Demodulation
+U_sig_demod = U_sig0
+I_sig_demod = I_sig0
+U1_sig = U_sig0:[1]
+sequenz DemodulationElectricalSignal U1_sig; -> sig_demod
+U_sig_demod:U1 = sig_demod - mean(sig_demod)
+U2_sig = U_sig0:[2]
+sequenz DemodulationElectricalSignal U2_sig; -> sig_demod
+U_sig_demod:U2 = sig_demod - mean(sig_demod)
+U3_sig = U_sig0:[3]
+sequenz DemodulationElectricalSignal U1_sig; -> sig_demod
+U_sig_demod:U3 = sig_demod - mean(sig_demod)
+I1_sig = I_sig0:[1]
+sequenz DemodulationElectricalSignal I1_sig; -> sig_demod
+I_sig_demod:I1 = sig_demod - mean(sig_demod)
+I2_sig = I_sig0:[2]
+sequenz DemodulationElectricalSignal I2_sig; -> sig_demod
+I_sig_demod:I2= sig_demod - mean(sig_demod)
+I3_sig = I_sig0:[3]
+sequenz DemodulationElectricalSignal I3_sig; -> sig_demod
+I_sig_demod:I3 = sig_demod - mean(sig_demod)
+
+U_sig0_demod = U_sig_demod
+I_sig0_demod = I_sig_demod
+
+; Speed Calculation
+wenn ind_channelPuls <> "None"
+	; IF TACHO EXIST -> RUNNINGSPEED FROM TACHO
+	sequenz search_item Ch_Config:ChName ind_channelPuls ; search_index -> search the configuration of the current channel in the xlsconfig file
+	_kkpuls = search_index ; tzuew(tteil(ind_channelpuls,3,5),"f")+1	
+	TachoChannelName = Ch_Config:SigName[_kkpuls]
+	_tacho_idx =GrKanalFinde(MeasData,TachoChannelName)
+	TachoSig = MeasData:[_tacho_idx]
+	;TachoSig = xoff(TachoSig,0)
+	wenn streamingfeatureextraction = 0
+		TachoSig = gren(TachoSig,_time_min, _time_max)
+	ende
+	sequenz signalegleichsetzen U_sig0:[1] TachoSig
+	TachoSig = _sig2
+	_Triglevel = tzuew (Ch_Config:TrigLevel[1],"a")
+	_PulsPerRev = tzuew (Ch_Config:PulsPerRev[1], "a")
+	
+	; Speed Calculation
+	sequenz Pulse2Speed TachoSig _Triglevel _PulsPerRev 1; _drehzahl
+	RunningSpeed = _drehzahl_mitte
+	RotatingFrequency = RunningSpeed/60
+	;	if max(_drehzahl)-min(_drehzahl) >= 120
+	;		transient = 1
+	;	ende
+sonst
+	; ELSE -> RUNNINGSPEED FROM NAMEPLATE
+	RunningSpeed = Speed_rpm_np
+	RotatingFrequency = RunningSpeed/60
+ende
+
+; INIT PARAMETER LIST
+_Tmittel_kask = leer
+freqline_vec = leer
+rotfreq_vec = leer
+InrushAmp= leer
+InrushTime = leer 
+VDF = leer
+THDF = leer
+ESA_Parameter_Trend= leer
+ESA_Metrics_Trend = leer
+U1_kask = leer; 
+U1_demod_kask = leer; 
+U2_kask = leer; 
+U2_demod_kask = leer; 
+U3_kask = leer; 
+U3_demod_kask = leer; 
+I1_kask = leer; 
+I1_demod_kask = leer; 
+I2_kask = leer; 
+I2_demod_kask = leer; 
+I3_kask = leer; 
+I3_demod_kask = leer; 
+U1_harmonics = leer
+I1_harmonics = leer
+U2_harmonics = leer
+I2_harmonics = leer
+U3_harmonics = leer
+I3_harmonics = leer
+I1_spec_ = leer
+I2_spec_ = leer
+I3_spec_ = leer
+U1_spec_ = leer
+U2_spec_ = leer
+U3_spec_ = leer
+
+I1_demod_spec_ = leer
+I2_demod_spec_ = leer
+I3_demod_spec_ = leer
+U1_demod_spec_ = leer
+U2_demod_spec_ = leer
+U3_demod_spec_ = leer
+
+I1_harmonics_seg = leer
+I2_harmonics_seg = leer
+I3_harmonics_seg = leer
+U1_harmonics_seg = leer
+U2_harmonics_seg = leer
+U3_harmonics_seg = leer
+
+U1_stft = leer
+U2_stft = leer
+U3_stft = leer 
+I1_stft = leer 
+I2_stft = leer 
+I3_stft = leer
+
+realpower_spec = leer
+torque_spec = leer
+RealPower_W = leer
+MechPower_W = leer
+Torque_Nm  = leer
+MechRotFreq = leer
+RealPower_W_red = leer
+MechPower_W_red = leer
+Torque_Nm_red = leer
+MechRotFreq_red = leer
+AppPower_VA_red = leer
+ReactivePower_VAS_red = leer
+CosPhi_red = leer
+
+esa_stft = leer
+U1_spec = leer
+U2_spec  = leer
+U3_spec = leer
+I1_spec = leer
+I2_spec = leer
+I3_spec = leer
+U1_demod_spec = leer
+U2_demod_spec = leer
+U3_demod_spec = leer
+I1_demod_spec = leer
+I2_demod_spec = leer
+I3_demod_spec = leer
+esa_harmonics = leer
+U1_Harmonics_seg = leer
+U2_Harmonics_seg = leer
+U3_Harmonics_seg = leer
+I1_Harmonics_seg = leer
+I2_Harmonics_seg = leer
+I3_Harmonics_seg = leer
+
+esa_spec = leer
+u_spec = grneu()
+i_spec = grneu()
+esa_spec_demod = leer
+u_demod_spec = grneu()
+i_demod_spec = grneu()
+
+CwLoadCCV("ESA_TWF","C:\BDA\ExpertAnalysis\"+ "Esa_TWF.ccv")
+CwLoadCCV("ESA_DemodTwf","C:\BDA\ExpertAnalysis\" + "Esa_DemodTWF.ccv")
+CwLoadCCV("ESA_STFT","C:\BDA\ExpertAnalysis\"+ "Esa_stft.ccv")
+CwLoadCCV("esa_stft_demod","C:\BDA\ExpertAnalysis\" + "Esa_stft_demod.ccv")
+CwLoadCCV("ESA_Spectrum","C:\BDA\ExpertAnalysis\"+ "Esa_spectrum.ccv")
+CwLoadCCV("esa_spectrum_demod","C:\BDA\ExpertAnalysis\" + "esa_spectrum_demod.ccv")
+CwLoadCCV("ESA_Parameter","C:\BDA\ExpertAnalysis\" + "ESA_Parameter.ccv")
+CwLoadCCV("ESA_Harmonics","C:\BDA\ExpertAnalysis\" + "ESA_Harmonics.ccv")
+CwLoadCCV("ESA_metrics_twf","C:\BDA\ExpertAnalysis\"+ "ESA_metrics_twf.ccv")
+CwLoadCCV("ESA_metrics_spectrum","C:\BDA\ExpertAnalysis\" + "ESA_metrics_spectrum.ccv")
+;CwLoadCCV("ESA_Parameter","C:\BDA\ExpertAnalysis\" + "ESA_Parameter.ccv")
+CwLoadCCV("ESA_FrequencyData","C:\BDA\ExpertAnalysis\" + "ESA_FrequencyData.ccv")
+
+
+_T_fenster = Pngetvalue("Twindow")
+_overlap = Pngetvalue("OverlapValue")
+
+_Tgesamt = lang?(U_sig0:[1])*xdel?(U_sig0:[1]); Gesamte Messdauer
+DateTime_Wert = Zeit?( U_sig0:[1] ) 
+DateTime_str = ZeitInText(DateTime_Wert,3)
+Date_ist = TTeil(DateTime_str,7,4)+TTeil(DateTime_str,4,2)+TTeil(DateTime_str,1,2)+"_"+TTeil(DateTime_str,12,2)+TTeil(DateTime_str,15,2)+TTeil(DateTime_str,18,2)
+
+_windowlength = floor( _T_fenster /xdel?(U_sig0:[1]))
+_deltaf = 1/_T_fenster; Abtastzeit
+_Fs = 1/xdel?(U_sig0:[1]); Abtastfrequenz
+
+wenn _T_fenster > _Tgesamt
+	_T_fenster = _Tgesamt
+ende
+_anzahl_it_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iterationen mit Overlap-Fkt
+
+wenn streamingfeatureextraction = 0
+	_ng = _windowlength
+	_dt = xdel?(U_sig0:[1])
+	_deltaf = 1/_T_fenster
+	_fmax = _fs/2
+	PnSetValue("Fs",_fs)
+	PnSetValue("Samples",_ng)
+	PnSetValue("Tgesamt",_Tgesamt)
+	PnSetValue("Averages",_anzahl_it_mit_overlap)
+	PnSetValue("Twindow",_T_fenster)
+	PnSetValue("deltaf",_deltaf)
+	PnSetValue("fmax",_fmax)
+ende
+
+
+;if _Tgesamt <= 20
+;	erg = BoxNachricht("Info","Signal length or Frequency Resolution not suitable for PPF visualization -> Signal Length < 20 sec","!1")
+;end
+;if _T_fenster < 2
+;	erg = BoxNachricht("Info","Frequency Values are not estimated accurately -> Twindow < 2sec ","!1")
+;end
+
+_nn = 1;
+SOLANGE _nn <= _anzahl_it_mit_overlap 
+	ratio = floor(_nn/_anzahl_it_mit_overlap*100) 
+	seteinheit(ratio,"%",1)
+
+	;zeigen ii 
+	; Overlap theorie
+	;Tgesamt = _windowlength*Tfenster - (_windowlength-1)*Overlap*Tfenster
+	;Tbeginn = i*Tfenster - (i-1)*Overlap*Tfenster - Tfenster
+	;Tende = i*Tfenster - (i-1)*Overlap*Tfenster 
+		
+	U_peak= leer
+	I_peak = leer
+	U_eff = leer
+	I_eff = leer
+	U_Crest = leer
+	I_Crest = leer
+	Z = leer
+	I_rotfreq_vec = leer
+	U_freqline_vec = leer
+	U_synchfreq_vec = leer
+	U_Variation = leer
+	I_Variation = leer
+	Pactive = leer
+	Papparent = leer
+	Preactive = leer
+	CosPhi  = leer
+	
+	U_THD_all = leer
+	U_HD_pve = leer
+	U_HD_nve = leer
+	U_HD_zero = leer
+	U_HD_odd =leer
+	U_HD_even = leer
+	I_THD_all = leer
+	I_HD_pve = leer
+	I_HD_nve = leer
+	I_HD_zero =leer
+	I_HD_odd =leer
+	I_HD_even = leer
+	ESA_Metrics = GrNeu()
+	
+	; Store Motor Data
+	ESA_Metrics:freqline_Hz_np= freqline_Hz_np; Netzfrequenz
+	ESA_Metrics:Power_W_np = Power_W_np; -> mechanische Leistung bei 100%Load
+	ESA_Metrics:Speed_rpm_np = Speed_rpm_np; -> Nenndrehzahl
+	ESA_Metrics:Torque_Nm_np = Torque_Nm_np; Nm
+	ESA_Metrics:U_V_np = U_V_np; -> Nennspannung 
+	ESA_Metrics:I_A_np = I_A_np;  -> Nennstrom A
+	ESA_Metrics:Polpaar_np = Polpaar_np; Polpaar_npzahl
+	ESA_Metrics:RotorBars_np = RotorBars_np
+	ESA_Metrics:StatorSlots_np = StatorSlots_np
+	ESA_Metrics:App_Power_VA_np = U_V_np * I_A_np *  sqrt(3)
+	ESA_Metrics:OutputPower_W_np = Torque_Nm_np * Speed_rpm_np/60 * 2 * pi 
+	ESA_Metrics:PowerFactor_np = PowerFactor_np 
+	ESA_Metrics:Efficiency_np = Efficiency_np 
+
+	if PowerFactor_np <> 0; if PowerFactor is known
+		ESA_Metrics:PowerFactor_np = PowerFactor_np 
+		ESA_Metrics:Real_Power_W_np =ESA_Metrics:App_Power_VA_np * PowerFactor_np 
+		ESA_Metrics:Efficiency_%_np = Power_W_np / ESA_Metrics:Real_Power_W_np * 100
+	ende
+	if Efficiency_np <> 0; if Efficiency is known
+		ESA_Metrics:Efficiency_np = Efficiency_np 
+		ESA_Metrics:Real_Power_W_np = Power_W_np / Efficiency_np 
+		ESA_Metrics:PowerFactor_np = ESA_Metrics:Real_Power_W_np / ESA_Metrics:App_Power_VA_np
+	ende
+
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;1) Zeitfenster Selektion
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	_Tbeginn = (_nn-1)*_T_fenster-(_nn-1)*_overlap/100*_T_fenster
+	_Tende = _nn*_T_fenster-(_nn-1)*_overlap/100*_T_fenster;Tbeginn + T_fenster
+	_T_fenster_verifikation = _Tende-_Tbeginn
+	_N_beginn = floor(((_nn-1)-(_nn-1)*_overlap/100)*_windowlength);
+	_N_end = floor((_nn-(_nn-1)*_overlap/100)*_windowlength)-1
+	_Tmittel = (_Tende+_Tbeginn)/2
+	_Tmittel_kask = binde(_Tmittel_kask,_Tmittel)
+	
+	wenn _nn = 1
+		U_sig = grenindex(U_sig0,(_nn-1)*_windowlength+1,_nn*_windowlength)
+		I_sig = grenindex(I_sig0,(_nn-1)*_windowlength+1,_nn*_windowlength)
+		U_sig_demod = grenindex(U_sig0_demod,(_nn-1)*_windowlength+1,_nn*_windowlength)
+		I_sig_demod = grenindex(I_sig0_demod,(_nn-1)*_windowlength+1,_nn*_windowlength)
+		wenn ind_channelPuls <> "None"
+			TachoSig_window = grenindex(TachoSig,(_nn-1)*_windowlength+1,_nn*_windowlength)
+		end
+	sonst 
+		U_sig = grenindex(U_sig0,_N_beginn,_N_end)
+		I_sig = grenindex(I_sig0,_N_beginn,_N_end)
+
+		U_sig_demod = grenindex(U_sig0_demod,_N_beginn,_N_end)
+		I_sig_demod = grenindex(I_sig0_demod,_N_beginn,_N_end)
+		wenn ind_channelPuls <> "None"
+			TachoSig_window = grenindex(TachoSig,_N_beginn,_N_end)
+		end
+	ende
+		
+	wenn ind_channelPuls <> "None"
+		; Speed Calculation
+		sequenz Pulse2Speed TachoSig_window _Triglevel _PulsPerRev 1; _drehzahl
+		RunningSpeed = _drehzahl_mitte
+		RotatingFrequency = RunningSpeed/60
+		;		if max(_drehzahl)-min(_drehzahl) >= 120
+		;			transient = 1
+		;		ende
+	sonst
+		; ELSE -> RUNNINGSPEED FROM NAMEPLATE
+		RunningSpeed = Speed_rpm_np
+		RotatingFrequency = RunningSpeed/60
+	ende
+	
+	PhaseData = GrNeu()
+	
+	
+	if transient = 1
+		;entf U_sig_demod
+		;entf I_sig_demod
+		; Demodulation
+		U1_sig = U_sig:[1]
+		sequenz DemodulationElectricalSignal U1_sig; -> sig_demod
+		U_sig_demod:U1 = sig_demod - mean(sig_demod)
+		U2_sig = U_sig:[2]
+		sequenz DemodulationElectricalSignal U2_sig; -> sig_demod
+		U_sig_demod:U2 = sig_demod - mean(sig_demod)
+		U3_sig = U_sig:[3]
+		sequenz DemodulationElectricalSignal U1_sig; -> sig_demod
+		U_sig_demod:U3 = sig_demod - mean(sig_demod)
+		I1_sig = I_sig:[1]
+		sequenz DemodulationElectricalSignal I1_sig; -> sig_demod
+		I_sig_demod:I1 = sig_demod - mean(sig_demod)
+		I2_sig = I_sig:[2]
+		sequenz DemodulationElectricalSignal I2_sig; -> sig_demod
+		I_sig_demod:I2= sig_demod - mean(sig_demod)
+		I3_sig = I_sig:[3]
+		sequenz DemodulationElectricalSignal I3_sig; -> sig_demod
+		I_sig_demod:I3 = sig_demod - mean(sig_demod)
+	ende
+	
+	;FFT Analysis
+	sequenz esa_frequency_domain; -> 
+	
+	;Time Analysis
+	sequenz esa_time_domain
+		
+	Sequenz CollectAllPhaseData PhaseData _Tmittel; -> ESA_Parameter:
+	
+	sequenz Build_ESA_Metrics
+	
+	; Collect all Parameters
+	ESA_Parameter_Trend= binde(ESA_Parameter_Trend,ESA_Parameter) 
+	ESA_Metrics_Trend= binde(ESA_Metrics_Trend,ESA_Metrics) 
+		
+	_nn = _nn  +1
+ende
+
+
+;if transient <> 0
+;	I_eff1= ESA_Parameter_Trend:I_eff_1
+;	I_eff2 = ESA_Parameter_Trend:I_eff_2
+;	I_eff3 = ESA_Parameter_Trend:I_eff_3
+;	I_eff_ = 1/3*(Add(Add(I_eff1,I_eff2,1),I_eff3,1))
+;	I_max = max(I_eff_) 
+;	I_diff = abs(diff(I_eff_))
+;	I_diff2 = abs(diff(I_diff))
+;	;Idiff = diff(I_eff)
+;	;finde posi wo Idiff <= 0 im Interval ]T_Imax,Tend]
+;	I_last_vec  = I_eff_.y
+;	I_last = I_last_vec[_anzahl_it_mit_overlap]
+;	t_last_vec= I_eff_.x
+;	t_last = t_last_vec[_anzahl_it_mit_overlap]
+;	ta = posi(I_eff_,I_max)
+;	I_diff_ab_end = gren(I_diff,t_last-2,t_last)
+;	I_diff_ab_end_mean = mean(I_diff_ab_end.y)
+;	te = posi(I_diff_ab_ta,I_diff_ab_end_mean)
+;	;te = posi(I_eff,Ilast)
+;	delta = te-ta
+;	I_min = wert(I_eff_,te)
+;
+;	ESA_Metrics_Trend: InrushAmp1= I_max 
+;	ESA_Metrics_Trend: InrushTime1= ta
+;	SA_Metrics_Trend: InrushAmp2= I_min
+;	ESA_Metrics_Trend: InrushTime2= te
+;	ESA_Metrics_Trend: InrushDuration= delta
+;else
+;	ESA_Metrics_Trend: InrushAmp1= 0 
+;	ESA_Metrics_Trend: InrushTime1= 0
+;	SA_Metrics_Trend: InrushAmp2= 0
+;	ESA_Metrics_Trend: InrushTime2= 0
+;	ESA_Metrics_Trend: InrushDuration= 0
+;ende
+
+DateTime = DateTime_Wert + _Tmittel_kask
+
+ESA_Data = GrNeu()
+_xyz_max = grkanalZahl?( ESA_Parameter_Trend )
+_xyz = 1
+solange _xyz <= _xyz_max
+	_parname = GrKanalName?(ESA_Parameter_Trend, _xyz)
+	ESA_Parameter_Trend:[_xyz] = xyvon(DateTime,ESA_Parameter_Trend:[_xyz])
+	ESA_Data:{<_parname>} = ESA_Parameter_Trend:[_xyz]
+	_xyz = _xyz +1
+ende
+_xyz_max = grkanalZahl?(ESA_Metrics_Trend )
+_xyz = 1
+solange _xyz <= _xyz_max
+	_parname = GrKanalName?(ESA_Metrics_Trend, _xyz)
+	ESA_Metrics_Trend:[_xyz] = xyvon(DateTime,ESA_Metrics_Trend:[_xyz])
+	ESA_Data:{<_parname>}= ESA_Metrics_Trend:[_xyz]
+	_xyz = _xyz +1
+ende
+
+wenn streamingfeatureextraction = 0
+	
+	U_eff_p1 = mvrms(U_sig0:[1],Tf_min,Tf_min)
+	U_eff_p2 = mvrms(U_sig0:[2],Tf_min,Tf_min)
+	U_eff_p3 = mvrms(U_sig0:[3],Tf_min,Tf_min)
+	U_eff_avg_ = 1/3*(U_eff_p1 + U_eff_p2 + U_eff_p3)
+	
+	I_eff_p1 = mvrms(I_sig0:[1],Tf_min,Tf_min)
+	I_eff_p2 = mvrms(I_sig0:[2],Tf_min,Tf_min)
+	I_eff_p3 = mvrms(I_sig0:[3],Tf_min,Tf_min)
+	I_eff_avg_ = 1/3*(I_eff_p1 + I_eff_p2 + I_eff_p3)
+	
+	; processing all data
+	RealPower_W = Abs(1/sqrt(3)*(U_sig0:[1]*I_sig0:[1]+U_sig0:[2]*I_sig0:[2]+U_sig0:[3]*I_sig0:[3])); bzw. Pactive_Total (nach Vedat)
+	seteinheit(RealPower_W, "W",1)
+	RealPower_W_red = mvmean(RealPower_W,Tf_min,Tf_min)
+	RealPower_Mean_W = Mean(RealPower_W)
+	
+	AppPower_VA_red = Abs(1/sqrt(3)*(mvrms(U_sig0:[1],Tf_min,Tf_min)*mvrms(I_sig0:[1],Tf_min,Tf_min)+mvrms(U_sig0:[2],Tf_min,Tf_min)*mvrms(I_sig0:[2],Tf_min,Tf_min)+mvrms(U_sig0:[3],Tf_min,Tf_min)*mvrms(I_sig0:[3],Tf_min,Tf_min))); bzw. Pactive_Total (nach Vedat); Apparent Power
+	seteinheit(AppPower_VA_red, "VA",1)
+	AppPower_Mean_VA = mean(AppPower_VA_red)
+	
+	ReactivePower_VAS_red = wurz(AppPower_VA_red^2-RealPower_W_red^2); Reactive Power
+	seteinheit(ReactivePower_VAS_red, "VAS",1)
+	ReactivePower_Mean_VAS=  mean(ReactivePower_VAS_red)
+
+	CosPhi_red = RealPower_W_red / AppPower_VA_red
+	seteinheit(CosPhi_red, "",1)
+	CosPhi_Mean_red = Mean(CosPhi_red)
+
+	method = 2
+	if method = 1; from synchfreq
+		_sig = FiltTP(I_sig0:[1],0,0,16,80); Band pass  or high pass filter to remove the dominating frequencies
+		T_alle_0 = posiex(_sig,0)
+		_freqline = 1/(2*(diff(T_alle_0)))
+		_synchfreq = xy(T_alle_0,_freqline/Polpaar_np)
+		RS_vec =mvmean( _synchfreq,Tf_min,Tf_min)
+	else; from calculated speeed
+		RS_vec =ESA_Metrics_trend:RotatingFrequency.y
+		RS_vec = PTast0(RS_vec, RealPower_W_red)
+	end
+	RS = Gla5(RS_vec)
+	MechRotFreq_red = RS
+	seteinheit(MechRotFreq_red, "Hz",1)
+		
+	sequenz SignaleGleichSetzen RealPower_W MechRotFreq_red
+	MechRotFreq = _sig2
+	
+	Eta = ESA_Metrics:Efficiency_% / 100
+	
+	MechPower_W = Eta * RealPower_W 
+	
+	MechPower_W_red = mvmean(MechPower_W,Tf_min,Tf_min)
+	MechPower_W_Mean_red = mvmean(MechPower_W,Tf_min,Tf_min)
+	
+	Torque_Nm = MechPower_W/(2*pi*MechRotFreq);
+	seteinheit(Torque_Nm, "Nm",1)
+	Torque_Nm_red = mvmean(Torque_Nm,Tf_min,Tf_min)
+	Torque_Mean_Nm = Mean(Torque_Nm)
+
+	sequenz SelectTimeFunctionToDisplay
+		
+	
+	if transient = 0
+		if 0
+			realpower_spec = fft(RealPower_W-mean(RealPower_W));,_n,_window,_overlap,1)
+			torque_spec = fft(Torque_Nm -mean(Torque_Nm));,_n,_window,_overlap,1)
+		else
+			_n1 = lang?(RealPower_W)/PnGetValue("ElectricalAnalysis.Averages")
+			for _in = 10 to 20
+				_n = 2^_in
+				if _n > _n1
+					_n = 2^(_in-1)
+					break
+				ende
+			ende
+			_windowfft = Ch_Config:Windowfft[1]
+			wenn _windowfft = "Rechteck"
+				_window = 1;0
+				PnSetText("VibrationAnalysis.Window","Rechteck")
+			ende
+			wenn _windowfft = "Hanning"
+				_window = 2;2
+				PnSetText("VibrationAnalysis.Window","Hanning")
+			ende
+			wenn _windowfft = "Flattop"
+				_window = 3;5
+				PnSetText("VibrationAnalysis.Window","Flattop")
+			ende
+			
+				
+			_overlap = tzuew(Ch_Config:Overlap[1],"a")
+			realpower_spec = AmpSpectrumPeak_1(RealPower_W-mean(RealPower_W),_n,_window,_overlap,1)
+			torque_spec = AmpSpectrumPeak_1(Torque_Nm -mean(Torque_Nm),_n,_window,_overlap,1)
+		ende
+		fftoption 2 0
+		;		u_spec = fft(U_sig0-mean(U_sig0));,_n,_window,_overlap,1)
+		;		i_spec = fft(I_sig0-mean(I_sig0));,_n,_window,_overlap,1)
+		;		u_demod_spec = fft(U_sig0_demod-mean(U_sig0_demod));,_n,_window,_overlap,1)
+		;		i_demod_spec = fft(I_sig0_demod-mean(I_sig0_demod));,_n,_window,_overlap,1)
+		sequenz select_fft_to_display
+	end
+ende

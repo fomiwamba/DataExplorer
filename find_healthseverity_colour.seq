@@ -1,0 +1,21 @@
+sequenz imc_logging "find_health_severity_colour started"
+
+rel_sev1 = 100; % yellow
+rel_sev2 = 200; % orange
+rel_sev3 = 300; % red
+
+
+if _parseverity <= 0
+	;_parseverity_color = rgb(0,0, 255); blue
+	_parseverity_color = rgb(255,255, 255); blue
+elseif _parseverity > 0 and _parseverity <= rel_sev1
+	_parseverity_color = rgb(0,255,0); green
+elseif _parseverity > rel_sev1 and _parseverity <= rel_sev2
+	_parseverity_color = rgb(255, 255, 0); yellow
+elseif _parseverity > rel_sev2 and _parseverity <= rel_sev3
+	_parseverity_color = rgb(255,136,0); orange
+elseif _parseverity > rel_sev3
+	_parseverity_color = rgb(255, 0, 0); red
+else
+	_parseverity_color = rgb(0,0, 255)
+ende

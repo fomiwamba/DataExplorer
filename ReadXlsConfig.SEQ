@@ -1,0 +1,602 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Sequenz zur Extraktion von Konfigurationsdaten aus einer Excel-Konfigurationsfile
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "read_xlsx_config started"
+
+
+_file0 = AssetFolder + "\xlsconfig.xlsx"
+_file1 = AssetFolder + "\Plant_Props.dat"
+_file2 = AssetFolder + "\Asset_Props.dat"
+_file3 = AssetFolder + "\Asset_OC_Table.dat"
+_file4 = AssetFolder + "\Comp_Feature.dat"
+_file5 = AssetFolder + "\Ch_Config.dat"
+_file6 = AssetFolder + "\OP_Info.dat"
+_file7 = AssetFolder + "\Asset_State_Table.dat"
+_file8 = AssetFolder + "\Asset_Feature_List.dat"
+_file9 = AssetFolder + "\CorrTable.dat"
+_file10 = AssetFolder + "\VMS_Freq_Table.dat"
+_file11 = AssetFolder + "\HistoryTable.dat"
+_file12 = AssetFolder + "\RefMeasTable.dat"
+
+
+_config_time1 = FsGetFileTime(_file0)
+_config_time2 = FsGetFileTime(_file5)
+delta_config_time = _config_time1 - _config_time2
+
+if FsFileExists(_file1) and FsFileExists(_file2) and FsFileExists(_file3) and FsFileExists(_file4) and FsFileExists(_file5) and FsFileExists(_file6) and FsFileExists(_file7) and FsFileExists(_file8) and delta_config_time <0
+	;pause "Config.dat-Dateien lesen"
+	config_file_list = TxArrayCreate(0)
+	config_file_list[1] = _file1
+	config_file_list[2] = _file2
+	config_file_list[3] = _file3
+	config_file_list[4] = _file4
+	config_file_list[5] = _file5
+	config_file_list[6] = _file6
+	config_file_list[7] = _file7
+	config_file_list[8] = _file8
+	config_file_list[9] = _file9
+	config_file_list[10] = _file10
+	config_file_list[11] = _file11
+	config_file_list[12] = _file12
+	
+	for _file_idx = 1 to txarraygetsize(config_file_list)
+		_file = config_file_list[_file_idx]
+		_fh = FileOpenDSF(_file,0)
+		wenn _fh > 0
+			_VarName = FileObjName?(_fh, 1)
+			{<_VarName>} = FileObjRead(_fh, 1)	
+			_err = fileclose(_fh)
+		ende
+	ende
+else
+	;pause "Config.dat-Dateien neu erstellen"
+	;_file0 = "D:\Projekte\CNT_SUES" + "\xlsconfig.xlsx"
+	_fh = FileOpenXLS(_file0,0)
+	;XlSheetActivate( TxTitelOderIndex)
+	table = 0
+	table_max = 12
+	table_ratio = floor(table/table_max*100) 
+	seteinheit(table_ratio,"%",1)
+	zeigen table_ratio
+
+	show_time = 0
+	;zeigen show_time
+	wenn _fh > 0 
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von Plant_Infos -> Tabelle 1
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t0 = ZeitSystem?()
+		Plant_Props = Grneu()
+		FileXLSSelectSheet(_fh,1)
+		_Plant_PropName = TxArrayCreate(1)
+		_Plant_PropValue = TxArrayCreate(1)
+		_ii = 1
+		SOLANGE _ii <=  1024
+			_PName = FileXLSCellRead(_fh,1,_ii+1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_PName = FileXLSCellRead(_fh,1,_ii+1,0)
+				_Plant_PropName[_ii] = _PName
+				_PValue = FileXLSCellRead(_fh,2,_ii+1,0)
+				_Plant_PropValue[_ii] = _PValue
+				_ii = _ii + 1
+			ende
+		ENDE
+		Plant_Props:Name = _Plant_PropName
+		Plant_Props:Val = _Plant_PropValue
+
+		;_file = AssetFolder + "\Plant_Props.dat"
+		_res = FileSave(_file1, "", 0, Plant_Props)
+
+		t1 = ZeitSystem?()
+		dt1 = t1-t0
+		if show_time >0
+			zeigen dt1
+		ende
+
+		table = 1
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von Asset_Infos -> Tabelle 2
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t2 = ZeitSystem?()
+		Asset_Props = Grneu()
+		FileXLSSelectSheet(_fh,2)
+		_Asset_PropName = TxArrayCreate(1)
+		_Asset_PropValue = TxArrayCreate(1)
+		_ii = 1
+		SOLANGE _ii <=  1024
+			_PName = FileXLSCellRead(_fh,1,_ii+1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_PName = FileXLSCellRead(_fh,1,_ii+1,0)
+				_Asset_PropName[_ii] = _PName
+				_PValue = FileXLSCellRead(_fh,2,_ii+1,0)
+				_Asset_PropValue[_ii] = _PValue
+				_ii = _ii + 1
+			ende
+		ENDE
+		Asset_Props:Name = _Asset_PropName
+		Asset_Props:Val = _Asset_PropValue
+
+		;_file2 = AssetFolder + "\Asset_Props.dat"
+		_res = FileSave(_file2, "", 0, Asset_Props)
+
+		t3 = ZeitSystem?()
+		dt2 = t3-t2
+		if show_time >0
+			zeigen dt2
+		ende
+
+		table = 2
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von Asset_OC Table -> Tabelle 3
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t4 = ZeitSystem?()
+		Asset_OC_Table = Grneu()
+		FileXLSSelectSheet(_fh,3)
+		_OCName = TxArrayCreate(1)
+		_OC_Cond1_option = TxArrayCreate(1)
+		_OC_Cond1_GW1 = TxArrayCreate(1)
+		_OC_Cond1_GW2 = TxArrayCreate(1)
+		_OC_Cond2_option = TxArrayCreate(1)
+		_OC_Cond2_GW1 = TxArrayCreate(1)
+		_OC_Cond2_GW2 = TxArrayCreate(1)
+		_jj = 2; spalte
+		SOLANGE _jj <=  10
+			_PName = FileXLSCellRead(_fh,_jj,3,0)
+			_OCName [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,4,0)
+			_OC_Cond1_option [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,5,0)
+			_OC_Cond1_GW1 [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,6,0)
+			_OC_Cond1_GW2 [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,7,0)
+			_OC_Cond2_option [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,8,0)
+			_OC_Cond2_GW1 [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,9,0)
+			_OC_Cond2_GW2 [_jj-1] = _PName
+			_PName = FileXLSCellRead(_fh,_jj,10,0)
+			_jj = _jj +1
+		ende
+		Asset_OC_Table:OCName = _OCName
+		Asset_OC_Table:OC_Cond1_option = _OC_Cond1_option
+		Asset_OC_Table:OC_Cond1_GW1 = _OC_Cond1_GW1
+		Asset_OC_Table:OC_Cond1_GW2 = _OC_Cond1_GW2
+		Asset_OC_Table:OC_Cond2_option = _OC_Cond2_option
+		Asset_OC_Table:OC_Cond2_GW1 = _OC_Cond2_GW1
+		Asset_OC_Table:OC_Cond2_GW2 = _OC_Cond2_GW2
+		entf _OC*
+
+		;_file3 = AssetFolder + "\Asset_OC_Table.dat"
+		_res = FileSave(_file3, "", 0, Asset_OC_Table)
+
+		t5 = ZeitSystem?()
+		dt3 = t5-t4
+		if show_time >0
+			zeigen dt3
+		ende
+
+		table = 3
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von Component_Table (Data analysis-Settings) -> Tabelle 4
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t6 = ZeitSystem?()
+		Comp_Feature = Grneu()
+		FileXLSSelectSheet(_fh,4)
+		_ii = 1
+		SOLANGE _ii <= 1024; _anzcol - 1
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 1024;_anzrow - 1 
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				Comp_Feature:<_PName> = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file4 = AssetFolder + "\Comp_Feature.dat"
+		_res = FileSave(_file4, "", 0, Comp_Feature)
+
+		t7 = ZeitSystem?()
+		dt4 = t7-t6
+		if show_time >0
+			zeigen dt4
+		ende
+
+		table = 4
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von Ch_Config(Data analysis-Settings) -> Tabelle 5
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t8 = ZeitSystem?()
+		Ch_Config = Grneu()
+		FileXLSSelectSheet(_fh,5)
+		_ii = 1
+		SOLANGE _ii <= 1024; _zeilen
+			;zeigen _ii
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,1,_ii,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 1024;_cols
+					;zeigen _jj
+					_partext = FileXLSCellRead(_fh,_jj+1,_ii,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				Ch_Config:{<_PName>} = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file5 = AssetFolder + "\Ch_Config.dat"
+		_res = FileSave(_file5, "", 0, Ch_Config)
+
+		t9 = ZeitSystem?()
+		dt5 = t9-t8
+		if show_time >0
+			zeigen dt5
+		ende
+
+		table = 5
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von ProcessTable -> Tabelle 6
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t10 = ZeitSystem?()
+		OP_Info = Grneu()
+		FileXLSSelectSheet(_fh,6)
+		_ii = 1
+		SOLANGE _ii <= 1024; _anzcol - 1
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 100000;_anzrow - 1 
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				OP_Info:<_PName> = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file7 = AssetFolder + "\OP_Info.dat"
+		_res = FileSave(_file6, "", 0, OP_Info)
+
+		t11 = ZeitSystem?()
+		dt6 = t11-t10
+		if show_time >0
+			zeigen dt5
+		ende
+
+		table = 6
+		table_ratio = floor(table/table_max*100) 
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von AssetStateTable(Data analysis-Settings) -> Tabelle 7
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t8 = ZeitSystem?()
+		AssetStateTable = Grneu()
+		FileXLSSelectSheet(_fh,7)
+		_ii = 1
+		SOLANGE _ii <= 1024; _zeilen
+			;zeigen _ii
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 1024;_cols
+					;zeigen _jj
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				AssetStateTable:{<_PName>} = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file6 = AssetFolder + "\CorrTable.dat"
+		_res = FileSave(_file7, "", 0, AssetStateTable)
+
+		t9 = ZeitSystem?()
+		dt5 = t9-t8
+		if show_time >0
+			zeigen dt5
+		ende
+
+		table = 7
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von DelFeatureList(Data analysis-Settings) -> Tabelle 8
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t8 = ZeitSystem?()
+		DelFeatureList = Grneu()
+		FileXLSSelectSheet(_fh,8)
+		_ii = 1
+		SOLANGE _ii <= 1024; _zeilen
+			;zeigen _ii
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 1024;_cols
+					;zeigen _jj
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				DelFeatureList:{<_PName>} = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file6 = AssetFolder + "\CorrTable.dat"
+		_res = FileSave(_file8, "", 0, DelFeatureList)
+
+		t9 = ZeitSystem?()
+		dt5 = t9-t8
+		if show_time >0
+			zeigen dt5
+		ende
+
+		table = 8
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+	
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von CorrTable(Data analysis-Settings) -> Tabelle 9
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t8 = ZeitSystem?()
+		CorrTable = Grneu()
+		FileXLSSelectSheet(_fh,9)
+		_ii = 1
+		SOLANGE _ii <= 1024; _zeilen
+			;zeigen _ii
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 1024;_cols
+					;zeigen _jj
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				CorrTable:{<_PName>} = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file6 = AssetFolder + "\CorrTable.dat"
+		_res = FileSave(_file9, "", 0, CorrTable)
+
+		t9 = ZeitSystem?()
+		dt5 = t9-t8
+		if show_time >0
+			zeigen dt5
+		ende
+
+		table = 9
+		table_ratio = floor(table/table_max*100)
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von VMS_Freq_Table -> Tabelle 10
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		
+		t10 = ZeitSystem?()
+		VMS_Freq_Table = Grneu()
+		FileXLSSelectSheet(_fh,10)
+		_ii = 1
+		SOLANGE _ii <= 1024; _anzcol - 1
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 100000;_anzrow - 1 
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+				VMS_Freq_Table:<_PName> = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file8 = AssetFolder + "\VMS_Freq_Table.dat"
+		_res = FileSave(_file10, "", 0, VMS_Freq_Table)
+
+		t11 = ZeitSystem?()
+		dt6 = t11-t10
+		if show_time >0
+			zeigen dt5
+		ende
+		table = 10
+		table_ratio = floor(table/table_max*100) 
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von VMS_Freq_Table, Tabelle 11
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t10 = ZeitSystem?()
+		HistoryTable = Grneu()
+		FileXLSSelectSheet(_fh,11)
+		_ii = 1
+		SOLANGE _ii <= 1024; _anzcol - 1
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 100000;_anzrow - 1 
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+					HistoryTable:<_PName> = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file8 = AssetFolder + "\VMS_Freq_Table.dat"
+		_res = FileSave(_file11, "", 0, HistoryTable)
+
+		t11 = ZeitSystem?()
+		dt6 = t11-t10
+		if show_time >0
+			zeigen dt5
+		ende
+		table = 11
+		table_ratio = floor(table/table_max*100) 
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; Extraktion von RefMeasTable, Tabelle 12
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		t10 = ZeitSystem?()
+		RefMeasTable = Grneu()
+		FileXLSSelectSheet(_fh,12)
+		_ii = 1
+		SOLANGE _ii <= 1024; _anzcol - 1
+			_Ptxt = TxArrayCreate(0)
+			_PName = FileXLSCellRead(_fh,_ii,1,0)
+			wenn tverg(_Pname,"") = 0
+				break
+			sonst
+				_jj = 1
+				SOLANGE _jj <= 100000;_anzrow - 1 
+					_partext = FileXLSCellRead(_fh,_ii,_jj+1,0) 
+					wenn tverg(_Partext,"") = 0
+						break
+					sonst
+						_Ptxt[_jj] = _partext
+						_jj = _jj + 1
+					ende
+				ENDE
+				if txarraygetsize(_Ptxt) > 0
+					RefMeasTable:<_PName> = _Ptxt
+				end
+				_ii = _ii + 1
+			ende
+		ENDE
+		;_file8 = AssetFolder + "\VMS_Freq_Table.dat"
+		_res = FileSave(_file12, "", 0, RefMeasTable)
+
+		t11 = ZeitSystem?()
+		dt6 = t11-t10
+		if show_time >0
+			zeigen dt5
+		ende
+		table = 12
+		table_ratio = floor(table/table_max*100) 
+		seteinheit(table_ratio,"%",1)
+		zeigen table_ratio
+	ende
+
+	fileclose(_fh)
+ende
+
+if varexist?("table_ratio")
+	cwselectmode("variable")
+	cwselectwindow(table_ratio)
+	CwAction("win.close")
+ende

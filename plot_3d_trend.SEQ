@@ -1,0 +1,26 @@
+sequenz imc_logging "plot_3d_trend started"
+;zeige <Parname>
+
+CwSelectMode("title")
+ret = CwIsWindow(PA3)
+wenn ret <> 0
+	CwSelectWindow(PA3)
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwDisplaySet("displaymode",1)
+	CwDisplaySet("displaymode",4)
+	;CwNewChannel("append last axis",{<Parname>})
+	CwDisplaySet("grid",1)
+	CwSelectByIndex("y-axis",1)
+	CwAxisSet("ticks.option",1)
+	;CwAxisSet("ticks.count",11)
+	;CwDeleteElement("axis")
+	;CwNewChannel("append last axis",{<_Parname>})
+	CwNewChannel("append new axis",PA1)
+	CwSelectByIndex("x-axis",1)
+	CwAxisSet("range",1)
+	CwAxisSet("ticks.option",1)
+	;CwAxisSet("ticks.count",11)
+ende
+

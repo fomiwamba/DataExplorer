@@ -1,0 +1,132 @@
+sequenz imc_logging "read_config_channel_esa started"
+;zeigen ChannelName
+if varexist?("MeasData") 
+	if GrChanNum?(MeasData) > 1
+		; COLLECT ELECTRICAL SIGNAL FROM DATA_CHANNEL
+		_signamelist = txArrayCreate( 0)
+		_signamelist[1] = "U1"
+		_signamelist[2] = "U2"
+		_signamelist[3] = "U3"
+		_signamelist[4] = "I1"
+		_signamelist[5] = "I2"
+		_signamelist[6] = "I3"
+		_xyz = 1
+		u_sig_list = 0
+		i_sig_list =  0
+		solange _xyz <= 6
+			_signame = _signamelist [_xyz]
+			sequenz search_item Ch_Config:ESA_Channel _signame ; search_index -> search the configuration of the current channel in the xlsconfig file
+			wenn search_index > 0
+				_ChannelName = Ch_Config:SigName[search_index]
+				if _xyz = 1
+					;_T_fenster = 4;_windowlength*xdel?(U_sig0:[1]); Fensterbreite, _length
+					_T_fenster = tzuew(Ch_Config:Windowlength[search_index],"a")
+					_overlap = tzuew(Ch_Config:Overlap[search_index],"a")
+					ind_channelPuls = Ch_Config:TachoChannel[search_index]
+					_Triglevel =  tzuew(Ch_Config:TrigLevel[search_index],"a")
+					_PulsPerRev =  tzuew(Ch_Config:PulsPerRev[search_index],"a")
+				ende
+				wenn _xyz <= 3
+					U_data:{<_signame>} = MeasData:{<_ChannelName>}
+					u_sig_list = GrKanalZahl?(U_data)
+				sonst
+					I_data:{<_signame>} = MeasData:{<_ChannelName>}
+					i_sig_list =  GrKanalZahl?(I_data) 
+				ende
+			ende
+			_xyz = _xyz + 1
+		ende
+	
+		if  u_sig_list >= 3 and i_sig_list >= 3
+			Pnsettext("ElectricalAnalysis.U1",GrKanalName?(U_data,1))
+			Pnsettext("ElectricalAnalysis.U2",GrKanalName?(U_data,2))
+			Pnsettext("ElectricalAnalysis.U3",GrKanalName?(U_data,3))
+			Pnsettext("ElectricalAnalysis.I1",GrKanalName?(I_data,1))
+			Pnsettext("ElectricalAnalysis.I2",GrKanalName?(I_data,2))
+			Pnsettext("ElectricalAnalysis.I3",GrKanalName?(I_data,3))
+			_signame = "U1"
+			sequenz search_item Ch_Config:ESA_Channel _signame ; search_index -> search the configuration of the current channel in the xlsconfig file
+			wenn search_index > 0
+				_ChannelName = Ch_Config:SigName[search_index]
+				
+				_kk_config = search_index
+	
+				ind_tacho = Ch_Config:TachoChannel[_kk_config]
+				wenn ind_tacho = "None"
+					ChannelTachoName = "None"
+					MeasData:ChannelTacho = 0* U_data:[1]
+				sonst
+					_kkpuls = tzuew(tteil(ind_tacho,3,5),"f")+1	
+					sequenz search_item Ch_Config:ChName ind_tacho; search_index
+					ChannelTachoName = Ch_Config:SigName[search_index]
+					MeasData:ChannelTacho = MeasData:{<ChannelTachoName>}
+				ende
+				ChannelTacho = MeasData:ChannelTacho
+		
+				_windowfft = Ch_Config:windowfft[_kkk]
+				wenn _windowfft = "Rechteck"
+					_index = 1;0
+					PnSetText("ElectricalAnalysis.Window","Rechteck")
+				ende
+				wenn _windowfft = "Hanning"
+					_index = 2;2
+					PnSetText("ElectricalAnalysis.Window","Hanning")
+				ende
+				wenn _windowfft = "Flattop"
+					_index = 3;5
+					PnSetText("ElectricalAnalysis.Window","Flattop")
+				ende
+				;PnSelectItem("Window",_index)
+				_window = _index
+	
+				_overlap = tzuew(Ch_Config:overlap[_kkk],"f")
+				PnSetValue("ElectricalAnalysis.Overlap",_overlap)
+	
+	
+				;	_PulsPerRev = tzuew(Ch_Config:PulsPerRev[_kkk],"f")
+				;	PnSetValue("ElectricalAnalysis.PulsPerRev",_PulsPerRev)
+				;	_Triglevel = tzuew(Ch_Config:TrigLevel[_kkk],"f")
+				;	PnSetValue("ElectricalAnalysis.TrigLevel",_Triglevel)
+	
+				_t_ntd = tzuew(Ch_Config:windowlength[_kkk],"a")
+				PnSetValue("ElectricalAnalysis.Twindow",_t_ntd)
+				_twindow = PnGetValue("ElectricalAnalysis.Twindow")
+				;	wenn _twindow < 4
+				;		PnSetValue("Twindow",_t_ntd)
+				;	ende
+				_t_ntd = PnGetValue("ElectricalAnalysis.Twindow")	
+				_ng = lang?(U_data:[1])
+				_dt = xdel?(U_data:[1])
+				_fs = 1/_dt
+				_time_max = _ng*_dt
+				_tges = _time_max
+				PnSetValue("ElectricalAnalysis.Tmax",_time_max)
+				PnSetValue("ElectricalAnalysis.Tmin",1)
+				_ntd = _t_ntd/_dt
+				_Length = _ntd
+				;PnSetValue("Length",_Length)
+
+
+				_averages = ganz((_ng-_overlap/100*_ntd)/(_ntd-_overlap/100*_ntd));
+				wenn _averages < 0
+					BoxNachricht("Configuration error","Please reduce the block size (Length)","?1")
+				ende
+				_deltat = _ntd*_dt
+				_deltaf = 1/_deltat
+				_fmax = _fs/2
+				PnSetValue("ElectricalAnalysis.Fs",_fs)
+				PnSetValue("ElectricalAnalysis.Samples",_ng)
+				PnSetValue("ElectricalAnalysis.Tgesamt",_tges)
+	
+				PnSetValue("ElectricalAnalysis.Averages",_averages)
+				PnSetValue("ElectricalAnalysis.Twindow",_deltat)
+				PnSetValue("ElectricalAnalysis.deltaf",_deltaf)
+				PnSetValue("ElectricalAnalysis.Fmax",_fmax)
+
+				
+			ende
+		ende
+	ende
+else
+	_erg = boxnachricht("Info:","No electrical data available!","!1")
+ende

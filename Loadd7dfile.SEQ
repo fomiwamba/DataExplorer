@@ -1,0 +1,95 @@
+sequenz imc_logging "load_d7d_file started"
+
+if 0
+	filename ="D:\Projekte\YUMOD_201908\RohDaten\" + "YUMOD_2019_08_21_205037" + ".d7d"
+	filename = "D:\YUMOD_Test_2021_08_05_175604.d7d"
+ende
+
+_fh = FileOpenFAS(filename, "#Dewetron.dll|Dewetron Format", 0)
+
+; Aufpasse -> TDMS Optionen -> Import mit Datengruppen
+WENN _fh > 0 
+	_anzK = FileObjNum?(_fh); Anzahl der Gruppen in der Datei
+	_ii = 1
+	_count =  0
+	SOLANGE _ii <= _anzK
+		channel_ratio = floor(_ii/_anzK*100) 
+		seteinheit(channel_ratio,"%",1)
+		zeigen channel_ratio
+		
+		if FileObjType?(_fh, _ii) = 1
+			_VarName = FileObjName?(_fh, _ii)
+			{<_VarName>} = FileObjRead(_fh, _ii)	
+			;SetDataFormat ({<_VarName>}, 0, 0, 0 ) 
+			
+			wenn lang?({<_VarName>}) >= 1
+
+				; Set TrigZeit and Xoffset
+				_Trigzeit = Zeit?({<_VarName>})
+				_T0 = Xoff?({<_VarName>})
+				_Trigzeit_new = _Trigzeit + _T0
+				
+				
+				if _count = 0
+					Trigzeit_file = _Trigzeit_new
+				end
+				if _Trigzeit_new = Trigzeit_file
+					setzeit({<_VarName>},_Trigzeit_new)
+				else
+					_Trigzeit_new = Trigzeit_file
+					setzeit({<_VarName>},Trigzeit_file)
+				end
+				
+				{<_VarName>} = xoff({<_VarName>},0)
+				;_Messdatum = ZeitInText(_Trigzeit_new,3)
+				
+				; Bernd - PulsCounter to Pulsfreq
+				if tverg(_VarName,"CNT_0_Raw_Count") = 0
+					
+					_temp_tacho_sig = {<_VarName>}
+					_VarName = "CNT0RawCount"
+					{<_VarName>} = 1-diff(_temp_tacho_sig); 		1-diff(CNT_0_Raw_Count)
+			
+				end
+				;
+				
+				if xdel?({<_VarName>}) <= 1/500; wegen Sondermessung Daten mit statischen Signalen wie Temperaturen
+					sequenz CleanChannel {<_VarName>} _varname 
+					;Data:{<_VarName>} = {<_VarName>}
+				else
+					WENN IsXY( {<_VarName>} ) = 1
+						{<_VarName>}  = xy(kmpx({<_VarName>}),kmpy({<_VarName>}))
+						setzeit({<_VarName>},_Trigzeit_new)
+						{<_VarName>} = xoff({<_VarName>},0)
+					ENDE
+					
+					;if txwo(_VarName, "T080") <> 0 or  txwo(_VarName, "T260") <> 0
+					if 0
+						OP_Data:{<_VarName>} = mvmean({<_VarName>},1,1)
+					else
+						OP_Data:{<_VarName>} = rsamp({<_VarName>},ramp(0,1,xdel?({<_VarName>})*lang?({<_VarName>})))
+					end
+					;ende
+					
+				ende
+				_count = _count +1
+			else
+				_file = AssetFolder +"\"+"corrupted_channels.txt"; 
+				_txt = filename + " ---> " + _VarName
+				_fh1 = FileOpenASCII(_file,2)
+				_err = FileLineWrite(_fh1,_txt,0)
+				_err = FileClose(_fh1)
+			ende
+			
+			
+		ende
+		_ii = _ii + 1
+	ende
+	_err = fileclose(_fh)	
+sonst
+	_err = FileErrCode?() 
+	zeigen _err
+ende
+
+
+

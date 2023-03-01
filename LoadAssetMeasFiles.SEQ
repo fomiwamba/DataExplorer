@@ -1,0 +1,63 @@
+;sequenz LoadAssetMeasFiles
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%
+; Read Inputfolder
+; Collect all files (search files)
+; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sequenz imc_logging "load_asset_meas_files started"
+
+searchname = "*.dat"
+pathname = AssetFolder + "\Output\TWF\"
+_filelist_mm = FsFileListNew(pathname, searchname, 0, 1, 2)
+IstFileList = TxArrayCreate(0)
+IstFileId = TxArrayCreate(0)
+IstTrigger = TxArrayCreate(0)
+IstOC = TxArrayCreate(0)
+ExpertComments =  TxArrayCreate(0)
+_item = 0
+wenn _filelist_mm > 0
+	_cntfile = FsFileListGetCount(_filelist_mm)
+	wenn _cntfile> 0
+		_mm = 1
+		SOLANGE _mm <= _cntfile
+			_filename = FsFileListGetName(_filelist_mm, _mm)
+			_filename_short = FsSplitPath(_filename,4)
+			_filedatetime = "L"+tteil(_filename_short,tlang(_filename_short)-18, 15)
+			_filename_parts = TxSplit(_filename_short,"_")
+			
+			_erg = TxFind(FeatData:FileId,_filedatetime,1,1)
+			;zeigen _erg
+			;sleep(0.5)
+			if max(_erg) > 0
+				;sequenz Insert_Item "VibrationAnalysis.MeasFile" _filename
+				;sequenz Insert_Item "ElectricalAnalysis.MeasFile" _filename
+				
+				_item = _item +1 
+				IstFileList[_item] = _filename_short;
+				_fileidpos = posi(_erg,max(_erg)) + 1
+				_fileid_name = FeatData:FileId[_fileidpos]
+				IstFileId[_item] = _fileid_name
+				ExpertComments[_item] = "None"
+				IstTrigger[_item] = "None"
+				IstOC[_item] = "None"
+				if txarraygetsize(_filename_parts) > 3
+					IstTrigger[_item] = _filename_parts[3]
+					IstOC[_item] = _filename_parts[4]
+				end
+			end
+			del _erg
+			_mm = _mm + 1
+		end
+		AnzFiles = _cntfile
+	ende
+	FsFileListClose(_filelist_mm)
+sonst
+	_err = FsGetLastError() 
+	zeigen _err
+ende
+MeasFiles = IstFileList
+MeasFileId = IstFileId
+MeasTrigger = IstTrigger
+MeasOC = IstOC
+

@@ -1,0 +1,35 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input: Selected AssetFolder
+; Output: AssetFolderSelected.txt
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;AssetFolderIdx = pnGetSelectedItem("AssetFolderList")
+;AssetFolder = pnGetItemText("AssetFolderList",AssetFolderIdx)
+;
+;OpModeIdx = pnGetSelectedItem("OpMode")
+;OpMode = pnGetItemText("OpMode",OpModeIdx)
+
+sequenz imc_logging "select_asset_folder started"
+
+AssetFolderIdx = pnGetSelectedItem("AssetFolderList")
+AssetFolder = pnGetItemText("AssetFolderList",AssetFolderIdx)
+
+;OpModeIdx = pnGetSelectedItem("OpModeList")
+;OpMode = pnGetItemText("OpModeList",OpModeIdx)
+
+path_assetfolder_selected = "C:\BDA\AssetFolderSelected.txt"
+
+_fh = FileOpenASCII(path_assetfolder_selected,1)
+if _fh > 0
+	_err = FileLineWrite(_fh,AssetFolder,0)
+	;_err = FileLineWrite(_fh,OpMode,0)
+	_err = FileClose(_fh)
+sonst
+	_err = FileErrCode?() 
+	zeigen _err
+ende
+
+if OpMode = "AUTO_UNIQUE"
+	pnshow("DataPreProcessing",1)
+ende
+
+;entf _*

@@ -1,0 +1,162 @@
+sequenz imc_logging "build_esa_metrics started"
+
+_sig = FiltTP(I_sig0:[1],0,0,16,80); Band pass  or high pass filter to remove the dominating frequencies
+T_alle_0 = posiex(_sig,0)
+freqline = 1/(2*(diff(T_alle_0)))
+		
+;freqline = mean(U_freqline_vec)
+SynchronousFrequency = mitte(freqline)/Polpaar_np
+SynchronousSpeed = SynchronousFrequency* 60
+
+		
+ESA_Metrics:FrequencyLine = freqline
+ESA_Metrics:SynchronousFrequency = SynchronousFrequency
+wenn ind_channelPuls = "None"
+	RotatingFrequency = SynchronousFrequency;mean(I_rotfreq_vec)
+sonst
+	RotatingFrequency = mitte(_drehzahl/60)
+ende
+
+wenn streamingfeatureextraction = 0
+	wenn ind_channelPuls = "None"
+		RotatingFrequency = SynchronousFrequency;mean(I_rotfreq_vec)
+	sonst
+		RotatingFrequency = mitte(_drehzahl/60)
+	ende
+	;	ende
+	;	wenn tverg(_txt, "FromMotorNameplate") = 0
+	;		RotatingFrequency = Speed_rpm_np/60
+	;	ende
+	;	wenn tverg(_txt, "FromTachoSignal") = 0
+	;		RotatingFrequency = mitte(_drehzahl/60)
+	;	ende
+	;	wenn tverg(_txt, "FromDemodCurrentSpec") = 0
+	;		RotatingFrequency = mean(I_rotfreq_vec)
+	;	ende
+	;	wenn tverg(_txt, "EqualToSynchSpeed") = 0
+	;		RotatingFrequency = mean(U_synchfreq_vec)
+	;	ende
+	;	wenn tverg(_txt, "FromLoad") = 0
+	;		DemandPower_W = 1/sqrt(3)*Abs(Mean(U_sig:[1]*I_sig:[1]+U_sig:[2]*I_sig:[2]+U_sig:[3]*I_sig:[3])); bzw. Pactive_Total (nach Vedat)
+	;		MotorLoad_% = DemandPower_W/Power_W_np * 100 ; (nach Vedat) -> output power as a percentage of rated power
+	;		RunningSpeed_from_Load = SynchronousSpeed -  (SynchronousSpeed - Speed_rpm_np) * MotorLoad_% / 100
+	;		RotatingFrequency_from_Load = RunningSpeed_from_Load/60
+	;		RotatingFrequency =RotatingFrequency_from_Load
+	;	ende
+	;	wenn tverg(_txt, "FromUser") = 0
+	;		RotatingFrequency = Pngetvalue("Speed_user_rpm")/60
+	;	ende
+ende
+
+RunningFrequency = RotatingFrequency
+ESA_Metrics:RotatingFrequency= RotatingFrequency
+ESA_Metrics:RotatingSpeed = RotatingFrequency*60
+	
+; SF = Freqline - RS -> Slip Frequency
+SlipFrequency = SynchronousFrequency - RotatingFrequency
+ESA_Metrics:SlipFrequency = SlipFrequency
+
+; PPF = SF*p -> Pole Pass Frequency
+;7.8.1.23.Pole pass frequency / Line frequency
+;This parameter indicates the ratio in dB of the line frequency to the side lines at the pole pass frequency
+;on the low-frequency current spectrum.
+PPF = SlipFrequency * Polpaar_np * 2
+ESA_Metrics:PolPassFrequency= PPF
+
+; RotorBarPassFrequency
+RotorBarPassFrequency = RotatingFrequency * RotorBars_np
+ESA_Metrics:RotorBarPassFrequency = RotatingFrequency * RotorBars_np
+; StatorSlotPassFrequency
+StatorSlotPassFrequency = RotatingFrequency * StatorSlots_np; -> RS * Popaar * Phases * integer  -> 6 * RS * Pol
+ESA_Metrics:StatorSlotPassFrequency = RotatingFrequency * StatorSlots_np
+
+
+PowerFactor_avg = ESA_Parameter:PowerFactor_avg
+U_eff_avg = ESA_Parameter:U_eff_avg
+I_eff_avg = ESA_Parameter:I_eff_avg
+
+SynchronousFrequency = ESA_Metrics:FrequencyLine
+SynchronousSpeed = ESA_Metrics:SynchronousFrequency*60
+RunningSpeed = ESA_Metrics:RotatingFrequency*60
+
+method = 1
+if method = 1
+	DemandPower_W = Mean(1/sqrt(3)*Abs(U_sig:[1]*I_sig:[1]+U_sig:[2]*I_sig:[2]+U_sig:[3]*I_sig:[3])); bzw. Pactive_Total (nach Vedat)
+	ApparentPower_VA = 1/sqrt(3)*(U_eff:[1]*I_eff:[1]+U_eff:[2]*I_eff:[2]+U_eff:[3]*I_eff:[3])
+else
+	DemandPower_W = U_eff_avg * I_eff_avg * PowerFactor_avg * sqrt(3)
+	ApparentPower_VA = U_eff_avg * I_eff_avg * sqrt(3)
+end
+PowerFactor_CosPhi = DemandPower_W/ApparentPower_VA
+
+
+; Motor efficiency
+;The efficiency is calculated from a value table. The following parameters are used: 	;• Efficiency level	;• Enclosure	;• Load
+if Efficiency_np <> 0
+	;	Efficiency_% = function(EfficiencyLevel, Enclosure, Load_%)
+	; EfficiencyLevel = {‘Standard’, ‘High’, ‘Energy’ or ‘Premium’.}
+	; Enclosure = {ODP: Open, Drip-Proof motor or TEFC: Totally Enclosed, Fan-Cooled motor}
+	;The efficiency is not calculated if the load is smaller than 50%.
+	
+	Efficiency_% = Efficiency_np * 100
+	MotorLoad_% = Efficiency_% * DemandPower_W / Power_W_np
+	ESA_Metrics:MotorLoad_% = MotorLoad_%
+	
+else; Efficiency = 100%
+	
+	; LOAD
+	method = 1
+	if method = 1; -> current and voltage
+		MotorLoad_%  = I_eff_avg/I_A_np * U_eff_avg/U_V_np *100
+	elseif method = 2; -> slip method 
+		MotorLoad_% = (SynchronousSpeed - RunningSpeed)/(SynchronousSpeed - Speed_rpm_np) *100; Speed_rpm_np <-> 100% Load, RunningSpeed <-> Load
+	elseif method = 3; Corrected Slip Method
+		MotorLoad_% = (SynchronousSpeed - RunningSpeed)/((SynchronousSpeed - Speed_rpm_np)*(U_eff_avg/U_V_np)^2) *100
+	elseif method = 4
+		MotorLoad_% = DemandPower_W/Power_W_np * 100 ; (nach Vedat) -> output power as a percentage of rated power
+		;Load = Demand power * Efficiency at rated load / Nameplate power.
+	ende
+	; Efficiency
+	method = 1
+	if method = 1
+		Efficiency_% = Power_W_np * MotorLoad_% / DemandPower_W; / 100 -> eta = 0.7457 *hp *Load/Pi, 1hp = 745,7 W  = OutputPower/DemandPower
+	elseif method = 2
+		ESA_Metrics:App_Power_VA_np = U_V_np * I_A_np *  sqrt(3)
+		ESA_Metrics:Real_Power_W_np =ESA_Metrics:App_Power_VA_np * PowerFactor_np 
+		Efficiency_% = Power_W_np / ESA_Metrics:Real_Power_W_np * 100		
+	end
+	
+	if Efficiency_% >= 100
+		Efficiency_% = 100
+	ende
+ende
+
+	
+;Mechanical Power or Output Power
+method = 1
+if method = 1
+	OutputPower_W  = DemandPower_W*Efficiency_%/100
+else
+	OutputPower_W = Power_W_np * MotorLoad_%/100
+ende
+	
+;Torque
+OutputTorque_Nm = OutputPower_W/(2*pi*RotatingFrequency); Output torque = Output power / Rotation speed	P = M*2*pi*N
+	
+; Store Metrics
+ESA_Metrics:DemandPower_W = DemandPower_W
+ESA_Metrics:ApparentPower_VA = ApparentPower_VA
+ESA_Metrics:PowerFactor_CosPhi = PowerFactor_CosPhi
+ESA_Metrics:MotorLoad_% = MotorLoad_%
+ESA_Metrics:Efficiency_% = Efficiency_% 
+ESA_Metrics:OutputPower_W = OutputPower_W
+ESA_Metrics:OutputTorque_Nm = OutputTorque_Nm
+ESA_Metrics:U_V_np_fu = freqline / freqline_Hz_np * U_V_np  
+
+;wenn streamingfeatureextraction = 0
+;	ESA_Metrics:RunningSpeed_from_Load = SynchronousSpeed -  (SynchronousSpeed - Speed_rpm_np) * MotorLoad_% / 100
+;	ESA_Metrics:RotatingFrequency_from_Load = ESA_Metrics:RunningSpeed_from_Load/60
+;	ESA_Metrics:SlipFrequency_from_Load = (MotorLoad_% /100 *  (SynchronousSpeed - Speed_rpm_np))/60
+;ende
+
+;sequenz update_tables

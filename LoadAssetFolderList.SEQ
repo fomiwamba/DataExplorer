@@ -1,0 +1,38 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input: AssetFolderList.txt
+; Output: AssetFolderList - DropDownMenu
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sequenz imc_logging "load_asset_folder_list started"
+
+_path_assetfolder_list = "C:\BDA\AssetFolderList.txt"
+
+_idDatei= FileOpenASCII(_path_assetfolder_list,0 )
+if _idDatei > 0
+	_TxZeile = ""
+	_ok = 0
+	_count = 0
+	AssetFolderList = TxArrayCreate(0)
+	solange _ok = 0
+		_ok = FileLineRead( _idDatei, _TxZeile, 0 )
+		if _ok = 0 and _count >= 1
+			;AssetFolderItem[_count] = tteil(_TxZeile,3,tlang(_TxZeile)-2)
+			AssetFolderList[_count] = _TxZeile
+			;sequenz insert_item "DataExploration.AssetFolderList" AssetFolderList[_count]
+		ende
+		_count = _count + 1
+	ende
+	FileClose(_idDatei)
+	;DlgSelectItem("AssetFolderList",1)
+	;AssetFolderIdx = DlgGetSelectedItem("AssetFolderList")
+	;AssetFolder = DlgGetItemText("AssetFolderList",AssetFolderIdx)
+sonst
+	_err = FileErrCode?()
+	zeigen _err
+ende
+
+entf _*
+;DlgSelectItem("OpMode",1)
+;OpModeIdx = DlgGetSelectedItem("OpMode")
+;OpMode = DlgGetItemText("OpMode",OpModeIdx)
+

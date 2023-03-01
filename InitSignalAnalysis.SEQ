@@ -1,0 +1,26 @@
+; Load FeatureTable
+; -> filter all measurements according to time period and op interval
+; -> load measlist
+; -> load parlist of all channels
+; -> load funclist (fft, orderfft, envfft, orderenvfft) of all channels;
+
+sequenz imc_logging "init_signal_analysis started"
+
+entf *
+;DlgShow("ViewCirclePlot",0)
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz LoadAssetFolderList
+
+;sequenz LoadAssetFolderSelected
+sequenz LoadAssetMeasFileChannel
+
+wenn varexist?("AssetFolder") 
+	sequenz LoadConfigAndDataSelectedAssetFolder
+sonst
+	BoxNachricht("Info","Please select an AssetFolder","?1")
+	;sequenz LoadAssetFolderList
+ende
+
+

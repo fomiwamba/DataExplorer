@@ -1,0 +1,54 @@
+sequenz imc_logging "demodulation_electrical_signal started"
+
+; Demodulation:
+_sig = PA1
+_method = 2
+
+T_alle_0 = posiex(FiltBP(_sig,0,0,16,1,100),0)
+_freqline1 = 1/(2*mean(diff(T_alle_0)))
+_freqline = _freqline1
+if 0
+	_sig_spec = kmp1(dftSpectrum(U_sig0:[1],2));,_n,_window,_overlap,1)
+	_freqline2 = posi(_sig_spec,max(gren(_sig_spec,1,60)))
+	entf _sig_spec
+
+	if abs(_freqline1-_freqline2) < 1
+		_freqline = 0.5*(_freqline1+_freqline2)
+	ende
+ende
+
+
+wenn  _method = 1
+	; like envelope
+	_BPFu = 0
+	_BPFo = 2*_freqline
+	_TPF = 1*_freqline
+	_sig1 = FiltBP(_sig,0,0,16,_BPFu,_BPFo); Band pass  or high pass filter to remove the dominating frequencies
+	_sig2 = abs(_sig1); rectification using abs function to create the envelope function
+	_sig3 = FiltTP(_sig2,0,0,16,_TPF); low pass filter to remove high frequency in the envelope function 
+	sig_demod = _sig3
+elseif _method = 2; nach Vedat
+	;	The demodulation is done as follows:
+	;1.       Remove the DC offset
+	;2.       Low pass the time series at 2 x line frequency
+	;3.       Square the time series
+	;4.       Low pass the time series at line frequency
+	;5.       Square root the series
+
+	_TPF1 = 2*_freqline;freqline_Hz_np
+	_TPF2 = 1*_freqline;freqline_Hz_np
+	_sig1 = _sig - mean(_sig); Remove the DC offset
+	_sig2 =  FiltTP(_sig1,0,0,16,_TPF1); Low pass the time series at 2 x line frequency
+	_sig3 = _sig2*_sig2; Square the time series
+	_sig4 =  FiltTP(_sig3,0,0,16,_TPF2); Low pass the time series at line frequency
+	_sig5 = sqrt(_sig4);  Square root the series
+	sig_demod = _sig5
+sonst
+	sig_demod = FiltBS(_sig,0,0,10,freqline-0.3,freqline+0.3)
+ende
+
+;_sig =gren(I_sig0:I1,25,40)
+;_spec1 = dftspectrum(sig_demod1-mean(sig_demod1),2)
+;_spec = dftspectrum(sig_demod-mean(sig_demod),2)
+
+

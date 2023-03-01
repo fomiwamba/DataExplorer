@@ -1,0 +1,156 @@
+sequenz imc_logging "clear_plots started"
+; sequenz clear curvemanager
+
+CwSelectMode("title")
+_ret = CwIsWindow("TrendPlot")
+wenn _ret <> 0
+		CwSelectWindow("TrendPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+_ret = CwIsWindow("CascadePlot")
+wenn _ret <> 0
+		CwSelectWindow("CascadePlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+_ret = CwIsWindow("TimeWaveForm")
+wenn _ret <> 0
+		CwSelectWindow("TimeWaveForm")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+_ret = CwIsWindow("BoxPlot3D")
+wenn _ret <> 0
+		CwSelectWindow("BoxPlot3D")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+_ret = CwIsWindow("FFT_averaged")
+wenn _ret <> 0
+		CwSelectWindow("FFT_averaged")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+_ret = CwIsWindow("FFT3D")
+wenn _ret <> 0
+		CwSelectWindow("FFT3D")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+_ret = CwIsWindow("HistPlotT")
+wenn _ret <> 0
+		CwSelectWindow("HistPlotT")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+
+; delete marker -> measurement point
+entf measpoint
+entf measpoint_date
+
+if 0
+PnSetActivePage(9)
+CwSelectMode("title")
+_ret = CwIsWindow("ParameterDataPlot")
+wenn _ret <> 0
+		CwSelectWindow( "ParameterDataPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+
+PnSetActivePage(9)
+CwSelectMode("title")
+_ret = CwIsWindow("ParameterDataPlot")
+wenn _ret <> 0
+		CwSelectWindow( "ParameterDataPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+
+
+PnSetActivePage(10)
+CwSelectMode("title")
+_ret = CwIsWindow("ParameterDataPlot")
+wenn _ret <> 0
+		CwSelectWindow( "ParameterDataPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+ende
+end
+
+PnSetActivePage(11)
+CwSelectMode("title")
+_ret = CwIsWindow("ParameterPlot")
+wenn _ret <> 0
+		CwSelectWindow("ParameterPlot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+
+PnSetActivePage(11)
+CwSelectMode("title")
+_ret = CwIsWindow("PSD_Sig1_Plot")
+wenn _ret <> 0
+		CwSelectWindow("PSD_Sig1_Plot")
+	CwAction("delete.lines")
+	CwAction("delete.markers")
+	CwAction("reset")
+	;CwNewWindow("xyplot","show")
+	;CwDeleteElement("line")
+	;CwDeleteElement("axis")
+	;CwDeleteElement("cosys")
+	;CwDeleteElement("marker")
+ende
+

@@ -1,0 +1,23 @@
+sequenz imc_logging "select_item_from_file_list started"
+
+idx = PnGetSelectedItem("FileList")
+$filename = PnGetItemText("FileList",idx)
+_fileid = FileOpenDSF($filename,100)
+wenn _fileid > 0; and _filesize > 1000
+	_index = FileObjNum?(_fileid)
+	wenn _index <> 0
+		_count = 1
+		solange _count <= _index				
+			_parvalue = FileObjRead(_fileid,_count)
+			_Parname = FileObjName?(_fileid,_count)
+			_parnameneu = _parname;add(_parname,tadd("_",_Messdatum))
+			{<_Parnameneu>} = _parvalue
+			sequenz Insert_Item "ChannelX" _parnameneu
+			_count = _count + 1
+		ende
+		DlgSelectItem("ChannelX",1)
+	ende
+	_err = fileclose(_fileid)
+ende
+
+

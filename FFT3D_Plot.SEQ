@@ -1,0 +1,34 @@
+sequenz imc_logging "fft_3d_plot started"
+
+;cw_verz = "C:\BDA\ExpertAnalysis\"
+index = PnGetValue("CascadePlotaxis")
+wenn index = 0
+	wenn varexist?("Ax_trend_de")
+		;Ax_Trend_de = Ax_Trend_de
+		sequenz plot_3d_trend Ax_trend_de 1 "CascadePlot"
+		CwLoadCCV("CascadePlot",cw_verz + "Ax_Trend_normal.ccv")
+	ende
+	;	_index2 = PnGetSelectedItem("MeasListeDate")
+	;	wenn _index2 <> 0
+	;		Ax_kask = Ax_kask0
+	;		sequenz plot_3d_trend Ax_kask 1 "FFT3D"
+	;		CwLoadCCV("FFT3D",cw_verz + "Ax_kask_normal.ccv")
+	;	ende
+else
+	wenn varexist?("Ax_trend_de")
+		;Ax1 = Ax_Trend_de
+;		event_anzahl  = EventNum?(Ax_Trend)
+;		event_length = EventProp?(Ax_Trend,1,3);/event_anzahl
+;		EventJoin(Ax1,0)
+;		SetSegLang(Ax1,event_length)
+		Ax_Trend_det = MatrixTranspose(Ax_Trend_de)
+		sequenz plot_3d_trend Ax_trend_det 1 "CascadePlot"
+		CwLoadCCV("CascadePlot",cw_verz + "Ax_Trend_transposed.ccv")
+	ende
+	;	_index2 = PnGetSelectedItem("MeasListeDate")
+	;	wenn _index2 <> 0
+	;		Ax_kask = MatrixTranspose(Ax_kask0)
+	;		sequenz plot_3d_trend Ax_kask 1 "FFT3D"
+	;		CwLoadCCV("FFT3D",cw_verz + "Ax_kask_transposed.ccv")
+	;	ende
+ende

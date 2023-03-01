@@ -1,0 +1,6 @@
+acrobat_path = "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
+;help_path = "C:\BDA\CurveWindow_Kurvenfenster.pdf"
+help_path = "C:\BDA\imcFamosHelp.pdf"
+Applikation Vollbild  <acrobat_path> <help_path>
+
+;Applikation Vollbild C:\Program Files (x86)\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe C:\BDA\JMY_DataManager\CurveWindow.pdf

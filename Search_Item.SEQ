@@ -1,0 +1,21 @@
+
+sequenz imc_logging "search_item started"
+_txtarray = PA1
+_txtsearch = PA2
+_qqmax = TxArrayGetSize(_txtarray)
+_qq = 1
+SOLANGE _qq <= _qqmax 
+	wenn tverg(_txtarray[_qq],_txtsearch) = 0 
+		break
+	sonst	
+		_qq = _qq + 1
+	ende
+ENDE
+if _qq > _qqmax
+	search_index = 0
+else
+	search_index = _qq
+ende
+entf _qq
+entf _txtarray
+entf _txtsearch

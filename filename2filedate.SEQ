@@ -1,0 +1,68 @@
+sequenz imc_logging "filename_to_filedate started"
+
+_txtpos = TxWo(_filename,_file_ext)
+; fuer die d7d -> bei dewe files -> yyyy_mm_dd_hhmnss
+wenn txwo(_file_ext,".tdm") <>0 or txwo(_file_ext,".dat") <> 0 or txwo(_file_ext,".csv") <> 0 or txwo(_file_ext,".txt") <> 0
+	if txwo(_filename,"Trend") <> 0
+		_Messdatum = TTeil(_filename,_txtpos-11,11); jjjjmmtt_hhmmss
+		_Sek_ = "00"
+		_Sek=TzuEW(_Sek_,"e")
+		_Min_ = "00"
+		_Min=TzuEW(_Min_,"e")
+		_Stun_ = TTeil(_Messdatum,10,2)
+		_Stun=TzuEW(_Stun_,"e")
+		_Tag_ = TTeil(_Messdatum,7,2)
+		_Tag=TzuEW(_Tag_,"e")
+		_Monat_ = TTeil(_Messdatum,5,2)
+		_Monat=TzuEW(_Monat_,"e")
+		_Jahr_ = TTeil(_Messdatum,1,4)
+		_Jahr=TzuEW(_Jahr_,"e")
+	else
+		_Messdatum = TTeil(_filename,_txtpos-15,15); jjjjmmtt_hhmmss
+		_Sek_ = TTeil(_Messdatum,14,2)
+		_Sek=TzuEW(_Sek_,"e")
+		_Min_ = TTeil(_Messdatum,12,2)
+		_Min=TzuEW(_Min_,"e")
+		_Stun_ = TTeil(_Messdatum,10,2)
+		_Stun=TzuEW(_Stun_,"e")
+		_Tag_ = TTeil(_Messdatum,7,2)
+		_Tag=TzuEW(_Tag_,"e")
+		_Monat_ = TTeil(_Messdatum,5,2)
+		_Monat=TzuEW(_Monat_,"e")
+		_Jahr_ = TTeil(_Messdatum,1,4)
+		_Jahr=TzuEW(_Jahr_,"e")
+	end
+elseif txwo(_file_ext,".d7d") <>0  
+	_Messdatum = TTeil(_filename,_txtpos-17,17); yyyy_mm_dd_hhmnss
+	;_Messdatum = "2020_01_02_101122"
+	_Sek_ = TTeil(_Messdatum,16,2)
+	_Sek=TzuEW(_Sek_,"e")
+	_Min_ = TTeil(_Messdatum,14,2)
+	_Min=TzuEW(_Min_,"e")
+	_Stun_ = TTeil(_Messdatum,12,2)
+	_Stun=TzuEW(_Stun_,"e")
+	_Tag_ = TTeil(_Messdatum,9,2)
+	_Tag=TzuEW(_Tag_,"e")
+	_Monat_ = TTeil(_Messdatum,6,2)
+	_Monat=TzuEW(_Monat_,"e")
+	_Jahr_ = TTeil(_Messdatum,1,4)
+	_Jahr=TzuEW(_Jahr_,"e")
+sonst; Keck Daten
+	_Messdatum = TTeil(_filename,_txtpos-12,12);jjjjmmtthhmmss
+	
+	_Sek_ = "0";TTeil(_Messdatum,14,2)
+	_Sek=TzuEW(_Sek_,"e")
+	_Min_ = TTeil(_Messdatum,11,2)
+	_Min=TzuEW(_Min_,"e")
+	_Stun_ = TTeil(_Messdatum,9,2)
+	_Stun=TzuEW(_Stun_,"e")
+	_Tag_ = TTeil(_Messdatum,7,2)
+	_Tag=TzuEW(_Tag_,"e")
+	_Monat_ = TTeil(_Messdatum,5,2)
+	_Monat=TzuEW(_Monat_,"e")
+	_Jahr_ = TTeil(_Messdatum,1,4)
+	_Jahr=TzuEW(_Jahr_,"e")
+end
+_Messdatum_zahl=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+Date_string = _Jahr_+_Monat_+_Tag_+" "+_Stun_+":"+_Min_+":"+_Sek_
+FileId = _Messdatum

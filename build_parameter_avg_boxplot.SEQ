@@ -1,0 +1,101 @@
+sequenz imc_logging "build_parameter_avg_boxplot started"
+
+_a = IsCplx({<_parname>})
+if _a = 0
+	_x_iqr = leer; Interquartile oder quartilabstand
+	_x_median = leer; Median -> x050 or q2
+	_x_mean = leer;
+	_x_min = leer; Max -> Boxplot Whisker
+	_x_max = leer; Min -> Boxplot Whisker
+	_x_lq = leer; LowerQuartile -> Boxplot Quartil -> q1
+	_x_uq = leer; UpperQuartile -> Boxplot Quartil -> q3
+	_x_lower = leer;
+	_x_upper = leer;
+
+	;_parname = "S206_std"
+	_parname_fileid = _parname + "_fileid"
+	
+	FileId_x = kmpx(FileId_)
+	FileId_y = kmpy(FileId_)
+	FileId_y_max = max(FileId_y)
+	_tvec = leer
+	_yvec = leer
+	for _mm = 1 to FileId_y_max + 1
+		idx_list = posiex(FileId_y,_mm-1)
+		idx_min = min(idx_list)
+		idx_max = max(idx_list)
+		if xaxis = 1
+			par_filedid = grenindex(kmpy({<_parname>}),idx_min+1,idx_max+1)
+			mean_tvec = mean(grenindex(kmpx({<_parname>}),idx_min+1,idx_max+1))
+			mean_yvec = mean(grenindex(kmpy({<_parname>}),idx_min+1,idx_max+1))
+			_tvec= binde(_tvec, mean_tvec)
+			_yvec= binde(_yvec, mean_yvec)
+		else
+			par_filedid = grenindex({<_Parname>},idx_min+1,idx_max+1)
+			mean_tvec = mean(idx_list)
+			mean_yvec = mean(grenindex({<_parname>},idx_min+1,idx_max+1))
+			_tvec= binde(_tvec, mean_tvec)
+			_yvec= binde(_yvec, mean_yvec)
+		end
+	
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		; BoxPlot
+		x = sort(par_filedid,1)
+		n = lang?(x)
+		if n > 1
+			a1 = n*0.25
+			a2 = n*0.75
+			a3 = n*0.5
+			b1 = mod(n,4)
+			b2 = mod(n,4)
+			b3 = mod(n,2)
+	
+			wenn b1 = 0
+				x025 = 0.5*(x[a1]+x[a1+1]); wenn a 
+			sonst
+				x025 = x[a1]
+			end
+			wenn b2 = 0
+				x075 = 0.5*(x[a2]+x[a2+1]); wenn a 
+			sonst
+				x075 = x[a2]
+			end
+			wenn b3 = 0
+				x050 = 0.5*(x[a3]+x[a3+1]); wenn a 
+			sonst
+				x050 = x[a3]
+			end
+			_x_iqr = binde(_x_iqr, x075-x025); Interquartile oder quartilabstand
+			_x_median = binde(_x_median, x050); Median -> x050 or q2
+			_x_mean = binde(_x_mean,mean(par_filedid))
+			_x_min = binde(_x_min, min(par_filedid)); Max -> Boxplot Whisker
+			_x_max = binde(_x_max, max(par_filedid)); Min -> Boxplot Whisker
+			_x_lq = binde(_x_lq, x025); LowerQuartile -> Boxplot Quartil -> q1
+			_x_uq = binde(_x_uq, x075); UpperQuartile -> Boxplot Quartil -> q3
+			;x_std = binde(x_std, Streu(par_filedid-mean(par_filedid)));
+			;x_range = binde(x_range, max(par_filedid)-min(par_filedid))
+			;x_skew = binde(x_skew, 1/n*summe(((par_filedid-mean(par_filedid))/Streu(par_filedid-mean(par_filedid)))^3));
+			;x_kurt = binde(x_kurt, 1/n*summe(((par_filedid-mean(par_filedid))/Streu(par_filedid-mean(par_filedid)))^4));
+			_x_lower = binde(_x_lower,x025 - 1.5*(x075-x025))
+			_x_upper = binde(_x_upper,x075 + 1.5*(x075-x025))
+		end
+	end
+
+	{<_parname_fileid>} = xyvon(_tvec,_yvec)
+	seteinheit({<_parname_fileid>},einheit?({<_parname>},1),1)
+	;delta = 1.5*x_iqr; w = maximum whisker length
+
+	Parameter_avg_boxplot = GrNeu();
+	Parameter_avg_boxplot:x_median = _x_median
+	Parameter_avg_boxplot:x_lq = _x_lq
+	Parameter_avg_boxplot:x_uq = _x_uq
+	Parameter_avg_boxplot:x_lower = _x_lower
+	Parameter_avg_boxplot:x_upper = _x_upper
+	Parameter_avg_boxplot:x_mean = _x_mean
+	Parameter_avg_boxplot:x_max = _x_max
+	Parameter_avg_boxplot:x_min = _x_min
+	;zeigen Parameter_avg_boxplot
+	CwLoadCCV("Parameter_avg_boxplot", "C:\BDA\ExpertAnalysis\Parameter_avg_boxplot.ccv")
+
+	;sequenz plot_2d_trend {<_parname_fileid>} xaxis "VMS_Freq_Data.ParameterPlot"
+end

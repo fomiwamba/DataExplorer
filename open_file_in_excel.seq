@@ -1,0 +1,135 @@
+sequenz imc_logging "open_file_in_excel started"
+
+Pn = PngetselectedItem("TableList")
+table_name = PngetitemText("TableList",Pn)
+
+if txwo(table_name, "Current_Statistics_Table")
+	file = AssetFolder + "\Output\Features\"+ "current_statistics_table.csv"
+	
+elseif txwo(table_name, "Current_RelDeltaRef_Severity_Table")
+	file = AssetFolder + "\Output\Features\"+ "current_parameter_table_delta_rel.csv"
+	
+elseif txwo(table_name, "Current_AbsDeltaRef_Severity_Table")
+	file = AssetFolder + "\Output\Features\"+ "current_parameter_table_delta_abs.csv"
+	
+elseif txwo(table_name, "Current_Status_Table")
+	file = AssetFolder + "\Output\Features\"+ "current_parameter_table_status.csv"
+	
+elseif txwo(table_name, "Current_Value_Table")
+	file = AssetFolder + "\Output\Features\"+ "current_parameter_table_val.csv"
+	
+elseif txwo(table_name, "Visa_Fault_Table")
+	file = AssetFolder + "\Output\Features\"+ "visa_fault_table.csv"
+	
+elseif txwo(table_name, "Esa_Fault_Table")
+	file = AssetFolder + "\Output\Features\"+ "esa_fault_table.csv"
+	
+elseif txwo(table_name, "Feature_Limit_Table")
+	file = AssetFolder + "\Output\Features\"+ "FeatureOcRefLimitTable_M.csv"
+	_erg = FsFileExists(file)
+	if _erg = 0
+		file = AssetFolder + "\Output\Features\"+ "FeatureOcRefLimitTable.csv"
+	ende
+	
+elseif txwo(table_name, "Feature_Status_Table")
+	file = AssetFolder + "\Output\Features\"+ "FeatureStatusTable.csv"
+	
+elseif txwo(table_name, "Channel_Status_Table")
+	file = AssetFolder + "\Output\Features\"+ "ChannelStatusTable.csv"
+	
+elseif txwo(table_name, "ChannelFeatureStatusTable")
+	file = AssetFolder + "\Output\Features\"+ "ChannelFeatureStatusTable.csv"
+	
+elseif txwo(table_name, "Feature_Severity_Table")
+	file = AssetFolder + "\Output\Features\"+ "FeatureSeverityTable.csv"
+	
+elseif txwo(table_name, "Channel_Severity_Table")
+	file = AssetFolder + "\Output\Features\"+ "ChannelSeverityTable.csv"
+	
+elseif txwo(table_name, "ChannelFeatureSeverityTable")
+	file = AssetFolder + "\Output\Features\"+ "ChannelFeatureSeverityTable.csv"
+	
+elseif txwo(table_name, "Feature_Audit_Table")
+	file = AssetFolder + "\Output\Features\"+ "audit_table.csv"
+	
+elseif txwo(table_name, "AnalyticsTable")
+	file = AssetFolder + "\Output\Features\"+ "AnalyticsTable.csv"
+
+elseif txwo(table_name, "SuesFrequencyTable")
+	file = AssetFolder + "\Output\Features\"+ "SuesFrequencyTable.csv"
+	
+elseif txwo(table_name, "SuesStatisticsTable")
+	file = AssetFolder + "\Output\Features\"+ "SuesStatisticsTable.csv"
+	
+elseif txwo(table_name, "FeatureTable")
+	file = AssetFolder + "\Output\Features\"+ "FeatureTable_Clean.csv"
+	
+elseif txwo(table_name, "audit_table")
+	file = AssetFolder + "\Output\Features\"+ "audit_table.csv"
+	
+elseif txwo(table_name, "dist_table")
+	file = AssetFolder + "\Output\Features\"+ "dist_table.csv"
+	
+elseif txwo(table_name, "eigval_table")
+	file = AssetFolder + "\Output\Features\"+ "eigval_table.csv"
+	
+elseif txwo(table_name, "eigvect_table")
+	file = AssetFolder + "\Output\Features\"+ "eigvect_table.csv"
+	
+elseif txwo(table_name, "pca_table")
+	file = AssetFolder + "\Output\Features\"+ "pca_table.csv"
+	
+elseif txwo(table_name, "tsne_table")
+	file = AssetFolder + "\Output\Features\"+ "tsne_table.csv"
+	
+elseif txwo(table_name, "corr_table")
+	file = AssetFolder + "\Output\Features\"+ "corr_table.csv"
+	
+elseif txwo(table_name, "Config_Table")
+	file = AssetFolder + "\xlsconfig.xlsx"
+else
+	file = AssetFolder + "\xlsconfig.xlsx"
+ende
+
+_erg = FsFileExists(file)
+if _erg = 1
+	_erg = xlstart()
+	;WENN XlStart()
+	XlVisible(1)
+	XlWbOpen(file)
+	;   XlQuit()
+	;ENDE
+ende
+entf file
+entf table_name
+
+if 0
+	Config_Table
+	Current_Statistics_Table
+	Current_RelDeltaRef_Severity_Table
+	Current_AbsDeltaRef_Severity_Table
+	Current_Status_Table
+	Current_Value_Table
+	Visa_Fault_Table
+	Esa_Fault_Table
+	Esa_Fault_Table
+	Feature_Status_Table
+	Channel_Status_Table
+	ChannelFeatureStatusTable
+	Feature_Severity_Table
+	Channel_Severity_Table
+	ChannelFeatureSeverityTable
+	Feature_Audit_Table
+	
+	AnalyticsTable
+	SuesFrequencyTable
+	
+	audit_table
+	dist_table
+	eigval_table
+	eigvect_table
+	pca_table
+	tsne_table
+	corr_table
+	
+ende

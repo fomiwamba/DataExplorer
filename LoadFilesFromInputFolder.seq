@@ -1,0 +1,74 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%
+; Read Inputfolder
+; Collect all files (search files)
+; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sequenz imc_logging "load_file_from_input_folder started"
+
+
+Idx = DlgGetSelectedItem("AssetFolderList")
+wenn Idx > 0
+	AssetFolder = DlgGetItemText("AssetFolderList",Idx)
+	;
+	DlgDeleteItem("ParameterListe",0)
+	sequenz ClearPlots
+	; load configuration
+	path_configfile = AssetFolder + "\xlsconfig.xlsx" 
+	;sequenz Inifile_RevB path_configfile;
+
+	TrendFileFolder = AssetFolder + "\TrendFiles"; 
+
+	_PathName = TrendFileFolder
+	;formatidx = DlgGetSelectedItem("TrendFileFormat")
+	;trendfileformat =  DlgGetItemText("TrendFileFormat",formatidx)
+	;zeigen trendfileformat
+
+	tdms_files = 0
+	txt_files = 0
+	csv_files = 0
+
+	DlgDeleteItem("TrendFileListe",0)
+	_PathName = TrendFileFolder
+	_filelist_mm = FsFileListNew(_pathname, "*.*", 0, 1, 2)
+	FileList = TxArrayCreate(0)
+	count = 0
+	wenn _filelist_mm > 0
+		_cntfile = FsFileListGetCount(_filelist_mm)
+		wenn _cntfile > 0
+			_mm = 1
+			SOLANGE _mm <= _cntfile
+				_filename = FsFileListGetName(_filelist_mm, _mm)
+				
+				_filename_short = fsSplitPath(_filename, 4) 								
+
+				_file_ext = fssplitPath(_filename,3)
+				if txwo(_file_ext,"_index") =0 
+					count = count + 1
+					FileList[count] = _filename
+					sequenz Insert_Item "TrendFileListe" _filename
+				ende
+				
+				if txwo(_file_ext, "tdm") <> 0
+					tdms_files = 1
+				elseif txwo(_file_ext, "txt") <> 0
+					txt_files = 1
+				elseif txwo(_file_ext, "csv") <> 0
+					csv_files = 1
+				end
+				_mm = _mm + 1
+			end
+		end
+		FsFileListClose(_filelist_mm)
+	sonst
+		_err = FsGetLastError() 
+		zeigen _err
+	ende
+
+	if tdms_files = 1
+		_searchname = "*.tdms" 
+	elseif txt_files = 1
+		_searchname = "*.txt"
+	elseif csv_files = 1
+		_searchname = "*.csv"
+	ende
+ende

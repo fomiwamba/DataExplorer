@@ -1,0 +1,278 @@
+sequenz imc_logging "run_out_compensation started"
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Circular view / Roller profile
+
+;This processing aims at representing a time signal according to a circular view called “roller profile” in the paper industry. This type of representation can also be used to study speed-reducing gears.
+;For this type of plot, the roller rotation speed is required in order to convert time into angular degrees.
+;Moreover, if the signal is measured following a trigger input, the graph origin can be correlated to a mark on the roller. In this case, a synchronous averaging may also be calculated, thus allowing to reduce the influence of the vibrations from parts that rotate at a different (non multiple) speed.
+;Formulation and display
+;Let x(i) be a time signal of Nech samples with a rotation frequency Frot (Hz):
+;The angular position “a” of sample “ i ” is: a = i*360*Frot/Fech. (modulo 360)
+;Signal x(i) is used to represent a « mode shape » of a circle of radius R. 
+;Let C be the scaling coefficient, then the points to plots are:
+;In polar coordinates: Amplitude = R + C*x(i), Phase = a
+;In rectangular coordinates: Xpos = Cos(a)*( R + C*x(i)), Ypos = Sin(a)*( R + C*x(i))
+;Max. Limit circle (R+C*xmax)
+;Circle with radius R (x(i) = 0)
+;Min. Limit circle (R-C*xmax)
+;Point indicating beginning of time range
+;Full scale/Radius ratio -> This ratio is used to define C*xmax/R. e.g. C*xmax/R = 0.5
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+entf _dphi
+entf _rs
+idx = DlgGetSelectedItem("C");2048;PA3;samples_per_rev[channelcount] 
+C = DlgGetItemText("C",idx)
+C = tzuew(C,"e")
+
+
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if varexist?("method")
+sonst
+	method = 1
+ende
+wenn method = 0
+	_vib = <a_sig1>;S3X;PA1
+	_peak_raw = <a_peak>;K3;PA2
+sonst
+	_vib = S3X;PA1
+	_peak_raw = K3;PA2
+ende
+
+wenn a_peak="None"
+	Peak = 0*signal1
+	k1triglevel = 1
+	_peak_raw = Peak
+	
+sonst
+	Peak = <a_peak>
+	Peak = gren(Peak,0,min(binde(Tmax,Tend)))
+	_peak_raw = Peak
+	idx = DlgGetSelectedItem("SamplesPerRev");2048;PA3;samples_per_rev[channelcount] 
+	_samples_per_rev = DlgGetItemText("SamplesPerRev",idx)
+	_samples_per_rev = tzuew(_samples_per_rev,"e")
+	_pam = 5;PA4;:pam[channelcount] 
+	_windowfft = 2;PA5;:windowfft[channelcount] ; 	-> Standard auf 2 <=> Hanning
+	_overlap = 0;PA6;:overlap[channelcount] ;		-> Standard auf 50%
+	_pulse_per_rev = 1;PA7;:pulse_per_rev[channelcount] 		;
+	_env = 0;PA8
+	;_TrigLevel = 0.5
+
+	KP = _peak_raw
+	k1min = min(KP)
+	k1mean = mean(KP)
+	k1max = max(KP) 
+	delta1 = k1max-k1mean
+	delta2 = k1mean-k1min
+	wenn delta1<delta2
+		k1triglevel = k1mean - delta1
+	sonst
+		k1triglevel = k1mean + delta2
+	end
+	_TrigLevel = k1triglevel
+
+	_vib = _vib - mean(_vib);
+	wenn _env = 0
+		_vib = _vib - mean(_vib);
+	ende
+	;_peak_1 = _peak_raw - _TrigLevel 
+	_peak = STri(_peak_raw,_TrigLevel,_TrigLevel)
+	_dp = diff(_peak)*xdel?(_peak)
+	_Tx = posiex(-_dp,2); findet alle Zeiten, wo peak <= 0
+	_anz_umdrehungen = lang?(_Tx) 
+
+	;sequenz SignaleGleichSetzen _vib _peak
+	;_vib = _sig1
+	;_peak = _sig2
+
+	;wenn varexist?("peak")
+	idx = DlgGetSelectedItem("NumberOfRev");2048;PA3;samples_per_rev[channelcount] 
+	NRev = DlgGetItemText("NumberOfRev",idx)
+	if tverg (NRev,"-") = 0
+		NRev = _anz_umdrehungen
+	sonst
+		NRev = tzuew(NRev,"e")
+	ende
+	Npoints = NRev
+
+	idx = DlgGetSelectedItem("CirclePlotRadius");2048;PA3;samples_per_rev[channelcount] 
+	radius_ratio = DlgGetItemText("CirclePlotRadius",idx)
+	radius_ratio = 1/C*tzuew(radius_ratio,"e");R/(C*xmax) with C = 1, xmax = max(vib)
+
+	T_min = dlggetvalue("T_min")
+	T_max = dlggetvalue("T_max")
+
+	OtrTachoMode(3, 0, _pulse_per_rev, 0)
+	_peak0 = gren(_peak,T_min, T_max)
+	_vib0 = gren(_vib,T_min, T_max)
+	_speed0 = OtrTachoToSpeed(_peak0)
+	_rs = OtrResample(_vib0,_peak,_samples_per_rev/2 ,1)
+	_speed = OtrResample(_speed0,_peak0,_samples_per_rev/2,1)
+	_phi0 = int(2*pi*_speed0/60)
+	_phi = OtrResample(_phi0,_peak0,_samples_per_rev/2,1)
+	_dphi = mod(_phi, 2*pi)
+	seteinheit(_dphi,"Rad",1)
+
+	T_max = T_min + 60/mean(_speed0)*NRev
+
+	; ACOEM Method
+	_vib1 = gren(_vib,T_min,T_max)
+	Frot = mean(_speed0/60)
+	Fech = 1/xdel?(_vib1)
+	isamp = rampe(0,1,lang?(_vib1))
+	a = mod(360*Frot/Fech*isamp,360) *2*pi/360; N_samp_per_rev = Trot/dt = Fech/Frot
+	seteinheit (a,"Rad",1)
+
+	;R = 1
+	x_max = max (_vib1)
+	;C*xmax/R = 0.5 = radius_ratio
+	R = C*x_max * radius_ratio
+	Betr = R+C*_vib1
+	PolarVib = kompl(Betr,a)
+	nn_length = lang?(PolarVib)
+	PolarVib0 = kompl(Betr[1],a[1])
+	PolarVibEnd = kompl(Betr[nn_length],a[nn_length])
+	CwLoadCCV("PolarVib","C:\BDA\SignalAnalysis\PolarVib.ccv")
+	aa1 = R+C*x_max
+	aa2 = R-C*x_max
+	aa3 = aa1 - aa2
+	dlgsetvalue("MaxCircle",aa1)
+	dlgsetvalue("MinCircle",aa2)
+
+	;_vib2 = OtrTrackingBandPassZ(_vib,_speed0,1,0.05,12)
+
+	_rsall = grenindex(_rs,1,Npoints*_samples_per_rev) 
+	_rsall = _rsall - mean(_rsall)
+	radius = C*max(_rsall) * radius_ratio
+	_rs = radius + C*_rsall
+
+	;
+	;_dphi = gren(_dphi,0,Npoints)
+	;_rs = gren(_rs,0,Npoints)
+	;
+	_dphi = grenindex(_dphi,1,Npoints*_samples_per_rev)
+
+
+	Z = kompl(_rs,_dphi)
+	Zkart = Kart(Z)
+	Zstart = kompl(_rs[1],_dphi[1])
+	Zend = kompl(_rs[lang?(Z)],_dphi[lang?(Z)])
+
+	_rs0 = 0*_rs + radius
+	Z0 = kompl(_rs0,_dphi)
+	Zkart0 = Kart(Z0)
+
+	Z1 = kompl(_rsall ,_dphi);_rsall
+	Zkart1 = Kart(Z1+Z0)
+
+	tsa_rs = _rs
+	n_rev = lang?(tsa_rs)/_samples_per_rev
+	setseglang(tsa_rs,_samples_per_rev)
+	tsa_rs_mean = MatrixSumLines(tsa_rs,0)/n_rev
+
+	tsa_dphi= _dphi
+	setseglang(tsa_dphi,_samples_per_rev)
+
+	CwLoadCCV("SigVsTime","C:\BDA\SignalAnalysis\vib.ccv")
+	CwLoadCCV("SigVsRev","C:\BDA\SignalAnalysis\rs.ccv")
+	CwLoadCCV("TSA_Sig","C:\BDA\SignalAnalysis\tsa_rs.ccv")
+	CwLoadCCV("CirclePlotSig","C:\BDA\SignalAnalysis\zkart.ccv")
+	CwLoadCCV("OAx_kask","C:\BDA\SignalAnalysis\OAx_kask.ccv")
+	CwLoadCCV("OAx","C:\BDA\SignalAnalysis\OAx.ccv")
+
+
+	;
+	;
+	;xpos = 0
+	;ypos = 0
+	;method = 2
+	;wenn method = 1
+	;	x = 0*rampe(1,1,lang?(_rs))
+	;	y = x
+	;	x0 = x
+	;	y0 = x
+	;	i = 1
+	;	solange i <= lang?(_dphi)
+	;		zeigen i
+	;		x[i] = _rs[i]*cos(_dphi[i])+xpos
+	;		y[i] = _rs[i]*sin(_dphi[i])+xpos
+	;		x0[i] = _rs0[i]*cos(_dphi[i])+xpos
+	;		x0[i] = _rs0[i]*sin(_dphi[i])+xpos
+	;		i = i + 1
+	;	ende
+	;else
+	;	;x =(radius + _rs)*cos(_dphi)+xpos
+	;;	y = (radius + _rs)*sin(_dphi)+xpos
+	;	x =_rs*cos(_dphi)+xpos
+	;	y = _rs*sin(_dphi)+xpos
+	;	x0 = (_rs0)*cos(_dphi)+xpos
+	;	y0 = (_rs0)*sin(_dphi)+xpos
+	;ende
+	;
+	;Z = kompl(_rs,_dphi)
+	;Zkart = Kart(Z)
+	;
+	;_a = cos(_dphi)
+	;x1= _rs * _a
+	;_b = sin(_dphi)
+	;y1 = _rs*_b
+	;z = sqrt(x1^2+y1^2)
+	;
+
+
+
+	_OAx_kask = leer;
+	_OPx_kask = leer;
+	_OSpeed_kask = leer;
+
+	_nn_max = ganz(lang?(_rsall)/_samples_per_rev/_pam)
+	_nn = 1
+	_Tgesamt = ganz(lang?(_rsall))
+	_T_fenster = _pam*_samples_per_rev
+	wenn _T_fenster > _Tgesamt
+		_T_fenster = _Tgesamt
+	ende
+	_nn_mit_overlap = ganz((_Tgesamt-_overlap/100*_T_fenster)/(_T_fenster-_overlap/100*_T_fenster)); Anzahl der Iteration
+
+
+	wenn mean(_speed0) > 1
+		_N_f = _T_fenster
+		wenn _nn_mit_overlap <= 0
+			BoxNachricht("Configuration error","Please reduce the number of samples per revolution (NpR)","?1")
+			DlgSelectItem("Omax",2)
+		sonst
+			solange _nn < _nn_mit_overlap 
+				_Tbeginn = (_nn-1)*_T_fenster-(_nn-1)*_overlap/100*_T_fenster
+				_Tende = _nn*_T_fenster-(_nn-1)*_overlap/100*_T_fenster;Tbeginn + T_fenster
+				_T_fenster_verifikation = _Tende-_Tbeginn
+				_N_beginn = floor(((_nn-1)-(_nn-1)*_overlap/100)*_N_f)+1;
+				_N_end = floor((_nn-(_nn-1)*_overlap/100)*_N_f)+1
+				dN = _N_end - _N_beginn
+				_rs_ = grenindex(_rsall,_N_beginn,_N_end)
+				_om = mean(grenindex(_speed,_N_beginn,_N_end))
+				_specx = dftspectrum(_rs_,_windowfft)
+			
+				;zeigen specx
+				_OAx = kmp1(wurz(2)*_specx)
+				SetEinheit(_OAx,"Ordnung",0)
+				SetEinheit(_OAx,einheit?(_vib,1),1)
+			
+				_OPx = kmp2(_specx)
+				SetEinheit(_OPx,"Ordnung",0)
+			
+				_OAx_kask = binde(_OAx_kask, _OAx)
+				_OPx_kask = binde(_OPx_kask, _OPx)
+				_OSpeed_kask = binde(_OSpeed_kask, _om)
+
+				_nn = _nn + 1
+			ende
+			SetSegLang(_OAx_kask,lang?(_OAx))
+			SetSegLang(_OPx_kask,lang?(_OPx))
+		
+		
+		ende
+	ende
+ende

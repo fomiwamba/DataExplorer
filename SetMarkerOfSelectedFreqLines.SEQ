@@ -1,0 +1,144 @@
+; stator mechanical damage -> StatorSlotPassFrequency + LF sidebands		-> RS * SSL +/- FL
+; stator electrical damage -> StatorSlotPassFrequency + LF sidebands + RS sidebands 		-> RS * SSL +/- FL +/- RS
+; rotor indicator -> RotorBarPassFrequency + LF sidebands
+; static eccentricity -> RotorBarPassFrequency + LF sidebands & 2*LF sidedands	-> RS*RB+-j*FL, j = 1,3,5,... 
+; dynamic eccentricity -> RotorBarPassFrequency + LF sidebands & 2*LF sidedands + RS sidebands 	-> RS*RB+-j*FL+-k*RS, j = 1,3,5,... , k = 1,2,3
+; Bearing Damage -> m*RS*BF+-FL, m = 1,2,3
+; mechanical unbalance -> RS*RB+-j*FL, j = 2,4,..
+sequenz imc_logging "set_markers_of_selected_freq_lines started"
+idx = PnGetSelectedItem("FreqList")
+_txt = PnGetItemText("FreqList", idx)
+
+;FrequencyLine
+;RotatingFrequency
+;PolPassFrequency
+;StatorMechanical
+;StatorElectrical
+;RotorIndicator
+;RotorImbalance
+;RotorBarDamage
+;DynamicEccentricity
+;StaticEccentricity
+;BearingDamage
+
+if tverg(_txt, "FrequencyLine") = 0; freq_task = "FrequencyLine"; FL
+	Freqvec = rampe(0,1,20)
+	F0 = mean(ESA_Metrics_Trend:FrequencyLine.y) 
+	_ii = 1
+	solange _ii <= lang?(Freqvec)
+		Freqvec[_ii] = F0 *_ii
+		_ii = _ii +1
+	ende
+ende
+if tverg(_txt, "RotatingFrequency") = 0;freq_task = "RotatingFrequency"; RS
+	Freqvec = rampe(0,1,20)
+	F0 = mean(ESA_Metrics_Trend:RotatingFrequency.y) 
+	_ii = 1
+	solange _ii <= lang?(Freqvec)
+		Freqvec[_ii] = F0 *_ii
+		_ii = _ii +1
+	ende
+ende
+
+if tverg(_txt, "PolPassFrequency") = 0;freq_task = "PolPassFrequency"; RS
+	Freqvec = rampe(0,1,3)
+	F0 = Mean(ESA_Metrics_Trend:PolPassFrequency.y)  
+	_ii = 1
+	solange _ii <= lang?(Freqvec)
+		Freqvec[_ii] = F0
+		_ii = _ii +1
+	ende
+ende
+
+if tverg(_txt, "StatorMechanical") = 0;freq_task = "StatorMechanical"; SMD -> RS * SSL +/- FL
+	CF = mean(ESA_Metrics_Trend:StatorSlotPassFrequency.y) ; > RS * Popaar * Phases * integer 
+	MF = mean(ESA_Metrics_Trend:FrequencyLine.y) 
+	Freqvec = rampe(0,1, 3)
+	Freqvec[1] = CF -1*MF
+	Freqvec[2] = CF +0*MF
+	Freqvec[3] = CF +1*MF
+ende
+
+if tverg(_txt, "StatorElectrical") = 0;freq_task = "StatorElectrical"; SED -> RS * SSL +/- FL +/- RS
+	CF = Mean(ESA_Metrics_Trend:StatorSlotPassFrequency.y)  
+	MF1 = Mean(ESA_Metrics_Trend:FrequencyLine.y) 
+	MF2 = Mean(ESA_Metrics_Trend:RotatingFrequency.y)  
+	Freqvec = rampe(0,1, 3)
+	Freqvec[1] = CF -1*MF1 - 1*MF2
+	Freqvec[2] = CF
+	Freqvec[3] = CF +1*MF1 + 1*MF2
+ende
+
+if tverg(_txt, "RotorIndicator") = 0;freq_task = "RotorIndicator"; RI ->  RS*RB+-j*FL
+	CF = Mean(ESA_Metrics_Trend:RotorBarPassFrequency.y)  
+	MF = Mean(ESA_Metrics_Trend:FrequencyLine.y)  
+	Freqvec = rampe(0,1, 3)
+	Freqvec[1] = CF -1*MF
+	Freqvec[2] = CF
+	Freqvec[3] = CF +1*MF
+ende
+
+
+if tverg(_txt, "RotorImbalance") = 0;freq_task = "RotorImbalance"; RI ->  RS*RB+-j*2*FL
+	CF = Mean(ESA_Metrics_Trend:RotorBarPassFrequency.y)  
+	MF = Mean(ESA_Metrics_Trend:FrequencyLine.y)  
+	Freqvec = rampe(0,1, 5)
+	Freqvec[1] = CF -4*MF
+	Freqvec[2] = CF -2*MF
+	Freqvec[3] = CF
+	Freqvec[4] = CF +2*MF
+	Freqvec[5] = CF +4*MF
+ende
+
+if tverg(_txt, "RotorBarDamage") = 0;freq_task = "RotorBarDamage"; RBD ->  FL +- PPF
+	; Load_%_min >= 70%
+	; Power_np_W_min = 40 * 0.746 ; 40 HP
+	CF = Mean(ESA_Metrics_Trend:FrequencyLine.y)  
+	MF = Mean(ESA_Metrics_Trend:PolPassFrequency.y)   
+	Freqvec = rampe(0,1, 3)
+	Freqvec[1] = CF -1*MF
+	Freqvec[2] = CF
+	Freqvec[3] = CF +1*MF
+ende
+
+if tverg(_txt, "StaticEccentricity") = 0;freq_task = "StaticEccentricity"; -> RS*RB+-j*FL, j = 1,3,5,... 
+	CF = Mean(ESA_Metrics_Trend:RotorBarPassFrequency.y)  
+	MF = Mean(ESA_Metrics_Trend:FrequencyLine.y)  
+	Freqvec = rampe(0,1, 7)
+	Freqvec[1] = CF -3*MF
+	Freqvec[2] = CF -1*MF
+	Freqvec[3] = CF
+	Freqvec[4] = CF +1*MF
+	Freqvec[5] = CF +3*MF
+ende
+
+if tverg(_txt, "DynamicEccentricity") = 0;freq_task = "DynamicEccentricity"; -> RS*RB+-j*FL+-k*RS, j = 1,3,5,... , k = 1,2,3
+	CF = Mean(ESA_Metrics_Trend:RotorBarPassFrequency.y)  
+	MF1 = Mean(ESA_Metrics_Trend:FrequencyLine.y) 
+	MF2 = Mean(ESA_Metrics_Trend:RotatingFrequency.y)  
+	Freqvec = rampe(0,1, 13)
+	Freqvec[1] = CF -1*MF1 - 1*MF2
+	Freqvec[2] = CF -1*MF1 + 1*MF2
+	Freqvec[3] = CF
+	Freqvec[4] = CF +1*MF1 - 1*MF2
+	Freqvec[5] = CF +1*MF1 + 1*MF2
+ende
+
+
+if tverg(_txt, "BearingDamage") = 0;freq_task = "BearingDamage"; -> m*RS*BF+-FL, m = 1,2,3, BF corresponding to the characteristic frequencies of the bearing.
+	CF = ESA_Metrics_Trend:BearingPassFrequency.y)  
+	MF1 = ESA_Metrics_Trend:FrequencyLine.y) 
+	Freqvec = rampe(0,1, 7)
+	Freqvec[1] = CF -3*MF1
+	Freqvec[2] = CF -2*MF1
+	Freqvec[3] = CF -1*MF1
+	Freqvec[4] = CF
+	Freqvec[5] = CF +1*MF1
+	Freqvec[6] = CF +3*MF1
+	Freqvec[7] = CF +5*MF1
+ende
+
+sequenz CleanMarkers
+
+sequenz ShowMarkers
+

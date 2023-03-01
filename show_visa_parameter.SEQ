@@ -1,0 +1,41 @@
+_index = PnTableGetSelectedRows("ParameterOverview.VISA_table")
+wenn _index > 0
+	_Parname = ParameterStatusListe[_index]
+	
+	sequenz ClearSelectedPlot "ParameterOverview.VISA_plot"
+	
+	index = PnGetvalue("ParameterOverview.VISA_axis")
+	wenn index = 1; TrendPlot_vs_Date
+		{<_Parname>} = FeatData:{<_Parname>}
+		xaxis = 1
+	else
+		if  IsXY({<_Parname>})
+			{<_Parname>} = kmpy(FeatData:{<_Parname>})
+		else
+			{<_Parname>} = xdel({<_Parname>},1)
+		ende
+		xaxis = 2
+	ende
+	_pardata0 = {<_Parname>};FeatData:{<_Parname>}
+	
+	sequenz FindFeatureNameAndUnit ; from xlsconfig.
+		
+	;Neu - 10092019 - Francis
+	;---------------------------------------------
+	_parname_ = _parname
+	if txwo(_parname_,".") > 0
+		_parname_ = txreplace( _parname_,".","_",0,1)
+	end
+	if txwo(_parname_ ," ") > 0
+		_parname_ = txreplace( _parname_ ," ","_",0,1)
+	end
+	if txwo(_parname_ ,"\") > 0
+		_parname_ = txreplace( _parname_ ,"\","_",0,1)
+	end
+	if txwo(_parname_ ,"/") > 0
+		_parname_ = txreplace( _parname_ ,"/","_",0,1)
+	end
+	{<_parname_>} =  {<_Parname>}
+	;---------------------------------------------
+	sequenz plot_2d_trend {<_Parname_>} xaxis "ParameterOverview.VISA_plot"
+end

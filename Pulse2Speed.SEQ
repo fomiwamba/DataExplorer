@@ -1,0 +1,58 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Sequenz zur Berechnung des Drehzahlsignals aus einem Pulssignal
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "pulse_to_speed started"
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Inputs
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+_peak_raw = PA1
+_TrigLevel = PA2
+_PulsePerRev = PA3
+_Fall = PA4
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Vorbereitung
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+_puls = _peak_raw 
+OtrTachoMode(3, 0, _PulsePerRev, 0)
+_peak_rec = stri(_puls,_TrigLevel ,_TrigLevel )
+_dp0 = diff(_peak_rec)*xdel?(_peak_rec)
+_Tx0 = posiex(-_dp0,2); findet alle Zeiten, wo peak <= 0
+_Tx1 = posiex(-_dp0,-2); findet alle Zeiten, wo peak <= 0
+
+wenn 0
+	_anz_p = lang?(_Tx0)
+	wenn _anz_p > 0
+		_zz = 1
+		T0 = 0*rampe(0,1,_anz_p-1)
+		SOLANGE _zz <=  _anz_p - 1 
+			T0[_zz] = _Tx0[_zz+1] - _Tx0[_zz]
+			_zz = _zz + 1
+		ENDE
+		_T0_max = max(T0)
+		_T0_min = min(T0)
+		_T0_mitte = mitte(T0)
+		_T0_var = streu(T0)
+		_F0_mitte = 1/_T0_mitte; Drehfrequenz in Hz
+		_drehzahl_mitte = _F0_mitte*60;
+	ende
+ende
+
+
+_drehzahl = OtrTachoToSpeed(_peak_rec)
+SetEinheit(_drehzahl,"U/min",1)
+_F0 = _drehzahl/60; Drehfrequenz in Hz
+SetEinheit(_F0,"Hz",1)
+_T0 = 1/_F0; Drehperiode in Sekunden
+SetEinheit(_T0,"s",1)
+_drehzahl_mitte = mitte(_drehzahl)
+_F0_mitte = mitte(_F0)
+_T0_mitte = mitte(_T0)
+wenn _Fall = 1
+	KF:drehzahl = _F0*60
+	KF:F0 = _F0
+	KF:T0 = _T0
+	;entf _*
+ende
+

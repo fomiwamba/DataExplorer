@@ -1,0 +1,39 @@
+
+
+
+sequenz imc_logging "signal_gleich_setzen started"
+; Resampling Zeit und Pulssignal
+_sig1 = PA1;    signal1
+_sig2 = PA2;    signal2
+wenn abs(xdel?(_sig1) - xdel?(_sig2))<1e-6; or xdel?(_sig1)/xdel?(_sig2)) <> 1; Haben Schwingung und Pulssignal gleiche Abtastzeit?
+sonst; wenn Abtastzeit nicht gleich ist
+	_ftpf = 1/xdel?(_sig1)/2.56
+	_sig2 = PTast(_sig2,_sig1); Resampling des Pulssignals
+	_sig2 = FiltTP(_sig2,0,0,4,_ftpf); Tiefpassfilterung des Pulssignals
+	entf _ftpf
+	_sig1 = _sig1
+	_sig2 = _sig2
+ende
+wenn abs(lang?(_sig1) - lang?(_sig2)) > 1; sind sie genauso lang? -> wenn nein, dann gleiche L�nge setzen
+	_tmax = min(binde(lang?(_sig1)*xdel?(_sig1),lang?(_sig2)*xdel?(_sig2)))
+	_sig1 = gren(_sig1,1,_tmax)
+	_sig2 = gren(_sig2,1,_tmax)
+	entf _tmax
+ende
+
+wenn 0
+	wenn abs(xdel?(_sig1) - xdel?(_sig2))<1e-3
+		wenn abs(lang?(_sig1) - lang?(_sig2)) > 1
+			_tmax = min(binde(lang?(_sig1)*xdel?(_sig1),lang?(_sig2)*xdel?(_sig2)))
+			_sig1 = gren(_sig1,1,_tmax)
+			_sig2 = gren(_sig2,1,_tmax)
+			entf _tmax
+		ende
+		_ftpf = 1/xdel?(_sig1)/2.56
+		_sig2 = PTast(_sig2,_sig1)
+		_sig2 = FiltTP(_sig2,0,0,4,_ftpf)
+		entf _ftpf
+		_sig1 = _sig1
+		_sig2 = _sig2
+	ende
+ende

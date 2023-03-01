@@ -1,0 +1,204 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1:FEatureFile, FFT_Trendfile
+; Output: gefilterter FFT_Trend
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "read_python_3d_fft started"
+
+
+;Featfile = "FeatureTable_Clean.csv"; PnGetText("FeatureTableType")
+Featfile = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
+Featfile = AssetFolder + "\Output\Features\" + FeatFile + ".csv"; FeatureTable_CleanRedScaled.xlsx"
+
+
+Store = "OFF"
+Average = "OFF"
+AveragedSpectrum = PnGetValue("AveragedSpectrum")
+Deltaf = PnGetValue("Deltaf")
+Freq_max = PnGetValue("Freq_max")
+if Deltaf > 1 or Deltaf <= 0
+	Deltaf = 0.5
+end
+if Freq_max <= 0
+	Freq_max = 0
+end
+if AveragedSpectrum = 1
+	Average = "ON"
+end
+page_ist  = PnGetActivePage()
+if page_ist = 1
+
+	_datumFrom = PnGetValue("DateFrom")
+	_datumTo = PnGetValue("DateTo")
+	_datumFromtxt = zeitintext(_datumFrom, 3)
+	_datumTotxt = zeitintext(_datumTo, 3)
+else
+	_datumFromtxt = ""
+	_datumTotxt = ""
+end
+
+_outputfile = "C:\BDA\ExpertAnalysis\TrendView_Output.txt"
+_erg = FsDeleteFile(_outputfile)
+; To Do -> If FeatFile exist? then continue
+_erg = FsFileExists(Featfile)
+if _erg = 1
+	_spec_filename = FftFileIst; AssetFolder + "\Output"+ "\" + 
+	inputfile = "C:\BDA\ExpertAnalysis\TrendView_Input.txt"
+	_fh = FileOpenASCII(inputfile,1)
+	_err = FileLineWrite(_fh,AssetFolder,0)
+	_err = FileLineWrite(_fh,_spec_filename,0)
+	_err = FileLineWrite(_fh,Featfile,0)
+	_err = FileLineWrite(_fh,Store,0)
+	_err = FileLineWrite(_fh,Average,0)
+	_err = FileLineWrite(_fh,tform(Deltaf,"f1.2"),0)
+	_err = FileLineWrite(_fh,tform(Freq_max,"f1.2"),0)
+	_err = FileLineWrite(_fh,_datumFromtxt,0)
+	_err = FileLineWrite(_fh,_datumTotxt,0)
+
+	_err = FileClose(_fh)
+
+	;Applikation Vollbild C:\python37\python.exe C:\BDA\AI\FilterFftTrend.py
+	sequenz imc_logging "cadis_filter_fft_trend started"
+	ret = Execute("C:\python37\python.exe", "C:\BDA\AI\Filter_fft_trend.py", "", 0,-1)
+ende
+	
+_erg = FsFileExists(_outputfile)
+if _erg = 1
+	_fh0= FileOpenASCII( _outputfile,0 )
+	if _fh0 > 0
+		_TxZeile = ""
+		_ok = 0
+		solange _ok = 0
+			_ok = FileLineRead( _fh0, _TxZeile, 0 )
+			if _ok = 0 
+				_FftFileSoll = _TxZeile
+			ende
+		ende
+		FileClose(_fh0)
+	sonst
+		_err = FileErrCode?()
+		zeigen _err
+	ende
+	
+	_erg = FsFileExists(_FftFileSoll)
+	if _erg = 1
+		if txwo(_FftFileSoll, "_Hist_Trend") = 0
+			importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+			_par_unit_ = "Hz"
+		else
+			importsvorlage = "#ImportAscii1.dll|ascii_python_3dhist"		
+			_par_unit_ = "µm"
+		end
+		t0 = ZeitSystem?()
+		Eventidx = leer;
+		Eventdate = leer;
+		_x = leer
+		_groupart = 1;
+		_fileid = FileOpenFAS(_FftFileSoll, importsvorlage, 0); ascii_statusfile
+		wenn _fileid > 0
+			_anzPar = FileObjNum?(_fileid)
+			_fft_idx = 1
+			SOLANGE _fft_idx <= _anzPar  
+				;zeigen _fft_idx
+				_typ = FileObjType?(_fileid,_fft_idx)
+				wenn _typ = 1
+					_Parname = FileObjName?(_fileid,_fft_idx)
+					{<_Parname>} = FileObjRead(_fileid,_fft_idx)
+					seteinheit ({<_Parname>},_par_unit_,0)
+				
+					fftfile_name = FsSplitPath(fftfileist,2)
+					parname_trend = fftfile_name
+				
+					wenn _groupart = 1; Segment
+						wenn _fft_idx = 1				
+							{<parname_trend>} = GrNeu()
+							{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+						sonst
+							{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+						ende
+					else
+						wenn _fft_idx > 1
+							EventAppend({<parname_trend>},{<_Parname>},0)
+						ende				
+						wenn _fft_idx = 1				
+							{<parname_trend>} = EventNew({<_Parname>},0)
+						ende
+						wenn _fft_idx > 1
+							EventAppend({<parname_trend>},{<_Parname>},0)
+						ende					
+						_eventnr = EventNum?({<parname_trend>})
+						_Messdatum = _Parname
+						_Sek_ = TTeil(_Messdatum,18,2)
+						_Sek=TzuEW(_Sek_,"e")
+						_Min_ = TTeil(_Messdatum,15,2)
+						_Min=TzuEW(_Min_,"e")
+						_Stun_ = TTeil(_Messdatum,12,2)
+						_Stun=TzuEW(_Stun_,"e")
+						_Tag_ = TTeil(_Messdatum,9,2)
+						_Tag=TzuEW(_Tag_,"e")
+						_Monat_ = TTeil(_Messdatum,6,2)
+						_Monat=TzuEW(_Monat_,"e")
+						_Jahr_ = TTeil(_Messdatum,1,4)
+						_Jahr=TzuEW(_Jahr_,"e")
+						_Messdatum_zahl=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+										
+						Ttrig = _Messdatum_zahl
+										
+						EventProp({<parname_trend>},_eventnr,0,Ttrig)
+					ende
+				
+					;			ActEventDate = EventProp?({<parname_trend>},_fft_idx,0)
+					;			Eventdate = binde(Eventdate,ganz(ActEventDate))
+					;			_x = binde(_x,_fft_idx)
+	
+					entf _Parname
+					entf {<_Parname>}
+				ende
+				zeigen _fft_idx
+				_fft_idx = _fft_idx + 1
+			ende
+		
+			Ax_Trend = {<parname_trend>}
+			wenn _groupart = 1 
+				_EwSegLang = lang?(Ax_Trend:[1])
+				_group = GrBinde(Ax_Trend,0)
+				SetSegLang(_group,_EwSegLang)
+				Ax_Trend = _group
+			ende
+	
+			fileclose(_fileid)	
+			
+			page_ist = PnGetActivePage()
+			if page_ist = 3
+				Pnsettext("ParameterOverview.FFT_Trend_Name",_FftFileSoll)
+			else
+				Pnsettext("ChannelOverview.FFT_Trend_Name",_FftFileSoll)
+			end
+			
+			Ax_trend_de = Ax_Trend
+			entf Ax_Trend
+			;sequenz plot_3d_trend Ax_trend 1 "CascadePlot"
+			if txwo(_FftFileSoll, "_Hist_Trend") = 0
+				sequenz FFT3D_Plot
+			else
+				sequenz FFT3D_Plot_Hist
+			end
+
+	
+			t1 = ZeitSystem?()
+			dt1 = t1-t0
+
+		ende
+	ende
+
+sonst 
+	_txt = "Spektrum Datei existiert nicht"
+	_res = BoxNachricht("Info:",_txt,"!1")
+ende
+
+if varexist?("_fft_idx")
+	cwselectmode("variable")
+	cwselectwindow(_fft_idx)
+	CwAction("win.close")
+ende
+
+;entf _*

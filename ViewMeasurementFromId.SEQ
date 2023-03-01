@@ -1,0 +1,223 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: Ausgewählte Messungszeitpunkt
+; Output: Identifizierte Messung + Ergebnis der Messungsnalayse
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "view_measurement_from_marker started"
+; measpoint_date from ViewMeasurementPoint
+_fileidx =PnTableGetSelectedRows("MeasurementOverview.MeasurementListeGitter")
+wenn lang?(_fileidx) > 0
+	filename = CompletedFolder + "\" + MeasFiles[_fileidx]
+	filename_short = FsSplitPath(filename,4)
+	measpoint_date = tteil(filename_short, tlang(filename_short)-18,15)
+
+	wenn varexist?("measpoint_date")
+		_varname = measpoint_date
+	
+		sequenz ClearSelectedPlot "TimeWaveForm"
+		sequenz ClearSelectedPlot "HistPlotT"
+		sequenz ClearSelectedPlot "BoxPlot"
+		sequenz ClearSelectedPlot "FFT3D"
+		sequenz ClearSelectedPlot "FFT_averaged"
+	
+
+		_t = tteil(_varname,7,2)
+		_m = tteil(_varname,5,2)
+		_j = tteil(_varname,1,4)
+		_hh = tteil(_varname,10,2)
+		_mm = tteil(_varname,12,2)
+		_ss = tteil(_varname,14,2)
+	
+		_Sek=TzuEW(_ss,"e")
+		_Min=TzuEW(_mm,"e")
+		_Stun=TzuEW(_hh,"e")
+		_Tag=TzuEW(_t,"e")
+		_Monat=TzuEW(_m,"e")
+		_Jahr=TzuEW(_j,"e")
+		Messdatum_zahl0=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+	
+		file_ist = filename
+
+		_Filename =  fssplitpath(file_ist,4)
+	
+		if fsfileexists(file_ist)
+			CwSelectMode("title")
+			ret = CwIsWindow("TimeWaveForm")
+			wenn ret <> 0
+				CwSelectWindow("TimeWaveForm")
+			ende
+			CwSelectByIndex("y-axis",1)
+			CwDeleteElement("axis")
+			
+			_paridx =PnTableGetSelectedRows("MeasurementOverview.MeasSignalListGitter")
+			wenn _paridx <> 0
+
+				_parname = MeasSignalList[_paridx]
+				{<_Parname>} = MeasRawData:{<_Parname>}
+			end
+			xaxis = 0
+
+			line_width = 0.5
+			sequenz FindFeatureNameAndUnit ; from xlsconfig.
+			sequenz plot_2d_trend {<_Parname>} xaxis "TimeWaveForm"
+			;sequenz plot_2d_trend {<_signame>} 0 "TimeWaveForm"
+			;cw_verz = "C:\BDA\DataExploration\"
+			;CwLoadCCV("TimeWaveForm",cw_verz + "twf.ccv")
+			signal1 = {<_Parname>}
+			sequenz BoxPlot  signal1
+			;sequenz BoxPlot {<_signame>}
+		
+			signal = signal1
+			entf Parameter_Sig_mean
+			entf Ax_mean
+			entf Ax_kask
+			entf data_hist
+		
+			;		; build and load boxplot, histogram, fft_averaged and fft3d
+			Load_fft_file = PnGetValue("Load_fft_file")
+			if Load_fft_file = 0
+				sequenz BoxPlot_FFT_Analysis signal1
+			else
+				;S107_fft_mag_20200326_131000
+				_filedate = tteil(_Filename_short,tleng(_Filename_short)-18,tleng(_Filename_short)-6)
+				_FftFileSoll = ChannelName + "*fft_mag*" + _filedate + ".csv"
+				_fftfilesoll_verz = AssetFolder + "\Output\FFT\"
+				_fftfilesoll_list = FsGetFileNames(_fftfilesoll_verz,_FftFileSoll,0,1,0)
+				_erg = TxArrayGetSize(_fftfilesoll_list)
+				if _erg > 0
+					importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+					_par_unit_ = "Hz"
+
+					t0 = ZeitSystem?()
+					Eventidx = leer;
+					Eventdate = leer;
+					_x = leer
+					_groupart = 1;
+					_FftFileSoll = _fftfilesoll_list[1]
+					_fileid = FileOpenFAS(_FftFileSoll, importsvorlage, 0); ascii_statusfile
+					wenn _fileid > 0
+						_anzPar = FileObjNum?(_fileid)
+						_fft_idx = 1
+						SOLANGE _fft_idx <= _anzPar  
+							;zeigen _fft_idx
+							_typ = FileObjType?(_fileid,_fft_idx)
+							wenn _typ = 1
+								_Parname = FileObjName?(_fileid,_fft_idx)
+								{<_Parname>} = FileObjRead(_fileid,_fft_idx)
+								seteinheit ({<_Parname>},_par_unit_,0)
+				
+								fftfile_name = FsSplitPath(_FftFileSoll,2)
+								parname_trend = fftfile_name
+				
+								wenn _groupart = 1; Segment
+									wenn _fft_idx = 1				
+										{<parname_trend>} = GrNeu()
+										{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+									sonst
+										{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+									ende
+								else
+									wenn _fft_idx > 1
+										EventAppend({<parname_trend>},{<_Parname>},0)
+									ende				
+									wenn _fft_idx = 1				
+										{<parname_trend>} = EventNew({<_Parname>},0)
+									ende
+									wenn _fft_idx > 1
+										EventAppend({<parname_trend>},{<_Parname>},0)
+									ende					
+									_eventnr = EventNum?({<parname_trend>})
+									_Messdatum = _Parname
+									_Sek_ = TTeil(_Messdatum,18,2)
+									_Sek=TzuEW(_Sek_,"e")
+									_Min_ = TTeil(_Messdatum,15,2)
+									_Min=TzuEW(_Min_,"e")
+									_Stun_ = TTeil(_Messdatum,12,2)
+									_Stun=TzuEW(_Stun_,"e")
+									_Tag_ = TTeil(_Messdatum,9,2)
+									_Tag=TzuEW(_Tag_,"e")
+									_Monat_ = TTeil(_Messdatum,6,2)
+									_Monat=TzuEW(_Monat_,"e")
+									_Jahr_ = TTeil(_Messdatum,1,4)
+									_Jahr=TzuEW(_Jahr_,"e")
+									_Messdatum_zahl=ZeitBinde(_Tag,_Monat,_Jahr,_Stun,_Min,_Sek)
+										
+									Ttrig = _Messdatum_zahl
+										
+									EventProp({<parname_trend>},_eventnr,0,Ttrig)
+								ende
+				
+								;			ActEventDate = EventProp?({<parname_trend>},_fft_idx,0)
+								;			Eventdate = binde(Eventdate,ganz(ActEventDate))
+								;			_x = binde(_x,_fft_idx)
+	
+								entf _Parname
+								entf {<_Parname>}
+							ende
+							zeigen _fft_idx
+							_fft_idx = _fft_idx + 1
+						ende
+						Ax_kask = {<parname_trend>}
+						wenn _groupart = 1 
+							_EwSegLang = lang?(Ax_kask:[1])
+							_group = GrBinde(Ax_kask,0)
+							SetSegLang(_group,_EwSegLang)
+							Ax_kask = _group
+						ende
+						Ax_mean = MatrixSumLines(Ax_kask,0)/(_fft_idx-1)
+	
+						fileclose(_fileid)	
+					end
+					if varexist?("_fft_idx")
+						cwselectmode("variable")
+						cwselectwindow(_fft_idx)
+						CwAction("win.close")
+					ende
+				end
+			end
+			
+			;		
+			; averaged fft
+			CwSelectMode("title")
+			ret = CwIsWindow("FFT_averaged")
+			wenn ret <> 0
+				CwSelectWindow("FFT_averaged")
+			ende
+			CwSelectByIndex("y-axis",1)
+			CwDeleteElement("axis")
+			CwNewChannel("append new axis",Ax_mean)
+			CwSelectByChannel("line",Ax_mean)
+			;			CwLineSet("symbol",0)
+			CwLoadCCV("FFT_averaged",cw_verz + "Ax_mean.ccv")
+		
+			;3d fft
+			CwSelectMode("title")
+			ret = CwIsWindow("FFT3D")
+			wenn ret <> 0
+				CwSelectWindow("FFT3D")
+			ende
+			CwSelectByIndex("y-axis",1)
+			CwDeleteElement("axis")
+			
+			;cw_verz = "C:\BDA\ExpertAnalysis\"
+			index = PnGetValue("CascadePlotaxis")
+			wenn index = 0
+				sequenz plot_3d_trend Ax_kask 1 "FFT3D"
+				CwLoadCCV("FFT3D",cw_verz + "Ax_kask_normal.ccv")
+			else
+				Ax_kask_t = MatrixTranspose(Ax_kask)
+				sequenz plot_3d_trend Ax_kask_t 1 "FFT3D"
+				CwLoadCCV("FFT3D",cw_verz + "Ax_kask_transposed.ccv")
+			ende
+		
+			;sequenz ShowParameterTableStatus
+			
+			;sequenz ReadConfigChannel
+			
+			;sequenz ReadConfigChannel_esa
+		
+		sonst
+			BoxNachricht("Info","Measurement Signal not present in the measurement file","?1")
+		ende
+	ende
+end
+;

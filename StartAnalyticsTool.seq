@@ -1,0 +1,17 @@
+sequenz imc_logging "start_analytics_tool started"
+
+Idx = PnGetSelectedItem("AnalyticsTool")
+if idx > 0
+	ist_analytics = PnGetItemText("AnalyticsTool",Idx)
+	if tverg(ist_analytics,"None") = 0
+	elseif tverg(ist_analytics,"VisualAnalytics") = 0
+		sequenz ApplyVisualAnalytics
+	elseif tverg(ist_analytics,"JupyterNotebook") = 0
+		sequenz StartJupyterNotebook
+	elseif tverg(ist_analytics,"Grafana") = 0
+		sequenz StartGrafana
+	else
+	end
+ende
+	
+

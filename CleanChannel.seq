@@ -1,0 +1,102 @@
+sequenz imc_logging "clean_channel_props started"
+
+; inputs: PA2 = _varname, PA1 = {<_varname>}
+; outputs: RawData, Feature, RawData_Channel
+;{<_varname>} = PA1
+;_varname = PA2
+
+
+wenn varexist?(_varname) and lang?({<_varname>}) > 1
+	;sequenz Insert_Item "Channellist" _varname
+			
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; change chunit -> SI EU
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	wenn 1; Einheitsumrechnung, Rescaling, Cleaning, Offset Correction, etc.
+		wenn Einheit?({<_varname>},1)="µm"
+		end
+		wenn Einheit?({<_varname>},1)="mm"
+			{<_varname>} = {<_varname>}*10^3
+			seteinheit({<_varname>},"µm",1)
+		end
+		wenn Einheit?({<_varname>},1)="m"
+			{<_varname>} = {<_varname>}*10^6
+			seteinheit({<_varname>},"µm",1)
+		end
+		wenn Einheit?({<_varname>},1)="mm/s"
+		end
+		wenn Einheit?({<_varname>},1)="m/s"
+			{<_varname>} = {<_varname>}*10^3
+			seteinheit({<_varname>},"mm/s",1)
+		end
+		wenn Einheit?({<_varname>},1)="g"
+			{<_varname>} = {<_varname>}*9.81
+			seteinheit({<_varname>},"m/s^2",1)
+		end
+	end
+			
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;change chlength
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				
+				
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;change chname
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			
+	_txt2find1 = "_";"_T01" 
+	_txt2find2 = "-";"_T01" 
+	_txt2find3 = ":";"_T01" 
+	_txt2find4 = ".";"_T01" 
+	_pos1 = TxWhere(_varname,_txt2find1)
+	_pos2 = TxWhere(_varname,_txt2find2)
+	_pos3 = TxWhere(_varname,_txt2find3)
+	_pos4= TxWhere(_varname,_txt2find4)
+	if _pos1 > 0 or _pos2 > 0 or _pos3 > 0 or _pos4 > 0
+		_varname1 = TReplace(_varname,_txt2find1,"")
+		_varname1 = TReplace(_varname1,_txt2find2,"")
+		_varname1 = TReplace(_varname1,_txt2find3,"")
+		_varname1 = TReplace(_varname1,_txt2find4,"")
+	end
+	entf _pos1
+	entf _pos2
+	entf _pos3
+	entf _pos4
+	if varexist?("_varname1")
+
+		_pos1 = TxWhere(_varname1,_txt2find1)
+		_pos2 = TxWhere(_varname1,_txt2find2)
+		_pos3 = TxWhere(_varname1,_txt2find3)
+		_pos4= TxWhere(_varname1,_txt2find4)
+		if _pos1 > 0 or _pos2 > 0 or _pos3 > 0 or _pos4 > 0
+			_varname2 = TReplace(_varname1,_txt2find1,"")
+			_varname2 = TReplace(_varname2,_txt2find2,"")
+			_varname2 = TReplace(_varname2,_txt2find3,"")
+			_varname2 = TReplace(_varname2,_txt2find4,"")
+		end
+	ende
+	if varexist?("_varname2")
+		{<_varname2>} = {<_varname>}
+		;GrChanAppend(RawData_New,<TxName_new>)
+		RawData:{<_varname2>} = {<_varname>}
+		_varname = _varname2
+		{<_varname>} = {<_varname2>}
+	elseif varexist?("_varname1")
+		{<_varname1>} = {<_varname>}
+		;GrChanAppend(RawData_New,<TxName_new>)
+		RawData:{<_varname1>} = {<_varname>}
+		_varname = _varname1
+		{<_varname>} = {<_varname1>}
+	Else
+		;GrChanAppend(RawData_New,<TxName>)
+		RawData:{<_varname>} = {<_varname>}
+	End			
+	entf _varname1
+	entf _varname2
+						
+	;	wenn tverg(_varname, TachochannelName) = 0; _varname = TachochannelName
+	;		sequenz Insert_Item "ChannelPuls" _varname
+	;	end
+	;	sequenz Insert_Item "ChannelX" _varname
+	;	sequenz Insert_Item "ChannelY" _varname			
+ende

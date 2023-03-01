@@ -1,0 +1,21 @@
+
+_path_assetfolder_selected = "C:\BDA\AssetFolderSelected.txt"
+
+_idDatei= FileOpenASCII(_path_assetfolder_selected,0 )
+_TxZeile = ""
+_ok = 0
+_count = 0
+solange _ok = 0
+	_ok = FileLineRead( _idDatei, _TxZeile, 0 )
+	if _ok = 0 
+		if _count = 0
+			AssetFolder = _TxZeile
+		elseif _count = 1
+			OpMode = _TxZeile
+		ende
+	ende
+	_count = _count + 1
+ende
+FileClose(_idDatei)
+
+entf _*

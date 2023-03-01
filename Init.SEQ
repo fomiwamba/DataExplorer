@@ -1,0 +1,31 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+; Input1: AssetFolderList.txct, AssetFolderSelected.txt
+; Output: Selektierter AssetFolder
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+entf *
+sequenz imc_logging "init started"
+
+sequenz reset_fields
+
+cw_verz = "C:\BDA\ExpertAnalysis\"
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz LoadAssetFolderList
+PnSetActivePage(1)
+
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if 0
+	PnShow("Analytics_T",0)
+	PnShow("AnalyticsTool",0)
+end
+		
+_datumTo = timesystem?()
+_datumTotxt = zeitintext(_datumTo, 3)
+_datumFrom = _datumTo - 10*365*24*3600
+_datumFromtxt = zeitintext(_datumFrom, 3)
+PnSetValue("AssetOverview.DateFrom", _datumFrom)
+PnSetValue("AssetOverview.DateTo", _datumTo)
+
+
+

@@ -1,0 +1,33 @@
+sequenz imc_logging "start_create_report started"
+
+wenn varexist?("AssetFolder")
+	idx = pngetselectedItem("Channels")
+	
+	if idx >= 1
+		Channels = pnGetItemText("Channels",idx)
+		inputfile = "C:\BDA\ExpertAnalysis\CreateReport.txt"
+		_fh = FileOpenASCII(inputfile,1)
+		_err = FileLineWrite(_fh,AssetFolder,0)
+		_err = FileLineWrite(_fh,Channels,0)
+		_err = FileClose(_fh)
+		
+		
+		
+		; analytics status report
+		ret = Execute( "C:\BDA\AI\Start_AnalyticsReport.bat","" , "", 2,0); analytics report creation parallel start
+		;ret = Execute( "C:\BDA\ExpertAnalysis\Start_feature_status_report.bat","" , "", 2,0) ; --> pb mit mehreren report gleichzeitig
+		;ret = Execute( "C:\BDA\ExpertAnalysis\Start_frequency_parameter_status_report.bat","" , "", 2,0); --> pb mit mehreren report gleichzeitig
+		
+		sleep(10)
+		ret = Execute( "C:\BDA\ExpertAnalysis\Start_imc_famos_create_report_seq.bat","" , "", 2,0)
+		
+		; funktioniert nicht mit dem imc famos generator.,
+;		sleep(5)
+;		ret = Execute( "C:\BDA\ExpertAnalysis\Start_frequency_parameter_status_report.bat","" , "", 2,0)
+;		
+;		sleep(5)
+;		ret = Execute( "C:\BDA\ExpertAnalysis\Start_feature_status_report.bat","" , "", 2,0)
+	ende
+	
+ende
+

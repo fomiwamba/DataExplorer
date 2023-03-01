@@ -1,0 +1,46 @@
+;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sequenz imc_logging "update_feature_list started"
+
+;LADEN FEATURETABLE
+pnDeleteItem("ParameterListe",0)
+sequenz ClearPlots
+
+;Filelist = 
+;ConditionTable.csv
+;ProcessTable.csv
+;FeatureTable.csv
+;FeatureTable_Clean.csv
+;FeatureTable_CleanRed.csv
+;FeatureTable_CleanRedScaled.csv
+;FeatureClusterTable.csv
+;FeatureGroupedData.xlsx
+;FeatureGroupedAuditData.xlsx
+;FeatureGroupedPCAData.xlsx
+;FeatureAudit.csv
+;FeatureCorr.csv
+;FeaturePCA_Dist.csv
+;FeaturePCA_Coeffs.csv
+;FeaturePCA_EigValues.csv
+;FeaturePCA_EigVectors.csv
+;FeaturePCA_Table.csv
+;FeatureClusterCenters.csv
+;FeatureLimits.csv
+;FeatureStatus.csv
+;FeatureStats.csv
+
+
+;Ímportsvorlage = "#ImportAscii1.dll|Import_FeatData";Import_FeatData, "#ImportAscii1.dll|JMY_RefFile"
+importsvorlage = "#ImportAscii1.dll|ascii_statusfile"
+;_in = "C:\ProgramData\imc\Common\Def"
+_pathname = OutputFolder + "\Features\"
+;_suchnameidx = pnGetSelectedItem("FeatureTableType")
+_suchname = pnGetText("FeatureTableType")
+_file_search = _suchname;"FeatureTable.xlsx"
+_file_search = "FeatureTable_Clean_Famos.csv"
+FeatFile = _pathname + _suchname
+;_FileListID=FsFileListNew(_PathName, _suchname,0,0,0)
+sequenz LoadFeatureFile
+
+entf _*
+
+

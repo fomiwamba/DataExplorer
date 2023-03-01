@@ -1,0 +1,85 @@
+sequenz imc_logging "boxplot started"
+
+_sigx = PA1 ;{10_gtk_onl_000c}; 
+
+;_sigx = _sigx
+x = sort(_sigx,1)
+n = lang?(x)
+if n >= 10
+	a1 = n*0.25
+	a2 = n*0.75
+	a3 = n*0.5
+	b1 = mod(n,4)
+	b2 = mod(n,4)
+	b3 = mod(n,2)
+	
+	wenn b1 = 0
+		x025 = 0.5*(x[a1]+x[a1+1]); wenn a 
+	sonst
+		x025 = x[a1+1]
+	end
+	wenn b2 = 0
+		x075 = 0.5*(x[a2]+x[a2+1]); wenn a 
+	sonst
+		x075 = x[a2+1]
+	end
+	wenn b3 = 0
+		x050 = 0.5*(x[a3]+x[a3+1]); wenn a 
+	sonst
+		x050 = x[a3+1]
+	end
+	x_iqr = x075-x025; Interquartile oder quartilabstand
+	x_median = x050; Median -> x050 or q2
+	x_mean = mean(x)
+	x_min = min(x); Max -> Boxplot Whisker
+	x_max = max(x); Min -> Boxplot Whisker
+	x_lq = x025; LowerQuartile -> Boxplot Quartil -> q1
+	x_uq = x075; UpperQuartile -> Boxplot Quartil -> q3
+	x_std_p =  Streu(x-mean(x))+mean(x);
+	x_std_m = mean(x)- Streu(x-mean(x)) ; x_std 
+	x_range =max(_sigx)-min(_sigx)
+	
+	seteinheit(x_iqr,einheit?(_sigx,1),1)
+	seteinheit(x_median,einheit?(_sigx,1),1)
+	seteinheit(x_mean,einheit?(_sigx,1),1)
+	seteinheit(x_lq,einheit?(_sigx,1),1)
+	seteinheit(x_uq,einheit?(_sigx,1),1)
+	seteinheit(x_max,einheit?(_sigx,1),1)
+	seteinheit(x_min,einheit?(_sigx,1),1)
+	seteinheit(x_std_p,einheit?(_sigx,1),1)
+	seteinheit(x_std_m,einheit?(_sigx,1),1)
+	seteinheit(x_range,einheit?(_sigx,1),1)
+
+	;	x_lower = binde(x_lower,x025 - 1.5*(x075-x025))
+	;	x_upper = binde(x_upper,x075 + 1.5*(x075-x025))
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	nbins = 50
+	HistPlotT = leer
+	if (max(x)-min(x)) > 0
+	HistPlotT = xyvon(histo(x,(max(x)-min(x))/nbins,nbins),rampe(min(x),(max(x)-min(x))/nbins,nbins));
+	end
+	seteinheit(HistPlotT,einheit?(_sigx,2),1)
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	x_pstd =  x_mean + x_std_p
+	x_mstd =  x_mean - x_std_m
+	x_lower_std = x_mean - 3*x_std_m
+	x_upper_std = x_mean + 3*x_std_p
+	x_lower_iqr = x_lq - 1.5*x_iqr
+	x_upper_iqr = x_uq + 1.5*x_iqr
+	seteinheit(x_pstd,einheit?(_sigx,1),1)
+	seteinheit(x_mstd,einheit?(_sigx,1),1)
+	seteinheit(x_lower_std,einheit?(_sigx,1),1)
+	seteinheit(x_upper_std,einheit?(_sigx,1),1)
+	seteinheit(x_lower_iqr,einheit?(_sigx,1),1)
+	seteinheit(x_upper_iqr,einheit?(_sigx,1),1)
+	
+
+	;CwLoadCCV("BoxPlotMean","C:\BDA\DataExploration\BoxplotMean.ccv")
+	;CwLoadCCV("HistPlotT","C:\BDA\ExpertAnalysis\HistPlotT.ccv")
+	CwLoadCCV("HistPlotT",cw_verz + "HistPlotT.ccv")
+	;CwLoadCCV("BoxPlot","C:\BDA\DataExploration\BoxPlot.ccv")
+ende
+;entf _*

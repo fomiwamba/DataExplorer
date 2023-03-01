@@ -1,0 +1,15 @@
+sequenz imc_logging "par_trend_plot started"
+
+index = PnGetSelectedItem("ParTrend_Xaxis")
+wenn index = 1
+	_index1 = PnGetSelectedItem("ParameterListe")
+	wenn _index1 <> 0
+		CwLoadCCV("TrendPlot",cw_verz + "TrendPlot_vs_Date.ccv")	
+	ende
+ende
+wenn index = 2
+	_index1 = PnGetSelectedItem("ParameterListe")
+	wenn _index1 <> 0
+		CwLoadCCV("TrendPlot",cw_verz + "TrendPlot_vs_Index.ccv")
+	ende
+ende

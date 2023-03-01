@@ -1,0 +1,685 @@
+Store = "OFF"
+Average = "OFF"
+AveragedSpectrum = 0	;PnGetValue("AveragedSpectrum")
+Deltaf = 0					;PnGetValue("Deltaf")
+Freq_max = 200			;PnGetValue("Freq_max")
+if AveragedSpectrum = 1
+	Average = "ON"
+end
+_datumFromtxt = ""
+_datumTotxt = ""
+
+
+err = RgDocOpen( cadis_report_template_channel, 0 )
+wenn err = 0
+	RgTextSet("channelname", ChannelListe_[ch],0)
+	RgTextSet("channelunit", "",0)
+	RgTextSet("measurementfile","",0)
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; time series parameters
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 1; find time series parameters
+		FeatData = Grneu()
+		SpeedData = Grneu()
+		OPData = Grneu()
+		parameters_ok = 0
+		speed_ok = 0
+		op_ok = 0
+		_anzPar = GrChanNum?(FeatDataAll)
+		_index = 1
+		speed_count = 0
+		SOLANGE _index <= _anzPar  
+			; load parameters
+			_ok = 0
+			_Parname = GrChanName?(FeatDataAll,_index)
+			_parname_0 = tteil(_Parname,1,tleng(ist_channel))
+			if  txwo(_parname, "_speed" ) = 0 and txwo(_parname_0, ist_channel) <> 0  and txwo(_parname, "-Status") = 0 and txwo(_parname, "-Sev") = 0
+				_ok = 1
+				_parname_list = TxSplit(_parname,"_")
+				_parname_ = _parname_list[2]
+				{<_Parname_>} = FeatDataAll:[_index]
+				if lang?({<_Parname_>} ) > 1 and tverg(_parname_list[1],ist_channel) = 0
+					parameters_ok = 1
+					wenn IsXY({<_Parname_>})
+						{<_Parname_>} = sort({<_Parname_>},7)
+						FeatData:{<_Parname_>}={<_Parname_>}
+					sonst
+						FeatData:{<_Parname_>}={<_Parname_>}
+					ende
+				ende
+			ende
+				
+			; load speed parameter
+			if txwo(_parname, "_speed") <> 0  and txwo(_parname, "-Status") = 0 and txwo(_parname, "-Sev") = 0
+				speed_ok = 1
+				speed_count = speed_count + 1
+				_parname_ = "speed_" + tform(speed_count,"")
+				{<_parname_>} = FeatDataAll:[_index]
+				seteinheit({<_parname_>}  , "rpm",1)
+				wenn IsXY({<_parname_>} )
+					{<_parname_>} = sort({<_parname_>},7)
+					SpeedData:{<_parname_>} ={<_parname_>} 
+				sonst
+					SpeedData:{<_parname_>} ={<_parname_>} 
+				ende
+			ende
+				
+			; load Op_data
+			_kkmax = TxArrayGetSize(OP_Info:ParCode)
+			for _kk = 1 to _kkmax
+				op_par_verg = _parname
+				op_par = OP_Info:ParCode[_kk]
+				op_unit = OP_Info:ParUnit[_kk]
+				if txwo(op_par,_parname ) <> 0
+					op_ok = 1
+					{<_Parname>} = FeatDataAll:[_index]
+					seteinheit({<_Parname>}  , op_unit,1)
+					wenn IsXY({<_Parname>} )
+						{<_Parname>} = sort({<_Parname>},7)
+						OPData:{<_Parname>} ={<_Parname>} 
+					sonst
+						OPData:{<_Parname>} ={<_Parname>} 
+					ende
+				ende
+			ende
+						
+
+			_index = _index + 1
+		ende
+			
+		channel_ts_parameters = grneu()
+		channel_timeseries_parameters = grneu()
+		if parameters_ok = 1 and GrKanalZahl?(FeatData) >= 1; _kkmax-1
+			channel_timeseries_parameters = FeatData
+			for _ii = 1 to GrChanNum?(FeatData)
+				_varname = GrChanName?(FeatData,_ii)
+				if txwo(_varname, "-Sev") = 0 and txwo(_varname, "-Status") = 0
+					feat_data = FeatData:[_ii]
+					if txwo(_varname,"SubSynchronous") <>0
+						_varname_ ="SubSync"
+					elseif txwo(_varname,"NonSynchronous") <>0  
+						_varname_ ="NonSync"
+					elseif txwo(_varname,"Synchronous") <>0 
+						_varname_ ="Sync"
+					else
+						_varname_ =_varname
+					ende
+					if isxy(feat_data)
+						channel_ts_parameters:{<_varname_>} = kmpy(feat_data)
+						channel_timeseries_parameters = kmpy(FeatData)
+					else
+						x_vec = ramp(0,1,leng?(feat_data))
+						channel_ts_parameters:{<_varname_>} = xy(x_vec, feat_data)
+						channel_timeseries_parameters = FeatData
+					ende
+				ende
+			ende
+				
+		ende
+		TxErr$ = CwLoadCCV(channel_timeseries_parameters, "channel_timeseries_parameters.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","channel_timeseries_parameters","!1")
+		ende
+		err =RgCurveSet("channel_timeseries_parameters",channel_timeseries_parameters,0)
+		wenn err <> 0
+			err_txt ="channel_timeseries_parameters: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(channel_timeseries_parameters)
+		CwAction("win.close")
+
+		speed_parameter = leer
+		if speed_ok = 1; GrKanalZahl?(channel_timeseries_parameters) > 0
+			if isxy( SpeedData:[1] )
+				speed_parameter= kmpy(SpeedData)
+			else
+				x_vec = ramp(0,1,leng?(SpeedData:[1]))
+				speed_parameter = SpeedData:[1];xy(x_vec, {<_parname_speed>} )
+			ende
+		ende
+		TxErr$ = CwLoadCCV(speed_parameter, "speed.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","speed","!1")
+		ende
+		err =RgCurveSet("speed",speed_parameter,0)
+		wenn err <> 0
+			err_txt ="speed: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(speed_parameter)
+		CwAction("win.close")
+
+	ende
+		
+
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; channel_time_series_spectra
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 0 ; find time series spectra
+		file = ist_channel + "_FFT_Mag_Trend_FromTo.csv"
+		file = assetfolder + "\" + "Output\Features\" +file
+			
+		map = grneu()
+		channel_timeseries_spectra = grneu()
+		err = fsfileexists(file)
+		wenn err = 1
+			importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+			t0 = ZeitSystem?()
+			Eventidx = leer;
+			Eventdate = leer;
+			_x = leer
+			_groupart = 1;
+			_fileid = FileOpenFAS(file,importsvorlage, 0); ascii_statusfile
+			wenn _fileid > 0
+				_anzPar = FileObjNum?(_fileid)
+				_index = 1
+				SOLANGE _index <= _anzPar  
+					;zeigen _index
+					_typ = FileObjType?(_fileid,_index)
+					wenn _typ = 1
+						_Parname = FileObjName?(_fileid,_index)							
+						{<_Parname>} = FileObjRead(_fileid,_index)
+						seteinheit ({<_Parname>},"Hz",0)
+				
+						file_name = FsSplitPath(file,2)
+						parname_trend = file_name
+				
+						wenn _groupart = 1; Segment
+							wenn _index = 1				
+								{<parname_trend>} = GrNeu()
+								{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+							sonst
+								{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+							ende
+
+						ende
+
+						entf _Parname
+						entf {<_Parname>}
+					ende
+					_index = _index + 1
+				ende
+		
+				map = {<parname_trend>}
+				wenn _groupart = 1 
+					_EwSegLang = lang?(map:[1])
+					_group = GrBinde(map,0)
+					SetSegLang(_group,_EwSegLang)
+					map = _group
+					seteinheit(map,"Time",2)
+					channel_timeseries_spectra = map
+					entf map
+				ende
+	
+				fileclose(_fileid)	
+	
+				t1 = ZeitSystem?()
+				dt1 = t1-t0
+				;zeigen dt1
+			ende
+		ende
+			
+		TxErr$ = CwLoadCCV(channel_timeseries_spectra, "channel_timeseries_spectra.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","channel_timeseries_spectra","!1")
+		ende
+		err =RgCurveSet("channel_timeseries_spectra",channel_timeseries_spectra,0)
+		wenn err <> 0
+			err_txt = "channel_timeseries_spectra: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(channel_timeseries_spectra)
+		CwAction("win.close")	
+			
+	ende
+	
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; channel_time_series_spectra
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 1 ; find time series spectra
+		if 0
+			file = ist_channel + "_FFT_Mag_Trend_FromTo.csv"
+			file = assetfolder + "\" + "Output\Features\" +file
+			
+			map = grneu()
+			sues_channel_timeseries_spectra = grneu()
+			err = fsfileexists(file)
+			wenn err = 1
+				importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+				t0 = ZeitSystem?()
+				Eventidx = leer;
+				Eventdate = leer;
+				_x = leer
+				_groupart = 1;
+				_fileid = FileOpenFAS(file,importsvorlage, 0); ascii_statusfile
+				wenn _fileid > 0
+					_anzPar = FileObjNum?(_fileid)
+					_index = 1
+					SOLANGE _index <= _anzPar  
+						;zeigen _index
+						_typ = FileObjType?(_fileid,_index)
+						wenn _typ = 1
+							_Parname = FileObjName?(_fileid,_index)							
+							{<_Parname>} = FileObjRead(_fileid,_index)
+							seteinheit ({<_Parname>},"Hz",0)
+				
+							file_name = FsSplitPath(file,2)
+							parname_trend = file_name
+				
+							wenn _groupart = 1; Segment
+								wenn _index = 1				
+									{<parname_trend>} = GrNeu()
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								sonst
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								ende
+
+							ende
+
+							entf _Parname
+							entf {<_Parname>}
+						ende
+						_index = _index + 1
+					ende
+		
+					map = {<parname_trend>}
+					wenn _groupart = 1 
+						_EwSegLang = lang?(map:[1])
+						_group = GrBinde(map,0)
+						SetSegLang(_group,_EwSegLang)
+						map = _group
+						seteinheit(map,"Time",2)
+						sues_channel_timeseries_spectra = map
+						entf map
+					ende
+	
+					fileclose(_fileid)	
+	
+					t1 = ZeitSystem?()
+					dt1 = t1-t0
+					;zeigen dt1
+				ende
+			end
+		else
+			
+			;sequenz Load_Sues_Spectrum
+			_outputfile = "C:\BDA\ExpertAnalysis\TrendView_Output.txt"
+			_erg = FsDeleteFile(_outputfile)
+			; To Do -> If FeatFile exist? then continue
+
+			_inputfile = "C:\BDA\ExpertAnalysis\TrendView_Input.txt"
+			_fh = FileOpenASCII(_inputfile,1)
+			_err = FileLineWrite(_fh,AssetFolder,0)
+			_err = FileLineWrite(_fh,spec_filename,0)
+			_err = FileLineWrite(_fh,Featfile,0)
+			_err = FileLineWrite(_fh,Store,0)
+			_err = FileLineWrite(_fh,Average,0)
+			_err = FileLineWrite(_fh,tform(Deltaf,"f1.2"),0)
+			_err = FileLineWrite(_fh,tform(Freq_max,"f1.2"),0)
+			_err = FileLineWrite(_fh,_datumFromtxt,0)
+			_err = FileLineWrite(_fh,_datumTotxt,0)
+			_err = FileClose(_fh)
+
+			;Applikation Vollbild C:\python37\python.exe C:\BDA\AI\FilterFftTrend.py
+			sequenz imc_logging "cadis_filter_fft_trend started"
+			ret = Execute("C:\python37\python.exe", "C:\BDA\AI\Filter_fft_trend.py", "", 0,-1)
+			
+			ts_spec = 0
+
+			_erg = FsFileExists(_outputfile)
+			if _erg = 1
+				_fh0= FileOpenASCII(_outputfile,0 )
+				if _fh0 > 0
+					_TxZeile = ""
+					_ok = 0
+					solange _ok = 0
+						_ok = FileLineRead( _fh0, _TxZeile, 0 )
+						if _ok = 0 
+							FftFileSoll = _TxZeile
+						ende
+					ende
+					FileClose(_fh0)
+				sonst
+					_err = FileErrCode?()
+					zeigen _err
+				ende
+	
+				_erg = FsFileExists(FftFileSoll)
+				if _erg = 1
+
+					importsvorlage = "#ImportAscii1.dll|ascii_python_3dfft"
+					_par_unit_ = "Hz"
+
+					t0 = ZeitSystem?()
+					Eventidx = leer;
+					Eventdate = leer;
+					_x = leer
+					_groupart = 1;
+					_fileid = FileOpenFAS(FftFileSoll, importsvorlage, 0); ascii_statusfile
+					wenn _fileid > 0
+						_anzPar = FileObjNum?(_fileid)
+						fft_idx = 1
+						SOLANGE fft_idx <= _anzPar  
+							;zeigen fft_idx
+							_typ = FileObjType?(_fileid,fft_idx)
+							wenn _typ = 1
+								_Parname = FileObjName?(_fileid,fft_idx)
+								{<_Parname>} = FileObjRead(_fileid,fft_idx)
+								seteinheit ({<_Parname>},_par_unit_,0)
+				
+								fftfile_name = FsSplitPath(FftFileSoll,2)
+								parname_trend = fftfile_name
+				
+								wenn fft_idx = 1				
+									{<parname_trend>} = GrNeu()
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								sonst
+									{<parname_trend>}:{<_Parname>}  = {<_Parname>} 
+								ende
+						
+								entf _Parname
+								entf {<_Parname>}
+							ende
+							zeigen fft_idx
+							fft_idx = fft_idx + 1
+						ende
+							
+						map = {<parname_trend>}
+						wenn _groupart = 1 
+							_EwSegLang = lang?(map:[1])
+							_group = GrBinde(map,0)
+							SetSegLang(_group,_EwSegLang)
+							map = _group
+							seteinheit(map,"Time",2)
+							channel_timeseries_spectra = map
+							entf map
+							ts_spec = 1
+						ende
+
+						t1 = ZeitSystem?()
+						dt1 = t1-t0
+
+					ende
+					fileclose(_fileid)	
+				ende
+			sonst 
+				txt = "Spektrum Datei existiert nicht"
+				;_res = BoxNachricht("Info:",txt,"!1")
+				zeigen txt
+			ende
+
+			if varexist?("fft_idx")
+				cwselectmode("variable")
+				cwselectwindow(fft_idx)
+				CwAction("win.close")
+			end
+			if ts_spec = 1
+				TxErr$ = CwLoadCCV(channel_timeseries_spectra, "channel_timeseries_spectra.ccv")
+				wenn tverg(TxErr$,"") <> 0
+					err = BoxNachricht("Info","channel_timeseries_spectra","!1")
+				ende
+				err =RgCurveSet("channel_timeseries_spectra",channel_timeseries_spectra,0)
+				wenn err <> 0
+					err_txt = "channel_timeseries_spectra: " + RgGetErrorText(err)
+					err = BoxNachricht("Info",err_txt,"!1")
+				ende
+				CwSelectWindow(channel_timeseries_spectra)
+				CwAction("win.close")	
+			end
+		ende
+
+	ende
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	;  channel_twf + last measurement data
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 1; load channel data last measurement file
+		twf_ok = 0
+		wenn GrChanNum?(MeasData) >= 0 
+			_count = 1
+			solange _count <= GrChanNum?(MeasData) 
+				_Parname = GrChanName?(MeasData,_count)
+				if tverg(_parname,ist_channel) = 0
+					_parvalue = MeasData:[_count]
+					{<_Parname>} = _parvalue
+					channelunit = einheit?({<_Parname>},1)
+					if max(_parvalue) > min(_parvalue)
+						twf_ok = 1
+					end
+					break
+				ende
+				_count = _count + 1
+			ende
+		ende
+					
+		;date_time_str = date_time_lastfile
+			
+		channel_twf = leer
+		channel_twf_parameters = grneu()
+		if twf_ok = 1; time waveform is ok
+			channel_twf = {<_Parname>}
+			t0_sig = time?(channel_twf)
+			tend_sig = t0_sig + xdel?(channel_twf)*leng?(channel_twf)
+			RgTextSet("measurementfile",file_ext,0)
+			RgTextSet("channelunit", channelunit,0)
+			t_moving_window = tzuew(Ch_Config:Windowlength[1],"f")
+				
+			for _ii = 1 to GrChanNum?(FeatData)
+				_varname = GrChanName?(FeatData,_ii)
+				if txwo(_varname, "-Sev") = 0 and   txwo(_varname, "-Status") = 0
+					feat_data = FeatData:[_ii]
+					feat_data_idx = cut(feat_data, t0_sig, tend_sig , 1)
+					feat_data_idx_len = leng?(feat_data_idx)
+					feat_data_idx_last = feat_data_idx[feat_data_idx_len]
+					if txwo(_varname,"SubSynchronous") <>0
+						_varname_ ="SubSync"
+					elseif txwo(_varname,"NonSynchronous") <>0  
+						_varname_ ="NonSync"
+					elseif txwo(_varname,"Synchronous") <>0 
+						_varname_ ="Sync"
+					else
+						_varname_ =_varname
+					ende
+							
+					if isxy(feat_data_idx)
+						if 0
+							channel_twf_parameters:{<_varname_>} = mean(kmpy(feat_data_idx))
+						else
+							channel_twf_parameters:{<_varname_>} = kmpy(feat_data_idx[feat_data_idx_len])
+						end
+					else
+						x_vec = ramp(0,1,leng?(feat_data_idx))
+						;channel_twf_parameters:{<_varname_>} = mean(xy(x_vec,feat_data_idx )
+						if 0
+							channel_twf_parameters:{<_varname_>} = mean(feat_data_idx )
+						else
+							channel_twf_parameters:{<_varname_>} = feat_data_idx[feat_data_idx_len]
+						end
+					ende
+				ende
+			ende
+		ende
+				
+			
+		TxErr$ = CwLoadCCV(channel_twf, "channel_twf.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","channel_twf","!1")
+		ende
+		err = RgCurveSet("channel_twf",channel_twf,0)
+		wenn err <> 0
+			err_txt ="channel_twf: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(channel_twf)
+		CwAction("win.close")
+
+	
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		;  histogram + last measurement data
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		HistPlotT = leer
+		if twf_ok = 1 
+			if (max(channel_twf)-min(channel_twf)) > 0
+				nbins = 20
+				HistPlotT = xyvon(histo(channel_twf,(max(channel_twf)-min(channel_twf))/nbins,nbins),rampe(min(channel_twf),(max(channel_twf)-min(channel_twf))/nbins,nbins));
+			end
+		ende
+		TxErr$ = CwLoadCCV(HistPlotT, "HistPlotT.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","HistPlotT","!1")
+		ende
+		err = RgCurveSet("HistPlotT",HistPlotT,0)
+		wenn err <> 0
+			err_txt ="HistPlotT: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(HistPlotT)
+		CwAction("win.close")
+
+		
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		;  spectrogram + last measurement data
+		;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		;Version1 -> faster
+		ok = VerifyVar(channel_timeseries_spectra, "Group")
+		if ok = 1
+			spec_lang =grchannum?(channel_timeseries_spectra)
+		ende
+		ok = VerifyVar(channel_timeseries_spectra, "Seg")
+		if ok = 1
+			spec_lang =SegLen?(channel_timeseries_spectra)
+		ende
+			
+		Ax_mean = leer
+		Ax_kask = leer
+
+		if twf_ok = 1 and spec_lang > 0
+			sequenz BoxPlot_FFT_Analysis  {<_Parname>}; -> Ax_mean, Ax_kask
+		ende
+		TxErr$ = CwLoadCCV(Ax_mean, "Ax_mean.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","Ax_mean","!1")
+		ende
+		err = RgCurveSet("FFT_averaged",Ax_mean,0)
+		wenn err <> 0
+			err_txt ="FFT_averaged: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(Ax_mean)
+		CwAction("win.close")
+		
+
+		TxErr$ = CwLoadCCV(Ax_kask, "Ax_kask_normal.ccv")
+		wenn tverg(TxErr$,"") <> 0
+			err = BoxNachricht("Info","Ax_kask","!1")
+		ende
+
+		err = RgCurveSet("FFT3D",Ax_kask,0)
+		wenn err <> 0
+			err_txt ="FFT3D: " + RgGetErrorText(err)
+			err = BoxNachricht("Info",err_txt,"!1")
+		ende
+		CwSelectWindow(Ax_kask)
+		CwAction("win.close")
+			
+		;Version2 -
+		;sequenz BoxPlot_FFT_Orbit_Analysis
+		;orbit_vector_speed, etc.
+	ende
+	
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; Load Channel Parameter Data & Status
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	if 1; channel liste tabelle
+		table_name = "metrics_table"
+		table_cols = RgTableColumns?(table_name)
+		table_rows = RgTableRows?(table_name)
+		for _ii = 1 to table_rows
+			for _jj = 1 to table_cols
+				RgTableSetCell(table_name,_jj,_ii,"",0)
+				_parstatus_color = RGB(255, 255, 255)
+				RgObjSetColor(table_name,1,_parstatus_color,_jj,_ii)		
+			ende
+		ende
+		for _kk = 1 to txarraygetsize(asset_current_status_cols)
+			if tverg(ist_channel, asset_current_status_cols[_kk]) = 0
+				_colidx = _kk;-1	
+				ist_channel_par_status = asset_current_status_map0:[_colidx]
+				_parstatus = max(ist_channel_par_status)
+				sequenz find_status_colour; -> _parstatus_color
+				RgObjSetColor("channelname",1,_parstatus_color,0,0)		
+				break
+			ende
+		ende
+
+		if parameters_ok = 1 and twf_ok = 1 and GrKanalZahl?(FeatData) >= 1
+			for _ii =1 to grkanalzahl?(channel_ts_parameters)+1;txArrayGetSize( ChannelListe)
+				if _ii = 1
+					RgTableSetCell(table_name,1,_ii,"ParName",0)
+					RgTableSetCell(table_name,2,_ii,"TimeSeries",0)
+					RgTableSetCell(table_name,3,_ii,"Current",0)
+				else
+					_parname = grkanalname?(channel_ts_parameters,_ii-1)
+					_par_ts_value = channel_ts_parameters:{<_parname>}
+					_par_tw_value =  tform(mitte(channel_twf_parameters:{<_parname>}),"f1.4")
+					_par_ts_value_txt = tform(min(_par_ts_value),"f1.4") +"<"+ tform(mitte(_par_ts_value),"f1.4") +"<"+ tform(max(_par_ts_value),"f1.4") 
+					
+					RgTableSetCell(table_name,1,_ii,_parname,0)
+					RgTableSetCell(table_name,2,_ii,_par_ts_value_txt,0)
+					RgTableSetCell(table_name,3,_ii,_par_tw_value,0)
+					
+					for _kk = 1 to txarraygetsize(asset_current_status_rows)
+						if tverg(_parname, asset_current_status_rows[_kk]) = 0 or txwo(asset_current_status_rows[_kk],_parname) <> 0
+							_rowidx = _kk	
+							_parstatus = ist_channel_par_status[_rowidx]
+							sequenz find_status_colour; -> _parstatus_color
+							RgObjSetColor(table_name,1,_parstatus_color,3,_ii)	
+							break
+						ende
+					ende
+													
+				ende
+			ende
+			
+		ende
+	end
+		
+		
+	
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; export doc, pdf, png, etc.
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	sequenz export_report ist_channel
+	; close report
+	err =  RgDocClose( 0 )
+	if err < 0
+		zeigen (err)
+	ende
+
+
+		
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	; delete channel data
+	;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	entf parameters_ok
+	entf speed_ok
+		
+	entf channel_timeseries_parameters
+	entf measurementfile
+	entf speed_parameter
+	entf channel_ts_parameters
+	entf channel_twf_parameters
+	entf FeatData
+	entf channel_timeseries_spectra
+	entf channel_timeseries_spectra
+	entf channel_twf
+	entf HistPlotT
+	entf Ax_kask
+	entf Ax_mean
+else
+	zeigen  err
+ende

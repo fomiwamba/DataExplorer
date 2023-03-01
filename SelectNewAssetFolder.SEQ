@@ -1,0 +1,94 @@
+; Load FeatureTable
+; -> filter all measurements according to time period and op interval
+; -> load measlist
+; -> load parlist of all channels
+; -> load funclist (fft, orderfft, envfft, orderenvfft) of all channels;
+sequenz imc_logging "select_new_asset_folder started"
+entf *
+
+;AssetFolder = FsDlgSelectDirectory("Select AssetFolder","D:\",0)
+AssetFolderIdx = DlgGetSelectedItem("AssetFolderList")
+AssetFolder = DlgGetItemText("AssetFolderList",AssetFolderIdx)
+
+input_verz_SignalAnalysis = AssetFolder + "\ConditionFiles_Completed\"
+input_verz_SignalAnalysis = TErsetze(input_verz_SignalAnalysis,"\\","\")
+
+sequenz LoadConfigAndDataNewAssetFolder
+;
+;wenn varexist?("input_verz_SignalAnalysis")
+;	;input_verz = "D:\DataAnalytics\DataValidation\TSN_Measurements\";
+;	DlgDeleteItem("FileList",0)
+;	DlgDeleteItem("SignalList1",0)
+;	_suchname = "*.dat"
+;	_PathName = input_verz_SignalAnalysis
+;	$filelist_mm = FsFileListNew(_pathname, _suchname, 0, 1, 2)
+;	wenn $filelist_mm >= 1
+;		$cntfile = FsFileListGetCount($filelist_mm)
+;		wenn $cntfile> 0
+;			ii = 1
+;			solange ii <= $cntfile
+;				$filename = FsFileListGetName($filelist_mm, ii)
+;				$filename_neu = FsSplitPath($filename,4)
+;				$filename_path = FsSplitPath($filename,8)
+;				sequenz Insert_Item "FileList" $filename
+;				ii = ii +1
+;			end
+;			
+;			FsFileListClose($filelist_mm)
+;			wenn 1
+;				DlgSelectItem("FileList",1)
+;				idx = DlgGetSelectedItem("FileList")
+;				$filename = DlgGetItemText("FileList",idx)
+;				;$filename = $filename_path + $filename
+;				_fileid = FileOpenDSF($filename,100)
+;				wenn _fileid > 0; and _filesize > 1000
+;					_index = FileObjNum?(_fileid)
+;					wenn _index <> 0
+;						_count = 1
+;						solange _count <= _index				
+;							_parvalue = FileObjRead(_fileid,_count)
+;							_Parname = FileObjName?(_fileid,_count)
+;							_parnameneu = _parname;add(_parname,tadd("_",_Messdatum))
+;							{<_Parnameneu>} = _parvalue
+;							sequenz Insert_Item "SignalList1" _parnameneu
+;;							sequenz Insert_Item "SignalList2" _parnameneu
+;;							sequenz Insert_Item "SpeedSignalList" _parnameneu
+;							_count = _count + 1
+;						ende
+;					ende
+;					_err = fileclose(_fileid)
+;				ende
+;				;DlgInsertItem("SpeedSignalList",1,"None",0)
+;				;DlgInsertItem("SignalList1",1,"None",0)
+;				DlgSelectItem("SignalList1",1)
+;				;DlgInsertItem("SignalList2",1,"None",0)
+;;				DlgSelectItem("SignalList2",1)
+;;				DlgSelectItem("SpeedSignalList",1)
+;;				a = xyvon(binde(-1,1),binde(-1,1))
+;				wenn varexist?("ChannelName")
+;					idx = DlgFindItem("SignalList1",ChannelName)
+;					DlgSelectItem("SignalList1",idx)
+;;					DlgSelectItem("SignalList2",idx)
+;;					DlgSelectItem("SpeedSignalList",idx)
+;				sonst
+;					ChannelName = DlgGetItemText("SignalList1",1)
+;				ende
+;				
+;			ende
+;			;wenn varexist?("input_verz_SignalAnalysis")
+;			_txtposi = TxWo(input_verz_SignalAnalysis,"\Completed\")
+;
+;			path_configfile = tteil(input_verz_SignalAnalysis,1,_txtposi-1)
+;			path_configfile =  AssetFolder + "\xlsconfig.xlsx"
+;			;path_configfile = TErsetze(input_verz_SignalAnalysis,"\Completed\","\Input\xlsconfig.xlsx")
+;			sequenz Inifile_RevB path_configfile;
+;			sequenz ReadConfigChannel
+;		sonst
+;			BoxNachricht("Info","Please select another AssetFolder","?1")
+;		ende
+;	sonst
+;		BoxNachricht("Info","Please select another AssetFolder","?1")
+;	ende
+;ende
+
+;BoxNachricht("Next Step","Please Select a Parameter from the Feature List","?1")

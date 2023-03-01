@@ -1,0 +1,88 @@
+if 0
+	sig_x = S306
+	sig_y = S307
+	sig_p = K1
+else
+	sig_x = sigx 
+	sig_y = sigy 
+	sig_p = peak
+end
+
+t_sig_x = xdel?(sig_x) * lang?(sig_x)
+t_sig_x_mitte = t_sig_x/2
+
+sig_x = gren(sig_x, t_sig_x_mitte - _T_fenster,  t_sig_x_mitte +_T_fenster )
+sig_y =  gren(sig_y, t_sig_x_mitte - _T_fenster,  t_sig_x_mitte +_T_fenster )
+sig_p =  gren(sig_p, t_sig_x_mitte - _T_fenster,  t_sig_x_mitte +_T_fenster )
+
+;TrigLevel = -500
+n_periods = 6; vielfache von 2
+
+
+_peak_rec = sig_p;stri(sig_p,TrigLevel ,TrigLevel )
+dt = xdel?(sig_p)
+_dp0 = diff(_peak_rec)*xdel?(_peak_rec)
+_Tx0 = posiex(-_dp0,2); findet alle Zeiten, wo peak <= 0
+_Tx1 = posiex(-_dp0,-2); findet alle Zeiten, wo peak <= 0
+_Tp0 = leer
+_Tp1 = leer
+wenn 1
+	_anz_p = lang?(_Tx0)
+	wenn _anz_p > 0
+		
+		_zz = 1
+		T0 = 0*rampe(0,1,_anz_p-1)
+		SOLANGE _zz <=  _anz_p  
+			;_Tp = binde(_Tp,_Tx0[_zz])
+			_Tp0 = binde(_Tp0,_Tx1[_zz]-dt)
+			_Tp1 = binde(_Tp1,_Tx1[_zz])
+			if _zz <= _anz_p -1
+				T0[_zz] = _Tx0[_zz+1] - _Tx0[_zz]
+			end
+			_zz = _zz + 1
+		ENDE
+		_T0_max = max(T0)
+		_T0_min = min(T0)
+		_T0_mitte = mitte(T0)
+		_T0_var = streu(T0)
+		_F0_mitte = 1/_T0_mitte; Drehfrequenz in Hz
+		_drehzahl_mitte = _F0_mitte*60;
+		sig_speed = 60/T0
+	ende
+ende
+
+t_mitte = xdel?(sig_x)*lang?(sig_x)/2
+t_w =n_periods*_T0_mitte
+n_Tp0 = lang?(_Tp0)
+idx = t_mitte/xdel?(sig_x)
+if mod(n_Tp0,2) = 0
+	idx = n_Tp0/2
+else
+	idx =  (n_Tp0-1)/2
+end
+idx_min = idx - n_periods/2
+idx_max = idx + n_periods/2
+t_min0 = _Tp0[idx_min]
+t_max0 = _Tp0[idx_max]
+t_min1 = _Tp1[idx_min]
+t_max1 = _Tp1[idx_max]
+
+sig_x_p0_ = xyvon(_Tp0, wert(sig_x,_Tp0))
+sig_y_p0_ =  xyvon(_Tp0, wert(sig_y,_Tp0))
+sig_x_p1_ = xyvon(_Tp1, wert(sig_x,_Tp1))
+sig_y_p1_ =  xyvon(_Tp1, wert(sig_y,_Tp1))
+
+
+sig_x_ = gren(sig_x,t_min0,t_max1,0)
+sig_y_ = gren(sig_y,t_min0,t_max1,0)
+sig_p_ = gren(_peak_rec,t_min0,t_max1,0)
+orbit =  kompl(sig_x_, sig_y_)
+
+;
+sig_x_p0 = gren(sig_x_p0_,t_min0,t_max0,0)
+sig_y_p0 =  gren(sig_y_p0_,t_min0,t_max0,0)
+sig_x_p1 = gren(sig_x_p1_,t_min1,t_max1,0)
+sig_y_p1 =  gren(sig_y_p1_,t_min1,t_max1,0)
+orbit_p0 = kompl(sig_x_p0.y, sig_y_p0.y)
+orbit_p1 = kompl(sig_x_p1.y, sig_y_p1.y)
+
