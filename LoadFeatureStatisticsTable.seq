@@ -1,5 +1,13 @@
-asset_parameter_status = assetfolder + "\Output\Features\" + "FeatureStatisticsTable.csv"; Last Status of ChannelFeature
-		
+;asset_parameter_status = assetfolder + "\Output\Features\" + "FeatureStatisticsTable.csv"; Last Status of ChannelFeature
+
+Featfile = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
+if txwo(Featfile, "_Clean") = 0
+	Featfile1 = TxReplace(Featfile,"FeatureTable","FeatureStatisticsTable",0,1)
+else
+	Featfile1 = "FeatureStatisticsTable"
+end
+asset_parameter_status = assetfolder + "\" + "Output\Features\" + Featfile1 + ".csv"; -> max(Status) of Channel
+
 file = asset_parameter_status
 		
 if fsfileexists(file)

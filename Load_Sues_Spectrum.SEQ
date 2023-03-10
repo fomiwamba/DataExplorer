@@ -117,7 +117,7 @@ if _erg = 1
 			ende
 	
 			fileclose(_fileid)	
-			cw_verz = "C:\BDA\ExpertAnalysis\"
+			cw_verz = "C:\BDA\ExpertAnalysis\" ; to be replace by C:\BDA\DataExplorer
 			CwLoadCCV(SpectrumPlot,cw_verz + SpectrumTemplate)
 		
 			t1 = ZeitSystem?()

@@ -38,89 +38,91 @@ end
 PnSetActivePage(1)
 _index =PnTableGetSelectedRows("AssetOverview.AssetListeGitter")
 wenn lang?(_index) > 0
-	AssetFolder = AssetFolderList[_index]
-	cw_verz = "C:\BDA\ExpertAnalysis\"
-	;zeigen AssetFolder
-	sequenz reset_fields
-	PnSetText("ChannelOverview.SelectedAsset", AssetFolder)
-	PnSetText("ParameterOverview.SelectedAsset", AssetFolder)
-	PnSetText("MeasurementOverview.SelectedAsset", AssetFolder)
-	PnSetText("FrequencyParameters.SelectedAsset", AssetFolder)
-	PnSetText("MotorTable.SelectedAsset", AssetFolder)
-	PnSetText("VibrationAnalysis.SelectedAsset", AssetFolder)
-	PnSetText("ElectricalAnalysis.SelectedAsset", AssetFolder)
+	if _index > 0  and _index < 10000
+		AssetFolder = AssetFolderList[_index]
+		cw_verz = "C:\BDA\ExpertAnalysis\"
+		;zeigen AssetFolder
+		sequenz reset_fields
+		PnSetText("ChannelOverview.SelectedAsset", AssetFolder)
+		PnSetText("ParameterOverview.SelectedAsset", AssetFolder)
+		PnSetText("MeasurementOverview.SelectedAsset", AssetFolder)
+		PnSetText("FrequencyParameters.SelectedAsset", AssetFolder)
+		PnSetText("MotorTable.SelectedAsset", AssetFolder)
+		PnSetText("VibrationAnalysis.SelectedAsset", AssetFolder)
+		PnSetText("ElectricalAnalysis.SelectedAsset", AssetFolder)
 	
-	DateFromFile = AssetFolder + "\Output\DateFromTo.txt"
-	_fh = FileOpenASCII(DateFromFile,1)
-	if _fh > 0
-		_err = FileLineWrite(_fh,AssetFolder,0)
-		_err = FileLineWrite(_fh,_datumFromtxt,0)
-		_err = FileLineWrite(_fh,_datumTotxt,0)
-		_err = FileClose(_fh)
-	sonst
-		_err = FileErrCode?() 
-		zeigen _err
-	ende
-	
-	; load configuration
-	path_configfile = AssetFolder + "\xlsconfig.xlsx" 
-	_path_configfile_temp = AssetFolder + "\temp1_xlsconfig.xlsx" 
-	_erg = FsCopyFile(path_configfile,_path_configfile_temp,2,0)
-	;sequenz Inifile_RevB path_configfile;
-	sequenz ReadXlsConfig _path_configfile_temp;
-	_erg =FsDeleteFile(_path_configfile_temp)
-
-
-	InputFolder = AssetFolder + "\Input"; 
-	OutputFolder = AssetFolder + "\Output";
-	CompletedFolder = AssetFolder + "\Output\TWF"; 	"\ConditionFiles_Completed";
-
-	export_influxdb = PnGetValue("AssetOverview.export_influxdb")
-	if export_influxdb 
-		_path_assetfolder_selected = "C:\BDA\AssetFolderSelected.txt"
-		_fh = FileOpenASCII(_path_assetfolder_selected,1)
+		DateFromFile = AssetFolder + "\Output\DateFromTo.txt"
+		_fh = FileOpenASCII(DateFromFile,1)
 		if _fh > 0
 			_err = FileLineWrite(_fh,AssetFolder,0)
-			;_err = FileLineWrite(_fh,OpMode,0)
+			_err = FileLineWrite(_fh,_datumFromtxt,0)
+			_err = FileLineWrite(_fh,_datumTotxt,0)
 			_err = FileClose(_fh)
 		sonst
 			_err = FileErrCode?() 
 			zeigen _err
 		ende
+	
+		; load configuration
+		path_configfile = AssetFolder + "\xlsconfig.xlsx" 
+		_path_configfile_temp = AssetFolder + "\temp1_xlsconfig.xlsx" 
+		_erg = FsCopyFile(path_configfile,_path_configfile_temp,2,0)
+		;sequenz Inifile_RevB path_configfile;
+		sequenz ReadXlsConfig _path_configfile_temp;
+		_erg =FsDeleteFile(_path_configfile_temp)
 
-		sequenz imc_logging "cadis_export_data_from_influx_db started"
-		_ret = Execute( "C:\python37\python.exe", "C:\BDA\AI\CADIS_ExportDataFromInfluxDB.py", "", 3,-1)
 
-		_file = "C:\BDA\Cadis_ExportDataFromInfluxdb.txt"
-		Cadis_ExportDataFromInfluxdb = fsfileexists(_file)
+		InputFolder = AssetFolder + "\Input"; 
+		OutputFolder = AssetFolder + "\Output";
+		CompletedFolder = AssetFolder + "\Output\TWF"; 	"\ConditionFiles_Completed";
+
+		export_influxdb = PnGetValue("AssetOverview.export_influxdb")
+		if export_influxdb 
+			_path_assetfolder_selected = "C:\BDA\AssetFolderSelected.txt"
+			_fh = FileOpenASCII(_path_assetfolder_selected,1)
+			if _fh > 0
+				_err = FileLineWrite(_fh,AssetFolder,0)
+				;_err = FileLineWrite(_fh,OpMode,0)
+				_err = FileClose(_fh)
+			sonst
+				_err = FileErrCode?() 
+				zeigen _err
+			ende
+
+			sequenz imc_logging "cadis_export_data_from_influx_db started"
+			_ret = Execute( "C:\python39\python.exe", "C:\BDA\AI\CADIS_ExportDataFromInfluxDB.py", "", 3,-1)
+
+			_file = "C:\BDA\Cadis_ExportDataFromInfluxdb.txt"
+			Cadis_ExportDataFromInfluxdb = fsfileexists(_file)
 		
-		if Cadis_ExportDataFromInfluxdb = 1
+			if Cadis_ExportDataFromInfluxdb = 1
+				_suchname = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
+				_Pathname = OutputFolder + "\Features\"
+				sequenz LoadFeatureFile; inputs: _pathname, _suchname, output: FeatData
+	
+				sequenz LoadChannelStatusTable2
+				;
+				sequenz LoadAssetMeasFiles
+				sequenz LoadFeatureStatisticsTable
+				sequenz Load_VMS_Frequency_Data
+				PnSetActivePage(1)
+				_erg = boxnachricht("Info","Load Feature Data Done!","?1")
+			else
+				_erg = boxnachricht("Error","Export Data From InfluxDB!","S1")
+			end
+		else
 			_suchname = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
 			_Pathname = OutputFolder + "\Features\"
 			sequenz LoadFeatureFile; inputs: _pathname, _suchname, output: FeatData
-	
-			sequenz LoadChannelStatusTable
-			;
+		
+			sequenz LoadChannelStatusTable2
+
 			sequenz LoadAssetMeasFiles
 			sequenz LoadFeatureStatisticsTable
 			sequenz Load_VMS_Frequency_Data
 			PnSetActivePage(1)
 			_erg = boxnachricht("Info","Load Feature Data Done!","?1")
-		else
-			_erg = boxnachricht("Error","Export Data From InfluxDB!","S1")
 		end
-	else
-		_suchname = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
-		_Pathname = OutputFolder + "\Features\"
-		sequenz LoadFeatureFile; inputs: _pathname, _suchname, output: FeatData
-		
-		sequenz LoadChannelStatusTable
-
-		sequenz LoadAssetMeasFiles
-		sequenz LoadFeatureStatisticsTable
-		sequenz Load_VMS_Frequency_Data
-		PnSetActivePage(1)
-		_erg = boxnachricht("Info","Load Feature Data Done!","?1")
 	end
 end
 entf _*

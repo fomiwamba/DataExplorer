@@ -2,9 +2,22 @@
 
 sequenz imc_logging "load_channel_status_table started"
 
-channel_status_vs_time_file = assetfolder + "\" + "Output\Features\" + "ChannelStatusTable.csv"; -> max(Status) of Channel
-channel_severity_vs_time_file = assetfolder + "\" + "Output\Features\" + "ChannelSeverityTable.csv"; -> max(Status) of Channel
-asset_current_status = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"; Last Status of ChannelFeature
+Featfile = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
+if txwo(Featfile, "_Clean") = 0
+	Featfile1 = TxReplace(Featfile,"FeatureTable","ChannelStatusTable",0,1)
+else
+	Featfile1 = "ChannelStatusTable"
+end
+channel_status_vs_time_file = assetfolder + "\" + "Output\Features\" + Featfile1 + ".csv"; -> max(Status) of Channel
+
+if txwo(Featfile, "_Clean") = 0
+	Featfile2 = TxReplace(Featfile,"FeatureTable","ChannelSeverityTable",0,1)
+else
+	Featfile2 = "ChannelSeverityTable"
+end
+channel_severity_vs_time_file = assetfolder + "\" + "Output\Features\" + Featfile2 + ".csv"; -> max(Status) of Channel
+;asset_current_status = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"; Last Status of ChannelFeature
+asset_current_status = assetfolder + "\" + "Output\Features\" + "ChannelFeatureStatusTable.csv"
 
 view_sev = PnGetValue("AssetOverview.view_sev")
 
@@ -189,9 +202,13 @@ if fsfileexists(channel_status_vs_time_file) and fsfileexists(channel_severity_v
 end
 ;file = assetfolder + "\" + "Output\Features\" + "ChannelFeatureStatusTable.csv"; -> 1st colummn --> parameters, 1st row --> channels
 if view_sev = 1
-	file = assetfolder + "\" + "Output\Features\" + "current_parameter_table_delta_rel.csv"
+	;file = assetfolder + "\" + "Output\Features\" + "current_parameter_table_delta_rel.csv"
+	file = assetfolder + "\" + "Output\Features\" + "ChannelFeatureSeverityTable.csv"
+	;file = channel_sev_vs_time_file; -> 1st colummn --> parameters, 1st row --> channels
 else
-	file = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"
+	;file = assetfolder + "\" + "Output\Features\" + "current_parameter_table_status.csv"
+	file = assetfolder + "\" + "Output\Features\" + "ChannelFeatureStatusTable.csv"
+	;file = channel_status_vs_time_file; -> 1st colummn --> parameters, 1st row --> channels
 end
 
 for _kk = 1  to PnTableColumns?("AssetOverview.ChannelFeatureGitter")
@@ -255,7 +272,7 @@ if fsfileexists(file)
 
 	ende
 ende
-
+if 1
 for _kk = _ii+1  to PnTableColumns?("AssetOverview.ChannelFeatureGitter")
 	PnTableShowColumn("AssetOverview.ChannelFeatureGitter",_kk,0)
 end
@@ -267,6 +284,7 @@ if 0
 		PnTableSetCell("AssetOverview.ChannelFeatureGitter",_spalte,0, _parname)	
 	end
 end
-	
+end
+
 entf _*
 ;PnTableSetCell( "AssetOverview.ChannelFeatureGitter1", 2, 1, "Kanal1")

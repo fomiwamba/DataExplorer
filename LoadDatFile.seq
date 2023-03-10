@@ -1,6 +1,6 @@
 sequenz imc_logging "load_dat_file started"
 
-MeasSignalList = TxArrayCreate(0)
+MeasRawDataVar = TxArrayCreate(0)
 MeasRawData = GrNeu()
 _fileid = FileOpenDSF(filename,100)
 wenn _fileid > 0; and _filesize > 1000
@@ -12,7 +12,7 @@ wenn _fileid > 0; and _filesize > 1000
 			_signame = FileObjName?(_fileid,_count)
 			{<_signame>} = _parvalue
 			MeasRawData:{<_signame>} = {<_signame>}
-			MeasSignalList[_count] = _signame
+			MeasRawDataVar[_count] = _signame
 			;sequenz Insert_Item "ParameterList" _signame
 			_count = _count + 1
 		ende

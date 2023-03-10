@@ -1,0 +1,48 @@
+
+_paridx =PnTableGetSelectedRows("View3rdPartyFile.FileVariables")
+IF leng?(_paridx) > 0;  
+	if _paridx > 0  and _paridx < 10000
+		zeigen _paridx
+		_parname = DataExt_FeatListe[_paridx]
+		{<_Parname>} = DataExt:{<_Parname>}
+		
+		index = PnGetValue("View3rdPartyFile.VariablePlotAxis")
+		wenn index = 1; TrendPlot_vs_Date
+			{<_Parname>} = {<_Parname>} 
+			xaxis = 1
+		else
+			if  IsXY({<_Parname>})
+				{<_Parname>} = kmpy({<_Parname>} )
+			else
+				{<_Parname>} = xdel({<_Parname>},1)
+			ende
+			xaxis = 0
+		ende
+	
+		;---------------------------------------------
+		_parname_ = _parname
+		if txwo(_parname_,".") > 0
+			_parname_ = txreplace( _parname_,".","_",0,1)
+		end
+		if txwo(_parname_ ," ") > 0
+			_parname_ = txreplace( _parname_ ," ","_",0,1)
+		end
+		if txwo(_parname_ ,"\") > 0
+			_parname_ = txreplace( _parname_ ,"\","_",0,1)
+		end
+		if txwo(_parname_ ,"/") > 0
+			_parname_ = txreplace( _parname_ ,"/","_",0,1)
+		end
+		{<_parname_>} =  {<_Parname>}
+		;---------------------------------------------
+	
+		_parname_parts = txsplit(_parname,"_")
+		if txarraygetsize(_parname_parts) > 2
+			seteinheit({<_Parname>},_parname_parts[3],1)
+		else
+			sequenz FindFeatureNameAndUnit ; from xlsconfig.
+		end
+		line_width = 0.5
+		sequenz plot_2d_trend {<_Parname_>} xaxis "VariableDataPlot"
+	end
+end

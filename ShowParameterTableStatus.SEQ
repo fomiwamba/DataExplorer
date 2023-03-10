@@ -8,355 +8,376 @@ _ist_channel_par_status = leer
 
 _chidx =PnTableGetSelectedRows("ChannelOverview.ChannelListeGitter")
 wenn lang?(_chidx) > 0
-	;currentsignal = ChannelInfo:chname[_chidx];PnGetText("DataExploration.Channel")
-	currentsignal = AssetInfo:channels[_chidx];PnGetText("DataExploration.Channel")
-end
+	if _chidx > 0  and _chidx < 10000
+		;currentsignal = ChannelInfo:chname[_chidx];PnGetText("DataExploration.Channel")
+		currentsignal = AssetInfo:channels[_chidx];PnGetText("DataExploration.Channel")
 
-view_sev = PnGetValue("ChannelOverview.view_sev")
 
-;ChannelUnit = PnGetText("DataExploration.ChUnit")
-;PnSetText("ParStatusTable.ChannelUnit",ChannelUnit)
-;PnSetText("VISATable.Channel",currentsignal )
-sequenz search_item Ch_Config:SigName currentsignal
-if tverg(currentsignal,"") <> 0 and tleng(currentsignal) > 1 and search_index > 0; and ParStatusTable = 1
-	if varexist?("StatusData") and varexist?("StatusListe") and varexist?("ParameterStatusListe")
-	else
-		;asset_parameter_status = assetfolder + "\Output\Features\" + "FeatureStatisticsTable.csv"; Last Status of ChannelFeature
-		if view_sev = 0
-			asset_parameter_status = assetfolder + "\Output\Features\" + "current_parameter_table_status.csv"
-			file = asset_parameter_status
-		else
-			asset_parameter_status = assetfolder + "\Output\Features\" + "current_parameter_table_delta_rel.csv"
-			file = asset_parameter_status
-		end
+		view_sev = PnGetValue("ChannelOverview.view_sev")
+
+		;ChannelUnit = PnGetText("DataExploration.ChUnit")
+		;PnSetText("ParStatusTable.ChannelUnit",ChannelUnit)
+		;PnSetText("VISATable.Channel",currentsignal )
+		sequenz search_item Ch_Config:SigName currentsignal
+		if tverg(currentsignal,"") <> 0 and tleng(currentsignal) > 1 and search_index > 0; and ParStatusTable = 1
+			;			if varexist?("StatusData") and varexist?("StatusListe") and varexist?("ParameterStatusListe")
+			;			else
+
+			Featfile = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
+			if txwo(Featfile, "_Clean") = 0
+				Featfile1 = TxReplace(Featfile,"FeatureTable","FeatureStatisticsTable",0,1)
+			else
+				Featfile1 = "FeatureStatisticsTable"
+			end
+			asset_parameter_statistics = assetfolder + "\" + "Output\Features\" + Featfile1 + ".csv"; -> max(Status) of Channel
+			;asset_parameter_statistics = assetfolder + "\Output\Features\" + "FeatureStatisticsTable.csv"; Last Status of ChannelFeature
+			file = asset_parameter_statistics
+			;				if view_sev = 0
+			;					asset_parameter_status = assetfolder + "\Output\Features\" + "current_parameter_table_status.csv"
+			;					file = asset_parameter_status
+			;				else
+			;					asset_parameter_sev = assetfolder + "\Output\Features\" + "current_parameter_table_delta_rel.csv"
+			;					file = asset_parameter_sev
+			;				end
 		
-		if fsfileexists(file)
+			if fsfileexists(file)
 				
-			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			; Load FeatureStatisticsTable.csv
-			;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-			_fileid = FileOpenXLS(file,0)
-			wenn _fileid > 0
-				; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
-				FileXLSSelectSheet(_fileid,1)
-				StatusListe = TxArrayCreate(1)
-				ParameterStatusListe = TxArrayCreate(1)
-				StatusData = GrNeu()
-				Faults_data = TxArrayCreate(1)
-				_ii = 1
-				SOLANGE _ii <=  2560
-					_PName = FileXLSCellRead(_fileid,1,_ii+1,0)
-					wenn tverg(_Pname,"") = 0
-						break
-					sonst
-						ParameterStatusListe[_ii] = _PName
-						_ii = _ii + 1
-					ende
-				ENDE
-				_iimax = _ii -1 		
-				_jj = 1
-				SOLANGE _jj <=  2560
-					_PName = FileXLSCellRead(_fileid,_jj,1,0)
-					wenn tverg(_Pname,"") = 0
-						break
-					sonst
-						StatusListe[_jj] = _PName
+				;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				; Load FeatureStatisticsTable.csv
+				;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+				_fileid = FileOpenXLS(file,0)
+				wenn _fileid > 0
+					; parameter_liste = FileXLSColumnRead(_fileid,1,2,32,0)
+					FileXLSSelectSheet(_fileid,1)
+					StatusListe = TxArrayCreate(1)
+					ParameterStatusListe = TxArrayCreate(1)
+					StatusData = GrNeu()
+					Faults_data = TxArrayCreate(1)
+					_ii = 1
+					SOLANGE _ii <=  2560
+						_PName = FileXLSCellRead(_fileid,1,_ii+1,0)
+						wenn tverg(_Pname,"") = 0
+							break
+						sonst
+							ParameterStatusListe[_ii] = _PName
+							_ii = _ii + 1
+						ende
+					ENDE
+					_iimax = _ii -1 		
+					_jj = 1
+					SOLANGE _jj <=  2560
+						_PName = FileXLSCellRead(_fileid,_jj,1,0)
+						wenn tverg(_Pname,"") = 0
+							break
+						sonst
+							StatusListe[_jj] = _PName
 				
-						wenn tverg(_Pname,"VibFault") = 0
-							_kkk = 1
-							SOLANGE _kkk <= 2560;_cols
-								_partext = FileXLSCellRead(_fileid,_jj,_kkk+1,0) 
-								wenn tverg(_Partext,"") = 0
-									break
-								sonst
-									Faults_data[_kkk] = _partext
+							wenn tverg(_Pname,"VibFault") = 0
+								_kkk = 1
+								SOLANGE _kkk <= 2560;_cols
+									_partext = FileXLSCellRead(_fileid,_jj,_kkk+1,0) 
+									wenn tverg(_Partext,"") = 0
+										break
+									sonst
+										Faults_data[_kkk] = _partext
+									end
+									_kkk = _kkk + 1
+								ende
+								StatusData:{<_PName>} = Faults_data
+							else
+								if _jj > 1
+									StatusData:{<_PName>} = FileXLSColumnRead(_fileid,_jj,2,_iimax,0)
 								end
-								_kkk = _kkk + 1
-							ende
-							StatusData:{<_PName>} = Faults_data
-						else
-							if _jj > 1
-								StatusData:{<_PName>} = FileXLSColumnRead(_fileid,_jj,2,_iimax,0)
-							end
 						
-						ENDE
-						_jj = _jj + 1
-					ende
-				end
-				err = FileClose(_fileid)
-			ende
-			
-		end
-	ende
-
-	if varexist?("StatusData") and varexist?("StatusListe") and varexist?("ParameterStatusListe")
-		;PnSetText("ChannelOverview.Channel",currentsignal )
-		_table_name = "ChannelOverview.Parametertable"
-		_table_cols = PntableColumns?(_table_name)
-		_table_rows = PntableRows?(_table_name)
-		for _ii = 1 to _table_rows
-			for _jj = 1 to _table_cols
-				PntableSetCell(_table_name,_jj,_ii,"")
-				PntableSetProperty(_table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
-			ende
-			;Pn_tableSetProperty(_table_name,2,_ii,"FillColor",rgb(255,255,255))	
-		ende
-
-		
-		
-		if GrKanalZahl?(StatusData) >= 1 and leng?(StatusData:[1]) >= txarraygetsize(StatusListe)
-			ParNameList = TxArrayCreate(0)
-			ParFaultList = TxArrayCreate(0)
-			ParIdxList = leer
-			ParStatusList = leer
-			ParCurrentValList = leer
-			ParDeltaRefList = leer
-			ParRefValList = leer
-			ParDGmList = leer
-			ParDGpList = leer
-			ParALmList = leer
-			ParALpList = leer
-			ParpALpList = leer
-			ParpALmList = leer
-			ParMinValList = leer
-			ParMaxValList = leer
-			ParMeanValList = leer
-			ParMedianValList = leer
-			ParIQRValList = leer
-			ParStdValList = leer
-			_count = 0
-			channel_par_liste_1 = TxArrayCreate(0)
-			for _ii =1 to txarraygetsize(ParameterStatusListe)
-				_parname = ParameterStatusListe[_ii]
-				_parname_parts = TxSplit(_parname,"_")
-				_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
-				if tverg(_parname_red,currentsignal) = 0
-					_count = _count + 1
-					channel_par_liste_1[_count] = _parname
+							ENDE
+							_jj = _jj + 1
+						ende
+					end
+					err = FileClose(_fileid)
 				ende
+			
+				;				end
 			ende
-			for _ii =1 to txarraygetsize(channel_par_liste_1)+1
-				if _ii = 1
-					PntableSetCell(_table_name,1,_ii,"ParIdx")
-					;PntableSetCell(_table_name,2,_ii,"ParName")
-					for _kkkk = 1 to txarraygetsize(StatusListe)
-						PntableSetCell(_table_name,1+_kkkk,_ii,StatusListe[_kkkk])
+
+			if varexist?("StatusData") and varexist?("StatusListe") and varexist?("ParameterStatusListe")
+				;PnSetText("ChannelOverview.Channel",currentsignal )
+				_table_name = "ChannelOverview.Parametertable"
+				_table_cols = PntableColumns?(_table_name)
+				_table_rows = PntableRows?(_table_name)
+				for _ii = 1 to _table_rows
+					for _jj = 1 to _table_cols
+						PntableSetCell(_table_name,_jj,_ii,"")
+						PntableSetProperty(_table_name,_jj,_ii,"FillColor",rgb(255,255,255))	
 					ende
-				else
-					if _ii <= _table_rows
-						ParIdxList = binde(ParIdxList, _ii-1)
-						_parname = channel_par_liste_1[_ii-1]
+					;Pn_tableSetProperty(_table_name,2,_ii,"FillColor",rgb(255,255,255))	
+				ende
+
+		
+		
+				if GrKanalZahl?(StatusData) >= 1 and leng?(StatusData:[1]) >= txarraygetsize(StatusListe)
+					ParNameList = TxArrayCreate(0)
+					ParFaultList = TxArrayCreate(0)
+					ParIdxList = leer
+					ParStatusList = leer
+					ParCurrentValList = leer
+					ParDeltaRefList = leer
+					ParRefValList = leer
+					ParDGmList = leer
+					ParDGpList = leer
+					ParALmList = leer
+					ParALpList = leer
+					ParpALpList = leer
+					ParpALmList = leer
+					ParMinValList = leer
+					ParMaxValList = leer
+					ParMeanValList = leer
+					ParMedianValList = leer
+					ParIQRValList = leer
+					ParStdValList = leer
+					_count = 0
+					channel_par_liste_1 = TxArrayCreate(0)
+					for _ii =1 to txarraygetsize(ParameterStatusListe)
+						_parname = ParameterStatusListe[_ii]
 						_parname_parts = TxSplit(_parname,"_")
-						if txarraygetsize(_parname_parts) <=3
-							_parname_red = _parname_parts[2]
-						elseif txarraygetsize(_parname_parts) =4
-							_parname_red = _parname_parts[2] +"_"+_parname_parts[3]
-						elseif txarraygetsize(_parname_parts) =5
-							_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4]
+						_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
+						if tverg(_parname_red,currentsignal) = 0
+							_count = _count + 1
+							channel_par_liste_1[_count] = _parname
+						ende
+					ende
+					for _ii =1 to txarraygetsize(channel_par_liste_1)+1
+						if _ii = 1
+							PntableSetCell(_table_name,1,_ii,"ParIdx")
+							;PntableSetCell(_table_name,2,_ii,"ParName")
+							for _kkkk = 1 to txarraygetsize(StatusListe)
+								PntableSetCell(_table_name,1+_kkkk,_ii,StatusListe[_kkkk])
+							ende
 						else
-							_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4] +"_"+_parname_parts[5]
-						end
-						_par_idx_list = TxFind(ParameterStatusListe,_parname,1,1)
-						_par_idx  = posi(_par_idx_list, 1) + 1
-						;par_stats = StatusData:{<_parname>}
-						PntableSetCell(_table_name,1,_ii,tform(_ii-1,"f1.0"))
-						PntableSetCell(_table_name,2,_ii,_parname_red)
-						for _kkkk = 1 to txarraygetsize(StatusListe)
+							if _ii <= _table_rows
+								ParIdxList = binde(ParIdxList, _ii-1)
+								_parname = channel_par_liste_1[_ii-1]
+								_parname_parts = TxSplit(_parname,"_")
+								if txarraygetsize(_parname_parts) <=3
+									_parname_red = _parname_parts[2]
+								elseif txarraygetsize(_parname_parts) =4
+									_parname_red = _parname_parts[2] +"_"+_parname_parts[3]
+								elseif txarraygetsize(_parname_parts) =5
+									_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4]
+								else
+									_parname_red = _parname_parts[2] +"_"+_parname_parts[3]+"_"+_parname_parts[4] +"_"+_parname_parts[5]
+								end
+								_par_idx_list = TxFind(ParameterStatusListe,_parname,1,1)
+								_par_idx  = posi(_par_idx_list, 1) + 1
+								;par_stats = StatusData:{<_parname>}
+								PntableSetCell(_table_name,1,_ii,tform(_ii-1,"f1.0"))
+								PntableSetCell(_table_name,2,_ii,_parname_red)
+								for _kkkk = 1 to txarraygetsize(StatusListe)
 						
-							_parstatus_name = StatusListe[_kkkk]
+									_parstatus_name = StatusListe[_kkkk]
 							
 														
-							if tverg(_parstatus_name, "Parameters") = 0
-								;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,_parstatus_val,0)	
-								_idx = _ii -1
-								ParNameList[_idx]  = _parname_red
-								PntableSetCell(_table_name,1+_kkkk,_ii,_parname_red)		
-							elseif tverg(_parstatus_name, "VibFault") = 0
-								_par_stats = StatusData:{<_parstatus_name>}[_par_idx]
-								_idx = _ii -1
-								ParFaultList[_idx] = _par_stats
-								;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,_parstatus_val,0)	
-								PntableSetCell(_table_name,1+_kkkk,_ii,_par_stats)		
-							else
-								_par_stats = StatusData:{<_parstatus_name>}[_par_idx]
-								;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,tform(_parstatus_val,"f1.4"),0)		
-								PntableSetCell(_table_name,1+_kkkk,_ii,tform(_par_stats,"f1.2"))		
-							end
-							if tverg(_parstatus_name, "CurrentStatus") = 0 
-								_parstatus =-1
-								sequenz find_status_colour; -> _parstatus_color
-								PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)	
-								_parstatus = StatusData:{<_parstatus_name>}[_par_idx];StatusData:CurrentStatus[_ii-1]
-								ParStatusList = binde(ParStatusList, _parstatus)
-								_ist_channel_par_status = binde(_ist_channel_par_status, _parstatus)
-							elseif tverg(_parstatus_name, "CurentVal") = 0 or tverg(_parstatus_name, "CurrentVal") = 0 
-								;							_parstatus = StatusData:{<_parstatus_name>}[_ii-1]
-								;							_ist_channel_par_status = binde(_ist_channel_par_status, _parstatus)
-								ParCurrentValList = binde(ParCurrentValList, _par_stats)
-								sequenz find_status_colour; -> _parstatus_color
-								PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)	
-							elseif tverg(_parstatus_name, "RefVal") = 0
-								ParRefValList = binde(ParRefValList, _par_stats)
-								_parstatus =1
-								sequenz find_status_colour; -> _parstatus_color
-								PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
-							elseif tverg(_parstatus_name, "DeltaRef") = 0
-								ParDeltaRefList = binde(ParDeltaRefList, _par_stats)
-							elseif tverg(_parstatus_name, "DGm") = 0 or tverg(_parstatus_name, "DGp") = 0
-								if tverg(_parstatus_name, "DGm") = 0
-									ParDGmList = binde(ParDGmList, _par_stats)
-								else
-									ParDGpList = binde(ParDGpList, _par_stats)
-								end
-								_parstatus =4
-								sequenz find_status_colour; -> _parstatus_color
-								PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
-							elseif tverg(_parstatus_name, "ALm") = 0 or tverg(_parstatus_name, "ALp") = 0
-								if tverg(_parstatus_name, "ALm") = 0
-									ParALmList = binde(ParALmList, _par_stats)
-								else
-									ParALpList = binde(ParALpList, _par_stats)
-								end
-								_parstatus =3
-								sequenz find_status_colour; -> _parstatus_color
-								PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
-							elseif tverg(_parstatus_name, "pALm") = 0 or tverg(_parstatus_name, "pALp") = 0
-								if tverg(_parstatus_name, "pALm") = 0
-									ParpALmList = binde(ParpALmList, _par_stats)
-								else
-									ParpALpList = binde(ParpALpList, _par_stats)
-								end
-								_parstatus =2
-								sequenz find_status_colour; -> _parstatus_color
-								PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
-							elseif tverg(_parstatus_name, "MinVal") = 0
-								ParMinValList = binde(ParMinValList, _par_stats)
-							elseif tverg(_parstatus_name, "MaxVal") = 0
-								ParMaxValList = binde(ParMaxValList, _par_stats)
-							elseif tverg(_parstatus_name, "MeanVal") = 0
-								ParMeanValList = binde(ParMeanValList, _par_stats)
-							elseif tverg(_parstatus_name, "MedianVal") = 0
-								ParMedianValList = binde(ParMedianValList, _par_stats)
-							elseif tverg(_parstatus_name, "IQRVal") = 0
-								ParIQRValList = binde(ParIQRValList, _par_stats)
-							elseif tverg(_parstatus_name, "StdVal") = 0
-								ParStdValList = binde(ParStdValList, _par_stats)
+									if tverg(_parstatus_name, "Parameters") = 0
+										;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,_parstatus_val,0)	
+										_idx = _ii -1
+										ParNameList[_idx]  = _parname_red
+										PntableSetCell(_table_name,1+_kkkk,_ii,_parname_red)		
+									elseif tverg(_parstatus_name, "VibFault") = 0
+										_par_stats = StatusData:{<_parstatus_name>}[_par_idx]
+										_idx = _ii -1
+										ParFaultList[_idx] = _par_stats
+										;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,_parstatus_val,0)	
+										PntableSetCell(_table_name,1+_kkkk,_ii,_par_stats)		
+									else
+										_par_stats = StatusData:{<_parstatus_name>}[_par_idx]
+										;RgTableSetCell(table_name,1+_kkkk ,_ii - _ii_min + 1,tform(_parstatus_val,"f1.4"),0)		
+										PntableSetCell(_table_name,1+_kkkk,_ii,tform(_par_stats,"f1.2"))		
+									end
+									if tverg(_parstatus_name, "CurrentStatus") = 0 
+										_parstatus =-1
+										sequenz find_status_colour; -> _parstatus_color
+										PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)	
+										_parstatus = StatusData:{<_parstatus_name>}[_par_idx];StatusData:CurrentStatus[_ii-1]
+										ParStatusList = binde(ParStatusList, _parstatus)
+										_ist_channel_par_status = binde(_ist_channel_par_status, _parstatus)
+									elseif tverg(_parstatus_name, "CurentVal") = 0 or tverg(_parstatus_name, "CurrentVal") = 0 
+										;							_parstatus = StatusData:{<_parstatus_name>}[_ii-1]
+										;							_ist_channel_par_status = binde(_ist_channel_par_status, _parstatus)
+										ParCurrentValList = binde(ParCurrentValList, _par_stats)
+										sequenz find_status_colour; -> _parstatus_color
+										PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)	
+									elseif tverg(_parstatus_name, "RefVal") = 0
+										ParRefValList = binde(ParRefValList, _par_stats)
+										_parstatus =1
+										sequenz find_status_colour; -> _parstatus_color
+										PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+									elseif tverg(_parstatus_name, "DeltaRef") = 0
+										ParDeltaRefList = binde(ParDeltaRefList, _par_stats)
+									elseif tverg(_parstatus_name, "DGm") = 0 or tverg(_parstatus_name, "DGp") = 0
+										if tverg(_parstatus_name, "DGm") = 0
+											ParDGmList = binde(ParDGmList, _par_stats)
+										else
+											ParDGpList = binde(ParDGpList, _par_stats)
+										end
+										_parstatus =4
+										sequenz find_status_colour; -> _parstatus_color
+										PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+									elseif tverg(_parstatus_name, "ALm") = 0 or tverg(_parstatus_name, "ALp") = 0
+										if tverg(_parstatus_name, "ALm") = 0
+											ParALmList = binde(ParALmList, _par_stats)
+										else
+											ParALpList = binde(ParALpList, _par_stats)
+										end
+										_parstatus =3
+										sequenz find_status_colour; -> _parstatus_color
+										PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+									elseif tverg(_parstatus_name, "pALm") = 0 or tverg(_parstatus_name, "pALp") = 0
+										if tverg(_parstatus_name, "pALm") = 0
+											ParpALmList = binde(ParpALmList, _par_stats)
+										else
+											ParpALpList = binde(ParpALpList, _par_stats)
+										end
+										_parstatus =2
+										sequenz find_status_colour; -> _parstatus_color
+										PntableSetProperty(_table_name,_kkkk+1,_ii,"FillColor",_parstatus_color)		
+									elseif tverg(_parstatus_name, "MinVal") = 0
+										ParMinValList = binde(ParMinValList, _par_stats)
+									elseif tverg(_parstatus_name, "MaxVal") = 0
+										ParMaxValList = binde(ParMaxValList, _par_stats)
+									elseif tverg(_parstatus_name, "MeanVal") = 0
+										ParMeanValList = binde(ParMeanValList, _par_stats)
+									elseif tverg(_parstatus_name, "MedianVal") = 0
+										ParMedianValList = binde(ParMedianValList, _par_stats)
+									elseif tverg(_parstatus_name, "IQRVal") = 0
+										ParIQRValList = binde(ParIQRValList, _par_stats)
+									elseif tverg(_parstatus_name, "StdVal") = 0
+										ParStdValList = binde(ParStdValList, _par_stats)
+									ende
+								ende
 							ende
 						ende
 					ende
+					;_ist_channel_par_status = asset_current_status_map0:[_colidx]
+					_parstatus = max(_ist_channel_par_status)
+					sequenz find_status_colour; -> _parstatus_color
+					;PnSetProperty("ChannelOverview.Channel","FillColor",_parstatus_color)		
 				ende
+
+	
 			ende
-			;_ist_channel_par_status = asset_current_status_map0:[_colidx]
-			_parstatus = max(_ist_channel_par_status)
-			sequenz find_status_colour; -> _parstatus_color
-			;PnSetProperty("ChannelOverview.Channel","FillColor",_parstatus_color)		
 		ende
 
+		;%%%%%%%%%%%%%%%%%%%%%LOAD FEATURE STATUS _table%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		;currentsignal = PnGetText("DataExploration.Channel")
+		sequenz search_item Ch_Config:SigName currentsignal
+		if tverg(currentsignal,"") <> 0 and tleng(currentsignal) > 1 and search_index > 0; and ParStatusTable = 1
+			;	if varexist?("ParStatusMap") and varexist?("Par_Liste") and varexist?("Date_Time_List") 
+			;	else	
 	
-	ende
-ende
-
-;%%%%%%%%%%%%%%%%%%%%%LOAD FEATURE STATUS _table%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-;currentsignal = PnGetText("DataExploration.Channel")
-sequenz search_item Ch_Config:SigName currentsignal
-if tverg(currentsignal,"") <> 0 and tleng(currentsignal) > 1 and search_index > 0; and ParStatusTable = 1
-	;	if varexist?("ParStatusMap") and varexist?("Par_Liste") and varexist?("Date_Time_List") 
-	;	else
-	Featfile = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
-	if view_sev = 0
-		
-		Featfile = TxReplace(Featfile,"FeatureTable","FeatureStatusTable",0,1)
-		;ParStatusMap_file = assetfolder + "\Output\Features\" + "FeatureStatustable.csv"; Last Status of ChannelFeature
-		ParStatusMap_file = assetfolder + "\Output\Features\" + Featfile + ".csv"; Last Status of ChannelFeature
-	else
-		Featfile = TxReplace(Featfile,"FeatureTable","FeatureSeverityTable",0,1)
-		ParStatusMap_file = assetfolder + "\Output\Features\" + "FeatureSeverityTable.csv"; Last Status of ChannelFeature
-		ParStatusMap_file = assetfolder + "\Output\Features\" + Featfile + ".csv"; Last Status of ChannelFeature
-	end
-	
-	file = ParStatusMap_file
-	if fsfileexists(file)
-		sequenz get_table_data_as_map
-		ParStatusMap = Map
-		Date_Time_List = ParameterListe; -> Date_Time
-		Par_Liste =ChannelListe; -> Par_Liste
-	end
-	;parameter_status_vs_time_map = MatrixTranspose(parameter_status_vs_time_map)
-	;	end
-		
-	if varexist?("ParStatusMap") and varexist?("Par_Liste") and varexist?("Date_Time_List") 
-		if leng?(ParStatusMap:[1]) >= 1 
-			_count = 0
-			channel_par_liste_1 = TxArrayCreate(0)
-			ParStatusData = GrNeu()
-
-			for _ii =1 to txarraygetsize(Par_Liste);grkanalzahl?(parameter_status_vs_time_map)
-				_parname = Par_Liste[_ii]
-				;_parname = grkanalname?(parameter_status_vs_time_map,_ii)
-				_parname_parts = TxSplit(_parname,"_")
-				_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
-				if tverg(_parname_red,currentsignal) = 0
-					;zeigen _parname
-					_count = _count + 1
-					_parname_parts_ = TxSplit(_parname,"-")
-					_parname_ =_parname_parts_[1]
-					ParStatusData:{<_parname_>} = ParStatusMap:[_ii]
-					channel_par_liste_1[_count] = _parname_
-					;sleep(1)
-				ende
-			ende
-			
-			_EwSegLang = lang?(ParStatusData:[1])
-			_group = GrBinde(ParStatusData,0)
-			SetSegLang(_group,_EwSegLang)
-			
+			Featfile = PnGetText("AssetOverview.feature_filename"); "FeatureTable_Clean_Famos.csv"
 			if view_sev = 0
-				ParStatusData = _group;MatrixTranspose(_group)
-				
-				_TxErr$ = CwLoadCCV( "ChannelOverview.ParameterStatusMap", "ParStatusData.ccv")
-				wenn tverg(_TxErr$,"") <> 0
-					err = BoxNachricht("Info","channel_status_vs_time_map","!1")
-				ende
+				if txwo(Featfile, "_Clean") = 0
+					Featfile = TxReplace(Featfile,"FeatureTable","FeatureStatusTable",0,1)
+				else
+					Featfile = "FeatureStatusTable"
+				end
+				;ParStatusMap_file = assetfolder + "\Output\Features\" + "FeatureStatustable.csv"; Last Status of ChannelFeature
+				ParStatusMap_file = assetfolder + "\Output\Features\" + Featfile + ".csv"; Last Status of ChannelFeature
 			else
-				ParSeverityData = _group;MatrixTranspose(_group)
+				if txwo(Featfile, "_Clean") = 0
+					Featfile = TxReplace(Featfile,"FeatureTable","FeatureSeverityTable",0,1)
+				else
+					Featfile = "FeatureSeverityTable"
+				end
+				;Featfile = TxReplace(Featfile,"FeatureTable","FeatureSeverityTable",0,1)
+				;ParStatusMap_file = assetfolder + "\Output\Features\" + "FeatureSeverityTable.csv"; Last Status of ChannelFeature
+				ParStatusMap_file = assetfolder + "\Output\Features\" + Featfile + ".csv"; Last Status of ChannelFeature
+			end
+	
+			file = ParStatusMap_file
+			if fsfileexists(file)
+				sequenz get_table_data_as_map
+				ParStatusMap = Map
+				Date_Time_List = ParameterListe; -> Date_Time
+				Par_Liste =ChannelListe; -> Par_Liste
+			end
+			;parameter_status_vs_time_map = MatrixTranspose(parameter_status_vs_time_map)
+			;	end
+		
+			if varexist?("ParStatusMap") and varexist?("Par_Liste") and varexist?("Date_Time_List") 
+				if leng?(ParStatusMap:[1]) >= 1 
+					_count = 0
+					channel_par_liste_1 = TxArrayCreate(0)
+					ParStatusData = GrNeu()
+
+					for _ii =1 to txarraygetsize(Par_Liste);grkanalzahl?(parameter_status_vs_time_map)
+						_parname = Par_Liste[_ii]
+						;_parname = grkanalname?(parameter_status_vs_time_map,_ii)
+						_parname_parts = TxSplit(_parname,"_")
+						_parname_red = _parname_parts[1]; tteil(_parname,1,tleng(currentsignal))
+						if tverg(_parname_red,currentsignal) = 0
+							;zeigen _parname
+							_count = _count + 1
+							_parname_parts_ = TxSplit(_parname,"-")
+							_parname_ =_parname_parts_[1]
+							ParStatusData:{<_parname_>} = ParStatusMap:[_ii]
+							channel_par_liste_1[_count] = _parname_
+							;sleep(1)
+						ende
+					ende
+			
+					_EwSegLang = lang?(ParStatusData:[1])
+					_group = GrBinde(ParStatusData,0)
+					SetSegLang(_group,_EwSegLang)
+			
+					if view_sev = 0
+						ParStatusData = _group;MatrixTranspose(_group)
 				
-				_TxErr$ = CwLoadCCV( "ChannelOverview.ParameterStatusMap", "ParSeverityData.ccv")
-				wenn tverg(_TxErr$,"") <> 0
-					err = BoxNachricht("Info","channel_sev_vs_time_map","!1")
+						_TxErr$ = CwLoadCCV( "ChannelOverview.ParameterStatusMap", "ParStatusData.ccv")
+						wenn tverg(_TxErr$,"") <> 0
+							err = BoxNachricht("Info","channel_status_vs_time_map","!1")
+						ende
+					else
+						ParSeverityData = _group;MatrixTranspose(_group)
+				
+						_TxErr$ = CwLoadCCV( "ChannelOverview.ParameterStatusMap", "ParSeverityData.ccv")
+						wenn tverg(_TxErr$,"") <> 0
+							err = BoxNachricht("Info","channel_sev_vs_time_map","!1")
+						ende
+					end
 				ende
 			end
-		ende
-	end
 	
-	; Plot Channel Parameters
-	ChannFeatData = GrNeu()
-	sequenz ClearSelectedPlot "ChannelOverview.VISA_plot"
-	for _ii = 1 to GrChanNum?(FeatData)
-		_parname = GrChanName?(FeatData,_ii)
-		_chann_feat_parts = TxSplit(_parname,"_")
-		_chann_ = _chann_feat_parts[1]
-		if tverg(currentsignal,_chann_) = 0 and txwo(_parname,"-Sev") =0 and txwo(_parname,"-Status") =0
+			; Plot Channel Parameters
+			ChannFeatData = GrNeu()
+			sequenz ClearSelectedPlot "ChannelOverview.VISA_plot"
+			for _ii = 1 to GrChanNum?(FeatData)
+				_parname = GrChanName?(FeatData,_ii)
+				_chann_feat_parts = TxSplit(_parname,"_")
+				_chann_ = _chann_feat_parts[1]
+				if tverg(currentsignal,_chann_) = 0 and txwo(_parname,"-Sev") =0 and txwo(_parname,"-Status") =0
 		
-			;index = PnGetvalue("DataExploration.TrendPlotaxis")
-			xaxis = 0
-			line_width = 0.5
-			wenn xaxis = 1; TrendPlot_vs_Date
-				{<_parname>} = FeatData:{<_parname>}
-			else
-				if  IsXY(FeatData:{<_parname>})
-					{<_parname>} = kmpy(FeatData:{<_parname>})
-				else
-					{<_parname>} = xdel(FeatData:{<_parname>},1)
-				ende
-			ende
-			sequenz FindFeatureNameAndUnit ; from xlsconfig.
-			ChannFeatData:{<_parname>} = {<_parname>}
-			sequenz plot_2d_trend {<_parname>} xaxis "ChannelOverview.VISA_plot"
+					;index = PnGetvalue("DataExploration.TrendPlotaxis")
+					xaxis = 0
+					line_width = 0.5
+					wenn xaxis = 1; TrendPlot_vs_Date
+						{<_parname>} = FeatData:{<_parname>}
+					else
+						if  IsXY(FeatData:{<_parname>})
+							{<_parname>} = kmpy(FeatData:{<_parname>})
+						else
+							{<_parname>} = xdel(FeatData:{<_parname>},1)
+						ende
+					ende
+					sequenz FindFeatureNameAndUnit ; from xlsconfig.
+					ChannFeatData:{<_parname>} = {<_parname>}
+					sequenz plot_2d_trend {<_parname>} xaxis "ChannelOverview.VISA_plot"
+				end
+
+			end
+	
+			_parname = currentsignal
+			sequenz ShowSelected3DSpectrum
 		end
 
 	end
-	
-	_parname = currentsignal
-	sequenz ShowSelected3DSpectrum
 end
-

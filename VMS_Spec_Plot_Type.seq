@@ -8,7 +8,7 @@ if idx > 0
 	_fct_name = PnGetText("Spectrum")
 	;SpectrumPlot = "SpectrumPlot"
 	;Ax_Trend_Plot = _group
-	cw_verz = "C:\BDA\ExpertAnalysis\"
+	cw_verz = "C:\BDA\DataExplorer\"
 	if tverg(ist_vms_spec_plot,"Spectrogram") = 0
 		if txwo(_fct_name,  "_PSD_Trend") <> 0 or txwo(_fct_name,  "_FFT_Mag_Trend") <> 0 or txwo(_fct_name,  "_FRF_Mag_Trend") <> 0
 			SpectrumTemplate = "FRF_Mag_Plot.ccv"

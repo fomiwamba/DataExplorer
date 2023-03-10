@@ -6,33 +6,35 @@ sequenz imc_logging "select_item_parameter_liste started"
 
 _paridx =PnTableGetSelectedRows("MeasurementOverview.MeasSignalListGitter")
 wenn _paridx <> 0
-	if 0
-		_parname = MeasSignalList[_paridx]
-	else
-		_parname = MeasChName[_paridx]
-	end
-	{<_Parname>} = MeasRawData:{<_Parname>}
+	if _paridx > 0  and _paridx < 10000
+		if 0
+			_parname = MeasSignalList[_paridx]
+		else
+			_parname = MeasChName[_paridx]
+		end
+		{<_Parname>} = MeasRawData:{<_Parname>}
 		
-	xaxis = 0
+		xaxis = 0
 
 	
-	;---------------------------------------------
-	_parname_ = _parname
-	if txwo(_parname_,".") > 0
-		_parname_ = txreplace( _parname_,".","_",0,1)
+		;---------------------------------------------
+		_parname_ = _parname
+		if txwo(_parname_,".") > 0
+			_parname_ = txreplace( _parname_,".","_",0,1)
+		end
+		if txwo(_parname_ ," ") > 0
+			_parname_ = txreplace( _parname_ ," ","_",0,1)
+		end
+		if txwo(_parname_ ,"\") > 0
+			_parname_ = txreplace( _parname_ ,"\","_",0,1)
+		end
+		if txwo(_parname_ ,"/") > 0
+			_parname_ = txreplace( _parname_ ,"/","_",0,1)
+		end
+		{<_parname_>} =  {<_Parname>}
+		;---------------------------------------------
+		sequenz FindFeatureNameAndUnit ; from xlsconfig.
+		sequenz plot_2d_trend {<_Parname_>} xaxis "SignalPlot"
 	end
-	if txwo(_parname_ ," ") > 0
-		_parname_ = txreplace( _parname_ ," ","_",0,1)
-	end
-	if txwo(_parname_ ,"\") > 0
-		_parname_ = txreplace( _parname_ ,"\","_",0,1)
-	end
-	if txwo(_parname_ ,"/") > 0
-		_parname_ = txreplace( _parname_ ,"/","_",0,1)
-	end
-	{<_parname_>} =  {<_Parname>}
-	;---------------------------------------------
-	sequenz FindFeatureNameAndUnit ; from xlsconfig.
-	sequenz plot_2d_trend {<_Parname_>} xaxis "SignalPlot"
 end
 

@@ -26,26 +26,29 @@ wenn _filelist_mm > 0
 			_filedatetime = "L"+tteil(_filename_short,tlang(_filename_short)-18, 15)
 			_filename_parts = TxSplit(_filename_short,"_")
 			
-			_erg = TxFind(FeatData:FileId,_filedatetime,1,1)
+			;_erg = binde(0,1)
+			;			if varexist?("FeatData:FileId")
+			;				_erg = TxFind(FeatData:FileId,_filedatetime,1,1)
+			;			end
 			;zeigen _erg
 			;sleep(0.5)
-			if max(_erg) > 0
-				;sequenz Insert_Item "VibrationAnalysis.MeasFile" _filename
-				;sequenz Insert_Item "ElectricalAnalysis.MeasFile" _filename
+			;if max(_erg) > 0
+			;sequenz Insert_Item "VibrationAnalysis.MeasFile" _filename
+			;sequenz Insert_Item "ElectricalAnalysis.MeasFile" _filename
 				
-				_item = _item +1 
-				IstFileList[_item] = _filename_short;
-				_fileidpos = posi(_erg,max(_erg)) + 1
-				_fileid_name = FeatData:FileId[_fileidpos]
-				IstFileId[_item] = _fileid_name
-				ExpertComments[_item] = "None"
-				IstTrigger[_item] = "None"
-				IstOC[_item] = "None"
-				if txarraygetsize(_filename_parts) > 3
-					IstTrigger[_item] = _filename_parts[3]
-					IstOC[_item] = _filename_parts[4]
-				end
+			_item = _item +1 
+			IstFileList[_item] = _filename_short;
+			;_fileidpos = posi(_erg,max(_erg)) + 1
+			;_fileid_name = FeatData:FileId[_fileidpos]
+			IstFileId[_item] = _filedatetime
+			ExpertComments[_item] = "None"
+			IstTrigger[_item] = "None"
+			IstOC[_item] = "None"
+			if txarraygetsize(_filename_parts) > 3
+				IstTrigger[_item] = _filename_parts[3]
+				IstOC[_item] = _filename_parts[4]
 			end
+			;end
 			del _erg
 			_mm = _mm + 1
 		end
@@ -56,6 +59,7 @@ sonst
 	_err = FsGetLastError() 
 	zeigen _err
 ende
+
 MeasFiles = IstFileList
 MeasFileId = IstFileId
 MeasTrigger = IstTrigger

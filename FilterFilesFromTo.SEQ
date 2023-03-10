@@ -23,6 +23,7 @@ page_ist  = PnGetActivePage()
 if page_ist = 9; TrendData
 	_datumFrom = PnGetValue("ViewTrendData.Datefrom")
 	_datumTo = PnGetValue("ViewTrendData.Dateto")
+	append_files = PnGetValue("ViewTrendData.append_files")
 	sicherungsfolder = TrendFileFolder
 	appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
 	_erg0 = FsFileExists(appendfile)
@@ -40,6 +41,7 @@ end
 if page_ist = 10; ProcessData
 	_datumFrom = PnGetValue("ViewProcessData.Datefrom")
 	_datumTo = PnGetValue("ViewProcessData.Dateto")
+	append_files = PnGetValue("ViewProcessData.append_files")
 	sicherungsfolder = ProcessFileFolder
 	appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
 	_erg0 = FsFileExists(appendfile)
@@ -54,31 +56,34 @@ if page_ist = 10; ProcessData
 end
 
 if page_ist = 10 or page_ist = 9
-	cntfile = TxArrayGetSize(FileListFromTo)
-	if cntfile > 0
-		inputfile = "C:\BDA\ExpertAnalysis\PythonInput.txt"
+	if append_files = 1
+		cntfile = TxArrayGetSize(FileListFromTo)
+		if cntfile > 0
+			inputfile = "C:\BDA\ExpertAnalysis\PythonInput.txt"
 
-		_mm = 1
-		_fh = FileOpenASCII(inputfile,1)
-		SOLANGE _mm <= cntfile
-			_err = FileLineWrite(_fh,FileListFromTo[_mm],0)
-			_mm = _mm + 1
-		ende
-		_err = FileClose(_fh)
+			_mm = 1
+			_fh = FileOpenASCII(inputfile,1)
+			SOLANGE _mm <= cntfile
+				_err = FileLineWrite(_fh,FileListFromTo[_mm],0)
+				_mm = _mm + 1
+			ende
+			_err = FileClose(_fh)
 		
 		
-		;Applikation Vollbild C:\python37\python.exe C:\BDA\ExpertAnalysis\AppendFilesFromTo.py
-		ret = Execute( "C:\python37\python.exe","C:\BDA\ExpertAnalysis\AppendFilesFromTo.py","" ,0, -1)
+			;Applikation Vollbild C:\python37\python.exe C:\BDA\ExpertAnalysis\AppendFilesFromTo.py
+			ret = Execute( "C:\python37\python.exe","C:\BDA\ExpertAnalysis\AppendFilesFromTo.py","" ,0, -1)
 
-		appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
-		_erg0 = FsFileExists(appendfile)
-		if _erg0 = 1
-			filename = appendfile
-			filename_short = fsSplitPath(appendfile, 4) 
-			sequenz Insert_Item "FileList" filename_short
-			sequenz LoadTxtOrCsvTrendFile
+			appendfile = sicherungsfolder + "\AppendFileFromTo.csv"
+			_erg0 = FsFileExists(appendfile)
+			if _erg0 = 1
+				filename = appendfile
+				filename_short = fsSplitPath(appendfile, 4) 
+				sequenz Insert_Item "FileList" filename_short
+				sequenz LoadTxtOrCsvTrendFile
+			ende
 		ende
-	ende
+	end
+
 end
 
 entf _*

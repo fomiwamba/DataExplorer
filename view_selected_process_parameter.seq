@@ -1,0 +1,43 @@
+
+_paridx =PnTableGetSelectedRows("ViewTrendData.TrendParameterList")
+IF leng?(_paridx) > 0;  
+	if _paridx > 0  and _paridx < 10000
+
+	_parname = ProcessDataPar[_paridx]
+	{<_Parname>} = ProcessData:{<_Parname>}
+		
+
+	index = PnGetValue("ViewTrendData.TrendPlotAxis")
+	wenn index = 1; TrendPlot_vs_Date
+		{<_Parname>} = {<_Parname>} 
+		xaxis = 1
+	else
+		if  IsXY({<_Parname>})
+			{<_Parname>} = kmpy({<_Parname>} )
+		else
+			{<_Parname>} = xdel({<_Parname>},1)
+		ende
+		xaxis = 0
+	ende
+	;---------------------------------------------
+	_parname_ = _parname
+	if txwo(_parname_,".") > 0
+		_parname_ = txreplace( _parname_,".","_",0,1)
+	end
+	if txwo(_parname_ ," ") > 0
+		_parname_ = txreplace( _parname_ ," ","_",0,1)
+	end
+	if txwo(_parname_ ,"\") > 0
+		_parname_ = txreplace( _parname_ ,"\","_",0,1)
+	end
+	if txwo(_parname_ ,"/") > 0
+		_parname_ = txreplace( _parname_ ,"/","_",0,1)
+	end
+	{<_parname_>} =  {<_Parname>}
+	;---------------------------------------------
+	sequenz FindFeatureNameAndUnit ; from xlsconfig.
+	
+	line_width = 0.5
+	sequenz plot_2d_trend {<_Parname_>} xaxis "ParameterDataPlot"
+	end
+end

@@ -1,3 +1,4 @@
+
 sequenz imc_logging "reset_fields started"
 
 entf DelFeatureList
@@ -144,8 +145,8 @@ PnSetText("ViewTrendData.ParName","")
 PnSetText("ViewTrendData.ParIndex","")
 
 ;PnSetActivePage(9)
-PnDeleteItem("ViewTrendData.FileList",0)
-PnDeleteItem("ViewTrendData.ParameterList",0);
+;PnDeleteItem("ViewTrendData.FileList",0);
+;PnDeleteItem("ViewTrendData.ParameterList",0);
 sequenz ClearSelectedPlot "ViewTrendData.ParameterDataPlot"
 
 PnSetText("ViewProcessData.Filename","")
@@ -154,8 +155,8 @@ PnSetText("ViewProcessData.ParName","")
 PnSetText("ViewProcessData.ParIndex","")
 
 ;PnSetActivePage(10)
-PnDeleteItem("ViewProcessData.FileList",0)
-PnDeleteItem("ViewProcessData.ParameterList",0);
+;PnDeleteItem("ViewProcessData.FileList",0);
+;PnDeleteItem("ViewProcessData.ParameterList",0);
 sequenz ClearSelectedPlot "ViewProcessData.ParameterDataPlot"
 
 if 0

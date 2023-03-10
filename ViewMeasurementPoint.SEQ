@@ -1,11 +1,12 @@
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-; Input1: Ausgewählter Parameter, ausgewählter Marker
-; Output: Ausgewählte Messungszeitpunkt
+; Input1: Ausgewï¿½hlter Parameter, ausgewï¿½hlter Marker
+; Output: Ausgewï¿½hlte Messungszeitpunkt
 ;%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 sequenz imc_logging "view_measurement_point started"
 
 _index = PnTableGetSelectedRows("VISATable.VISA_table")
-wenn _index > 0
+wenn lang?(_index) > 0
+	if _index > 0  and _index < 10000
 	Parname = ParameterStatusListe[_index]
 	
 	CwSelectMode("title")
@@ -81,6 +82,7 @@ wenn _index > 0
 	sonst
 		BoxNachricht("Info","Please select a Marker before starting ViewMeasurement","?1")
 	ende
+	end
 sonst
 	BoxNachricht("Info","Please select a Parameter and Marker before starting ViewMeasurement","?1")
 ende

@@ -13,6 +13,7 @@ line_width = PnGetValue("FrequencyParameters.line_width")
 
 _index = PnTableGetSelectedRows("FrequencyParameters.FreqParameterListeGitter")
 wenn lang?(_index) > 0
+	if _index > 0  and _index < 10000
 	_Parname = SuesParListe[_index]
 	
 	if PnGetValue("ParameterOverview.ResetPlot")
@@ -103,7 +104,7 @@ wenn lang?(_index) > 0
 	ende
 	_pardata0 = {<_Parname>};SuesFreqData:{<_Parname>}
 	
-	sequenz FindFeatureNameAndUnit
+	;sequenz FindFeatureNameAndUnit
 	
 	;Neu - 10092019 - Francis
 	;---------------------------------------------
@@ -262,5 +263,6 @@ wenn lang?(_index) > 0
 	
 	sequenz ShowSuesMarkers
 ende
+end
 
 entf _*

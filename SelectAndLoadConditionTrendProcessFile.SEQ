@@ -7,39 +7,41 @@ PnSetActivePage(page_ist)
 
 _fileidx =PnTableGetSelectedRows("VibrationAnalysis.MeasurementListeGitter")
 wenn _fileidx > 0
-	filename = CompletedFolder +"\"+ MeasFiles[_fileidx]
-	filename_short = FsSplitPath(filename,4)
-	;Pnsettext("FileName",filename_short)
-	;PnSetText("FileIndex",tform(_fileidx,"f4.0"))
+	if _fileidx > 0  and _fileidx < 10000
+		filename = CompletedFolder +"\"+ MeasFiles[_fileidx]
+		filename_short = FsSplitPath(filename,4)
+		;Pnsettext("FileName",filename_short)
+		;PnSetText("FileIndex",tform(_fileidx,"f4.0"))
 
 
-	;zeigen filename
-	_erg = FsFileExists(filename)
-	wenn _erg = 1
-		if varexist?("RawData")
-		else
-			RawData = Grneu()
+		;zeigen filename
+		_erg = FsFileExists(filename)
+		wenn _erg = 1
+			if varexist?("RawData")
+			else
+				RawData = Grneu()
+			ende
+			;zeigen _filename
+			file_ext = fssplitPath(filename,3)
+			;zeigen _file_ext
+			if tverg(file_ext,".tdms") = 0 or tverg(file_ext,".tdm") = 0
+				sequenz LoadTmsFile_1
+			ende
+			if tverg(file_ext,".d7d") = 0
+				sequenz Loadd7dfile
+			end
+			if tverg (file_ext,".dat") =0
+				sequenz Loaddatfile
+				; input: filename
+				; outputs: Data, date_time_str, OP_Data
+			ende
+			if  tverg(file_ext,".csv") = 0 or tverg(file_ext,".txt") = 0
+				sequenz LoadTxtOrCsvTrendFile
+			ende
+		sonst
+			BoxNachricht("Info","No files in Inputfolder","?1")
 		ende
-		;zeigen _filename
-		file_ext = fssplitPath(filename,3)
-		;zeigen _file_ext
-		if tverg(file_ext,".tdms") = 0 or tverg(file_ext,".tdm") = 0
-			sequenz LoadTmsFile_1
-		ende
-		if tverg(file_ext,".d7d") = 0
-			sequenz Loadd7dfile
-		end
-		if tverg (file_ext,".dat") =0
-			sequenz Loaddatfile
-			; input: filename
-			; outputs: Data, date_time_str, OP_Data
-		ende
-		if  tverg(file_ext,".csv") = 0 or tverg(file_ext,".txt") = 0
-			sequenz LoadTxtOrCsvTrendFile
-		ende
-	sonst
-		BoxNachricht("Info","No files in Inputfolder","?1")
-	ende
+	end
 ende
 
 
